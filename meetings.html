@@ -584,23 +584,57 @@ async function findMeetings() {
 // Display meetings list
 function displayMeetings(meetingInvites) {
   meetingsContainer.innerHTML = '';
-  
+  function displayMeetings(meetingInvites) {
+  meetingsContainer.innerHTML = '';
+
   meetingInvites.forEach((invite, index) => {
     const meetingItem = document.createElement('div');
     meetingItem.className = 'meeting-item';
+
+    // Format start_at in ET. start_at is a timestamptz (UTC under the hood).
+    let timeDisplay = 'Time TBD';
+    if (invite.start_at) {
+      try {
+        const d = new Date(invite.start_at);
+        if (!isNaN(d.getTime())) {
+          timeDisplay = d.toLocaleString('en-US', {
+            timeZone: 'America/New_York',
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZoneName: 'short'   // shows "EDT" or "EST" automatically
+          });
+        }
+      } catch (e) {}
+    }
+
+    const titleText = invite.meeting_name || invite.name || 'Victory Vision Meeting';
+
     meetingItem.innerHTML = `
-      <div class="meeting-title-item">${invite.name || 'Victory Vision Meeting'}</div>
+      <div class="meeting-title-item">${titleText}</div>
       <div class="meeting-attendees">
-        Link: Link: ${invite.room_url ? (() => {
-  const parts = invite.room_url.split('-');
-  const name = parts[1]?.replace(/([A-Z])/g, ' $1').trim() || 'N/A';
-  const date = `${parts[2]}/${parts[3]}/${parts[4]}`;
-  const time = parts[5]?.replace(/(\d+)(AM|PM)/, '$1 $2');
-  return `${name} - ${date} at ${time} ${parts[6] || ''}`;
-})() : 'N/A'}
-${invite.room_url ? '' : '<br>⚠️ No room information available'}
+        ${timeDisplay}
+        ${invite.room_url ? '' : '<br>⚠️ No room information available'}
       </div>
     `;
+
+    if (invite.room_url) {
+      meetingItem.addEventListener('click', () => joinMeeting(invite));
+      meetingItem.style.cursor = 'pointer';
+    } else {
+      meetingItem.style.opacity = '0.6';
+      meetingItem.style.cursor = 'not-allowed';
+    }
+
+    meetingsContainer.appendChild(meetingItem);
+  });
+
+  meetingsList.style.display = 'block';
+}
     
     if (invite.room_url) {
       meetingItem.addEventListener('click', () => joinMeeting(invite));
