@@ -2113,8 +2113,11 @@ async function launchLinkedInAd() {
     // Read selected creative from selectedCreative global (set by selectCreative())
     const creativeUrl = (typeof selectedCreative !== 'undefined' && selectedCreative) ? (selectedCreative.URL || selectedCreative.url) : null;
 
-    // Read CTA dropdown
+    // Read selected CTA + budget cap + dates
     const cta = document.getElementById('adCTA').value || 'LEARN_MORE';
+    const totalBudget = parseFloat(document.getElementById('totalBudget').value) || null;
+    const startDateRaw = document.getElementById('adStartDate').value || null;
+    const endDateRaw = document.getElementById('adEndDate').value || null;
 
     if (!landingPageId) {
       showStatus('Please select a landing page first.', true);
@@ -2126,6 +2129,11 @@ async function launchLinkedInAd() {
       btn.textContent = '🚀 Launch LinkedIn Ad'; btn.disabled = false;
       return;
     }
+    if (totalBudget && !endDateRaw) {
+      showStatus('When a total budget cap is set, an end date is required. Set an end date in Step 4 or clear the total budget.', true);
+      btn.textContent = '🚀 Launch LinkedIn Ad'; btn.disabled = false;
+      return;
+    }
 
     const payload = {
       customer_id:     CUSTOMER_ID,
@@ -2134,14 +2142,17 @@ async function launchLinkedInAd() {
       copy:            document.getElementById('adIntro').value,
       url:             document.getElementById('adLandingPage').value,
       daily_budget:    parseFloat(document.getElementById('dailyBudget').value) || 50,
-      audience_mode:   wizardAudienceMode,                                    // cold | warm | both
+      total_budget:    totalBudget,
+      start_date:      startDateRaw,
+      end_date:        endDateRaw,
+      audience_mode:   wizardAudienceMode,
       cold_targeting:  {
         industries: pickMulti('wizColdIndustries'),
         titles:     pickMulti('wizColdTitles'),
         locations:  pickMulti('wizColdLocations'),
         companies:  pickMulti('wizColdCompanies')
       },
-      warm_segment:    selectedSegment,                                       // email_openers | first_degree | both
+      warm_segment:    selectedSegment,
       warm_retarget:   wizardAudienceMode !== 'cold',
       audience_tier:   wizardAudienceMode.toUpperCase(),
       landing_page_id: landingPageId,
