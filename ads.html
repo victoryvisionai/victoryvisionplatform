@@ -855,6 +855,22 @@
             </div>
           </div>
 
+          <!-- Connection-degree filter (LinkedIn relationship layer) -->
+          <div class="form-group" style="margin-bottom:16px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;">
+            <label style="font-size:13px;font-weight:700;color:#92400e;">🤝 LinkedIn Connection Filter <span style="font-weight:400;color:var(--muted);">(optional, layers on top of above)</span></label>
+            <select id="wizConnectionFilter" style="margin-top:6px;">
+              <option value="">No filter — reach everyone matching firmographics</option>
+              <option value="1ST_DEGREE">🤝 1st-degree connections only (your 5K network)</option>
+              <option value="1ST_AND_INDUSTRY">🤝🎯 1st-degree IN target industry</option>
+              <option value="2ND_DEGREE">🌐 2nd-degree (friends-of-friends)</option>
+              <option value="COMPANY_FOLLOWERS">⭐ Already follows Victory Vision page</option>
+              <option value="EXCLUDE_FOLLOWERS">🚫 Exclude existing page followers</option>
+            </select>
+            <div class="form-hint" style="font-size:11px;margin-top:6px;color:#92400e;">
+              💡 Different audiences perform very differently. AI SDR will A/B-test these over time.
+            </div>
+          </div>
+
           <!-- Cold targeting panel -->
           <div id="wizardColdPanel" style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;">
             <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
@@ -1053,13 +1069,40 @@
               </div>
 
               <div class="form-group">
-                <label>Optimization Goal</label>
-                <select id="optimizationGoal">
-                  <option value="CONVERSION" selected>Conversions (Meetings Booked)</option>
-                  <option value="CLICK">Clicks to Landing Page</option>
-                  <option value="IMPRESSION">Brand Awareness (Impressions)</option>
-                  <option value="VIDEO_VIEW">Video Views</option>
+                <label>🎯 Campaign Objective</label>
+                <select id="adObjective" onchange="onObjectiveChange()">
+                  <option value="WEBSITE_VISIT" selected>Website Visits — clicks to landing page (most common)</option>
+                  <option value="WEBSITE_CONVERSION">Website Conversions — optimize toward signups/downloads</option>
+                  <option value="LEAD_GENERATION">Lead Generation — in-LinkedIn lead form</option>
+                  <option value="BRAND_AWARENESS">Brand Awareness — maximize impressions (CPM)</option>
+                  <option value="ENGAGEMENT">Engagement — likes, comments, shares</option>
+                  <option value="VIDEO_VIEW">Video Views (video creative only)</option>
+                  <option value="FOLLOWERS">Page Followers — grow Victory Vision page</option>
                 </select>
+                <div class="form-hint" style="font-size:11px;">First-launch tip: Website Visits for cold ads, Followers to grow page audience.</div>
+              </div>
+
+              <div class="form-group">
+                <label>⚖️ Bidding Strategy</label>
+                <select id="adBidding" onchange="onBiddingChange()">
+                  <option value="MAX_DELIVERY" selected>Maximum Delivery — let LinkedIn optimize (recommended)</option>
+                  <option value="COST_CAP">Cost Cap — target a maximum CPC</option>
+                  <option value="MANUAL">Manual Bid — fixed CPC</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="adMaxCpcWrap" style="display:none;">
+                <label>Max CPC ($)</label>
+                <input type="number" id="adMaxCpc" min="2" max="50" step="0.50" value="5">
+                <div class="form-hint" style="font-size:11px;">LinkedIn typical range $2-$15 for B2B. Higher = faster delivery, higher cost.</div>
+              </div>
+
+              <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="adAudienceExpansion" style="width:auto;margin:0;">
+                  <span>Allow LinkedIn to broaden audience if narrow</span>
+                </label>
+                <div class="form-hint" style="font-size:11px;">LinkedIn adds similar people to your audience if your targeting is small. Cheaper reach, slightly less precise.</div>
               </div>
             </div>
             <div>
@@ -1557,7 +1600,8 @@ const N8N = {
   applyOptimization:    'https://victoryvision.app.n8n.cloud/webhook/ads/apply-optimization',
   getAttribution:       'https://victoryvision.app.n8n.cloud/webhook/ads/get-attribution',
   // Per-platform launch endpoints — each calls platform API, creates PAUSED/DRAFT campaign, returns deep_link
-  launchLinkedIn:       'https://victoryvision.app.n8n.cloud/webhook/ads/launch/linkedin',
+  launchLinkedIn:       'https://victoryvision.app.n8n.cloud/webhook/ads/launch/linkedin-v3',
+  submitCreative:       'https://victoryvision.app.n8n.cloud/webhook/ads/submit-creative',
   launchGoogle:         'https://victoryvision.app.n8n.cloud/webhook/ads/launch/google',
   launchMsft:           'https://victoryvision.app.n8n.cloud/webhook/ads/launch/msft',
 
@@ -2043,6 +2087,17 @@ function updateBudgetDisplay() {
   document.getElementById('budgetDisplay').textContent = `$${val}`;
 }
 
+// Show/hide max-CPC field based on bidding strategy
+function onBiddingChange() {
+  const bid = document.getElementById('adBidding').value;
+  document.getElementById('adMaxCpcWrap').style.display = (bid === 'COST_CAP' || bid === 'MANUAL') ? '' : 'none';
+}
+
+// Hook for future objective-driven UI changes (e.g., hide URL field if LEAD_GENERATION)
+function onObjectiveChange() {
+  // Reserved for future logic — for now just a stub so the inline onchange doesn't error
+}
+
 // ══════════════════════════════════════
 // LAUNCH SUMMARY
 // ══════════════════════════════════════
@@ -2050,7 +2105,7 @@ function buildLaunchSummary() {
   const segLabels = { email_openers: 'Email Openers', first_degree: '1st-Degree Connections', both: 'Both Combined' };
   const budget    = document.getElementById('dailyBudget').value;
   const total     = document.getElementById('totalBudget').value;
-  const goal      = document.getElementById('optimizationGoal').value;
+  const goal      = document.getElementById('adObjective').value;
   const start     = document.getElementById('adStartDate').value;
   const end       = document.getElementById('adEndDate').value;
   const headline  = document.getElementById('adHeadline').value || '(not set)';
@@ -2119,6 +2174,14 @@ async function launchLinkedInAd() {
     const startDateRaw = document.getElementById('adStartDate').value || null;
     const endDateRaw = document.getElementById('adEndDate').value || null;
 
+    // v3 fields
+    const objective         = document.getElementById('adObjective').value || 'WEBSITE_VISIT';
+    const biddingStrategy   = document.getElementById('adBidding').value || 'MAX_DELIVERY';
+    const maxCpcRaw         = parseFloat(document.getElementById('adMaxCpc').value);
+    const maxCpc            = (biddingStrategy === 'COST_CAP' || biddingStrategy === 'MANUAL') ? (maxCpcRaw || 5) : null;
+    const audienceExpansion = document.getElementById('adAudienceExpansion').checked === true;
+    const connectionFilter  = document.getElementById('wizConnectionFilter').value || null;
+
     if (!landingPageId) {
       showStatus('Please select a landing page first.', true);
       btn.textContent = '🚀 Launch LinkedIn Ad'; btn.disabled = false;
@@ -2135,30 +2198,55 @@ async function launchLinkedInAd() {
       return;
     }
 
+    // v3 payload — universal contract
     const payload = {
-      customer_id:     CUSTOMER_ID,
-      campaign_name:   document.getElementById('adHeadline').value || ('LinkedIn Campaign ' + new Date().toLocaleDateString()),
-      headline:        document.getElementById('adHeadline').value,
-      copy:            document.getElementById('adIntro').value,
-      url:             document.getElementById('adLandingPage').value,
-      daily_budget:    parseFloat(document.getElementById('dailyBudget').value) || 50,
-      total_budget:    totalBudget,
-      start_date:      startDateRaw,
-      end_date:        endDateRaw,
-      audience_mode:   wizardAudienceMode,
-      cold_targeting:  {
+      // Identity
+      customer_id:       CUSTOMER_ID,
+      applied_by:        'wizard',                                              // wizard | ai_sdr | api
+
+      // Campaign basics
+      campaign_name:     document.getElementById('adHeadline').value || ('LinkedIn Campaign ' + new Date().toLocaleDateString()),
+      headline:          document.getElementById('adHeadline').value,
+      copy:              document.getElementById('adIntro').value,
+      url:               document.getElementById('adLandingPage').value,
+      landing_page_id:   landingPageId,
+      page_type:         pageType,
+      creative_url:      creativeUrl,
+      cta:               cta,
+
+      // Budget + schedule
+      daily_budget:      parseFloat(document.getElementById('dailyBudget').value) || 50,
+      total_budget:      totalBudget,
+      start_date:        startDateRaw,
+      end_date:          endDateRaw,
+
+      // Strategy
+      objective:         objective,
+      bidding_strategy:  biddingStrategy,
+      max_cpc:           maxCpc,
+      audience_expansion_enabled: audienceExpansion,
+
+      // Audience descriptors
+      audience_tier:     wizardAudienceMode.toUpperCase(),
+      connection_filter: connectionFilter,
+      audience_mode:     wizardAudienceMode,
+      cold_targeting:    {
         industries: pickMulti('wizColdIndustries'),
         titles:     pickMulti('wizColdTitles'),
         locations:  pickMulti('wizColdLocations'),
         companies:  pickMulti('wizColdCompanies')
       },
-      warm_segment:    selectedSegment,
-      warm_retarget:   wizardAudienceMode !== 'cold',
-      audience_tier:   wizardAudienceMode.toUpperCase(),
-      landing_page_id: landingPageId,
-      page_type:       pageType,
-      creative_url:    creativeUrl,
-      cta:             cta
+      warm_segment:      selectedSegment,
+      warm_retarget:     wizardAudienceMode !== 'cold',
+
+      // CSV-formatted targeting (the brain's preferred shape)
+      target_industries: pickMulti('wizColdIndustries').join(','),
+      target_titles:     pickMulti('wizColdTitles').join(','),
+      target_locations:  pickMulti('wizColdLocations').join(',') || 'United States',
+
+      // A/B
+      ab_parent_id:      null,
+      ab_variant:        null
     };
 
     const raw = await apiCall(N8N.launchLinkedIn, payload);
@@ -2166,7 +2254,11 @@ async function launchLinkedInAd() {
 
     if (res && res.success) {
       const deepLinkHtml = res.deep_link ? ` <a href="${res.deep_link}" target="_blank" style="color:var(--navy);text-decoration:underline;">View in LinkedIn →</a>` : '';
-      showStatus(`🚀 LinkedIn campaign created as ${res.status || 'DRAFT'}!${deepLinkHtml}`, false);
+      const wasAutoSubmitted = res.applied_by === 'ai_sdr';
+      const statusMsg = wasAutoSubmitted
+        ? '✅ Ad created and auto-submitted to LinkedIn for review.'
+        : '🎬 Ad created as DRAFT — submit it for review from the dashboard when ready.';
+      showStatus(`${statusMsg}${deepLinkHtml}`, false);
       setTimeout(() => { switchTab('active'); loadCampaigns(); }, 1500);
     } else {
       const err = (res && (res.error || res.message)) || 'Unknown error';
@@ -2500,6 +2592,18 @@ function renderCampaignsTable(ads) {
     var roiStr    = roi != null ? '<span style="font-weight:700;color:' + roiColor + ';">' + roi + '%</span>' : '&ndash;';
     var cpm       = ad.cost_per_meeting ? '$' + Math.round(ad.cost_per_meeting) : (spend > 0 && (ad.meetings_booked || 0) > 0 ? '$' + Math.round(spend / (ad.meetings_booked || 1)) : '&ndash;');
     var pauseBtn  = ad.status === 'ACTIVE' ? '<button class="btn btn-sm" style="background:#f59e0b;color:white;border:none;margin-left:4px;" onclick="pauseCampaign(\'' + ad.id + '\')">&#9208;</button>' : '';
+    // Submit-for-review button: show when creative URN exists, hasn't been submitted yet
+    var canSubmit = (ad.platform === 'linkedin_ads')
+                 && (ad.ad_id && String(ad.ad_id).startsWith('urn:li:sponsoredCreative:'))
+                 && (!ad.review_status || ad.review_status === 'SUBMIT_FAILED')
+                 && (ad.status !== 'ACTIVE' && ad.status !== 'SUBMITTED_FOR_REVIEW');
+    var submitBtn = canSubmit ? '<button class="btn btn-sm" style="background:var(--blue);color:white;border:none;margin-left:4px;" title="Submit creative to LinkedIn for review" onclick="submitCreativeForReview(\'' + ad.id + '\')">🔍 Submit</button>' : '';
+    // Review status badge (separate from run-state status)
+    var reviewBadge = '';
+    if (ad.review_status === 'PENDING')        reviewBadge = '<span style="display:inline-block;font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;margin-left:4px;">⏳ Reviewing</span>';
+    else if (ad.review_status === 'APPROVED')  reviewBadge = '<span style="display:inline-block;font-size:10px;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:8px;margin-left:4px;">✓ Approved</span>';
+    else if (ad.review_status === 'REJECTED')  reviewBadge = '<span style="display:inline-block;font-size:10px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">⚠ Rejected</span>';
+    else if (ad.review_status === 'SUBMIT_FAILED') reviewBadge = '<span style="display:inline-block;font-size:10px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">⚠ Submit failed</span>';
     var dateStr   = ad.created_at ? new Date(ad.created_at).toLocaleDateString() : '';
     var platLabel = platform.replace('_ads', '').replace('_', ' ').toUpperCase();
     var statusLbl = (ad.status || 'Draft');
@@ -2514,8 +2618,8 @@ function renderCampaignsTable(ads) {
       '<td style="padding:10px 8px;">' + roiStr + '</td>' +
       '<td style="padding:10px 8px;font-weight:700;">' + fmtNum(ad.meetings_booked || 0) + '</td>' +
       '<td style="padding:10px 8px;">' + cpm + '</td>' +
-      '<td style="padding:10px 8px;"><span class="status-badge status-' + statusCls + '">' + statusLbl + '</span></td>' +
-      '<td style="padding:10px 8px;"><button class="btn btn-sm btn-ghost" onclick="openCampaignDetail(\'' + ad.id + '\')">Details</button>' + pauseBtn + '</td>' +
+      '<td style="padding:10px 8px;"><span class="status-badge status-' + statusCls + '">' + statusLbl + '</span>' + reviewBadge + '</td>' +
+      '<td style="padding:10px 8px;"><button class="btn btn-sm btn-ghost" onclick="openCampaignDetail(\'' + ad.id + '\')">Details</button>' + submitBtn + pauseBtn + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -2694,6 +2798,20 @@ async function pauseCampaign(id) {
     await apiCall(N8N.liPauseCampaign, { campaign_id: id });
     showStatus('Campaign paused.', false);
     loadCampaigns();
+  } catch(e) { showStatus('Failed: ' + e.message, true); }
+}
+
+async function submitCreativeForReview(adRowId) {
+  if (!confirm('Submit this creative to LinkedIn for review?\n\nLinkedIn typically reviews within 5 minutes to 24 hours. Once approved, the creative becomes eligible to run.')) return;
+  try {
+    const res = await apiCall(N8N.submitCreative, { customer_id: CUSTOMER_ID, ad_id: adRowId });
+    const r = Array.isArray(res) ? res[0] : res;
+    if (r && r.success) {
+      showStatus('🔍 Submitted to LinkedIn for review. Watch for the ⏳ Reviewing badge.', false);
+      loadCampaigns();
+    } else {
+      showStatus('Submit failed: ' + ((r && (r.error || r.message)) || 'unknown error'), true);
+    }
   } catch(e) { showStatus('Failed: ' + e.message, true); }
 }
 
@@ -3038,6 +3156,7 @@ window.closeBBModal = closeBBModal;
 window.openCampaignDetail = openCampaignDetail;
 window.closeCampaignModal = closeCampaignModal;
 window.pauseCampaign = pauseCampaign;
+window.submitCreativeForReview = submitCreativeForReview;
 window.deleteCampaign = deleteCampaign;
 window.reserveBillboard = reserveBillboard;
 window.applyOpt = applyOpt;
