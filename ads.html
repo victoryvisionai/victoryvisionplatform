@@ -975,12 +975,14 @@
               <div class="form-group">
                 <label>Call to Action</label>
                 <select id="adCTA" onchange="updateAdPreview()">
-                  <option value="LEARN_MORE">Learn More</option>
-                  <option value="SIGN_UP">Sign Up</option>
-                  <option value="CONTACT_US" selected>Contact Us</option>
-                  <option value="DOWNLOAD">Download</option>
-                  <option value="REGISTER">Register</option>
+                  <option value="LEARN_MORE" selected>Learn More</option>
+                  <option value="DOWNLOAD">Download — for lead magnets</option>
+                  <option value="SUBSCRIBE">Subscribe — for newsletters</option>
+                  <option value="REGISTER">Register — for events / webinars</option>
                   <option value="REQUEST_DEMO">Request Demo</option>
+                  <option value="SIGN_UP">Sign Up</option>
+                  <option value="VISIT_WEBSITE">Visit Website</option>
+                  <option value="VIEW_QUOTE">View Quote</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1982,7 +1984,7 @@ function updateAdPreview() {
   const headline = document.getElementById('adHeadline').value || 'Your Headline Here';
   const intro    = document.getElementById('adIntro').value   || 'Your intro text appears here.';
   const ctaVal   = document.getElementById('adCTA').value;
-  const ctaLabels = { LEARN_MORE: 'Learn More', SIGN_UP: 'Sign Up', CONTACT_US: 'Contact Us', DOWNLOAD: 'Download', REGISTER: 'Register', REQUEST_DEMO: 'Request Demo' };
+  const ctaLabels = { LEARN_MORE: 'Learn More', DOWNLOAD: 'Download', SUBSCRIBE: 'Subscribe', REGISTER: 'Register', REQUEST_DEMO: 'Request Demo', SIGN_UP: 'Sign Up', VISIT_WEBSITE: 'Visit Website', VIEW_QUOTE: 'View Quote' };
   const ctaLabel = ctaLabels[ctaVal] || 'Learn More';
 
   document.getElementById('liPreviewHeadline').textContent = headline;
@@ -2102,7 +2104,31 @@ async function launchLinkedInAd() {
       const sel = document.getElementById(id);
       return sel ? Array.from(sel.selectedOptions).map(o => o.value) : [];
     }
+    // Read selected page UUID + type from option dataset
+    const pageSelEl = document.getElementById('adLandingPage');
+    const pageOpt = pageSelEl.options[pageSelEl.selectedIndex];
+    const landingPageId = (pageOpt && pageOpt.dataset.pageId) || null;
+    const pageType = (pageOpt && pageOpt.dataset.pageType) || null;
+
+    // Read selected creative from selectedCreative global (set by selectCreative())
+    const creativeUrl = (typeof selectedCreative !== 'undefined' && selectedCreative) ? (selectedCreative.URL || selectedCreative.url) : null;
+
+    // Read CTA dropdown
+    const cta = document.getElementById('adCTA').value || 'LEARN_MORE';
+
+    if (!landingPageId) {
+      showStatus('Please select a landing page first.', true);
+      btn.textContent = '🚀 Launch LinkedIn Ad'; btn.disabled = false;
+      return;
+    }
+    if (!creativeUrl) {
+      showStatus('Please select a creative in Step 2 first.', true);
+      btn.textContent = '🚀 Launch LinkedIn Ad'; btn.disabled = false;
+      return;
+    }
+
     const payload = {
+      customer_id:     CUSTOMER_ID,
       campaign_name:   document.getElementById('adHeadline').value || ('LinkedIn Campaign ' + new Date().toLocaleDateString()),
       headline:        document.getElementById('adHeadline').value,
       copy:            document.getElementById('adIntro').value,
@@ -2118,7 +2144,10 @@ async function launchLinkedInAd() {
       warm_segment:    selectedSegment,                                       // email_openers | first_degree | both
       warm_retarget:   wizardAudienceMode !== 'cold',
       audience_tier:   wizardAudienceMode.toUpperCase(),
-      landing_page_id: null
+      landing_page_id: landingPageId,
+      page_type:       pageType,
+      creative_url:    creativeUrl,
+      cta:             cta
     };
 
     const raw = await apiCall(N8N.launchLinkedIn, payload);
@@ -2855,10 +2884,17 @@ async function loadLandingPages() {
     const res = await apiCall(N8N.getPages);
     const pages = Array.isArray(res) ? res : (res.pages || res.value || []);
     const sel = document.getElementById('adLandingPage');
-    pages.forEach(p => {
+    // Only show ad-eligible page types
+    const eligible = pages.filter(p => ['lead_magnet','landing','newsletter'].includes(p.page_type));
+    eligible.forEach(p => {
+      let url = p.URL || p.url || p.page_url || '';
+      if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
       const opt = document.createElement('option');
-      opt.value = p.url || p.page_url || '';
-      opt.textContent = p.name || p.page_name || p.url || 'Untitled Page';
+      opt.value = url;
+      opt.dataset.pageId = p.id || '';
+      opt.dataset.pageType = p.page_type || 'landing';
+      const typeIcon = p.page_type === 'lead_magnet' ? '📥 ' : (p.page_type === 'newsletter' ? '📧 ' : '🌐 ');
+      opt.textContent = typeIcon + (p.name || p.page_name || url || 'Untitled Page');
       sel.appendChild(opt);
     });
   } catch(e) { /* silent */ }
