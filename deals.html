@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Manage your placement deals and pipelines."/>
+  <meta name="author" content="Victory Vision"/>
+  <title>Victory Vision AI - Deals</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/intro.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+
+    /* === Navbar (matches contacts page) === */
+    .navbar { background-color: #0A3161; color: white; padding: 15px;
+              display: flex; justify-content: space-between; align-items: center; }
+    .navbar nav ul { display: flex; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+    .navbar nav ul li { margin: 0 10px; }
+    .navbar nav ul li a { color: white; text-decoration: none; }
+    .navbar nav ul li a.active { font-weight: bold; border-bottom: 2px solid #fff; padding-bottom: 4px; }
+    .navbar .user-info { display: flex; align-items: center; gap: 10px; }
+    .subscription-medallion { display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(45deg, #CD7F32, #A0522D); color: white; padding: 8px 15px;
+      border-radius: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 1px; cursor: pointer; position: relative; border: none; transition: all 0.3s ease; }
+    .subscription-medallion.bronze { background: linear-gradient(45deg, #CD7F32, #A0522D); }
+    .subscription-medallion.silver { background: linear-gradient(45deg, #C0C0C0, #808080); }
+    .subscription-medallion.gold { background: linear-gradient(45deg, #FFD700, #FFA500); }
+    .logo img { height: 60px; width: auto; max-height: 100px; }
+
+    /* === Layout === */
+    .content { padding: 20px 4px; max-width: 1600px; margin: 0 auto; }
+    .page-header { margin-bottom: 20px; padding: 0 16px; }
+    .page-title { font-size: 2.5rem; font-weight: bold; color: #0A3161; margin-bottom: 0.5rem; }
+    .page-subtitle { font-size: 1.1rem; color: #666; }
+
+    .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px; margin: 0 16px 20px 16px; }
+    .section-header { background: linear-gradient(135deg, #0A3161, #1a4c80); color: white;
+                      padding: 15px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0;
+                      display: flex; justify-content: space-between; align-items: center; }
+    .section-header h2 { margin: 0; font-size: 1.2rem; }
+
+    /* === Deal list (top of page) === */
+    .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                  gap: 16px; }
+    .deal-card { background: white; border: 2px solid transparent; border-radius: 8px;
+                 padding: 16px; cursor: pointer; transition: all 0.2s ease;
+                 box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+    .deal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .deal-card.selected { border-color: #0A3161; background: #f0f6ff; }
+    .deal-card-header { display: flex; justify-content: space-between; align-items: flex-start;
+                        margin-bottom: 8px; }
+    .deal-card-name { font-weight: bold; font-size: 1.05rem; color: #0A3161;
+                      flex: 1; padding-right: 8px; }
+    .deal-card-target { font-weight: bold; color: #28a745; font-size: 1.05rem; white-space: nowrap; }
+    .deal-card-status { display: inline-block; padding: 3px 10px; border-radius: 12px;
+                        font-size: 0.75rem; font-weight: bold; text-transform: uppercase;
+                        letter-spacing: 0.5px; margin-bottom: 8px; }
+    .status-pre-launch { background: #fff3cd; color: #856404; }
+    .status-pre-marketing { background: #d1ecf1; color: #0c5460; }
+    .status-launched { background: #d4edda; color: #155724; }
+    .status-soft-circle { background: #cce5ff; color: #004085; }
+    .status-final-close { background: #e2e3e5; color: #383d41; }
+    .status-closed { background: #d6d8db; color: #1b1e21; }
+    .status-paused { background: #f8d7da; color: #721c24; }
+
+    .deal-card-meta { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+    .deal-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+                       font-size: 0.85rem; margin-top: 12px; padding-top: 12px;
+                       border-top: 1px solid #eee; }
+    .deal-card-stat-label { color: #666; }
+    .deal-card-stat-value { font-weight: bold; color: #0A3161; }
+
+    /* === Tabs === */
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #ddd; margin: 0 16px 20px 16px;
+            padding: 0; }
+    .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent;
+           font-weight: 500; color: #666; transition: all 0.2s ease; user-select: none; }
+    .tab:hover { color: #0A3161; background: #f8f9fa; }
+    .tab.active { color: #0A3161; border-bottom-color: #0A3161; font-weight: bold; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* === Pipeline (kanban) === */
+    .pipeline { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr));
+                gap: 12px; overflow-x: auto; padding-bottom: 16px; }
+    .pipeline-column { background: #f0f2f5; border-radius: 8px; padding: 12px;
+                       min-width: 180px; min-height: 400px; }
+    .pipeline-column-header { font-weight: bold; color: #0A3161; margin-bottom: 12px;
+                              font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;
+                              display: flex; justify-content: space-between; align-items: center; }
+    .pipeline-column-count { background: #0A3161; color: white; border-radius: 12px;
+                             padding: 2px 8px; font-size: 0.75rem; }
+    .pipeline-card { background: white; border-radius: 6px; padding: 10px;
+                     margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                     cursor: move; transition: all 0.15s ease; font-size: 0.85rem; }
+    .pipeline-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
+    .pipeline-card-name { font-weight: bold; color: #0A3161; margin-bottom: 4px; }
+    .pipeline-card-company { color: #666; font-size: 0.8rem; margin-bottom: 6px; }
+    .pipeline-card-meta { display: flex; justify-content: space-between; align-items: center;
+                          font-size: 0.75rem; color: #666; }
+    .pipeline-card-score { background: #28a745; color: white; padding: 2px 6px; border-radius: 10px;
+                           font-weight: bold; font-size: 0.7rem; }
+    .pipeline-card-score.low { background: #6c757d; }
+    .pipeline-card-score.mid { background: #ffc107; color: #333; }
+    .pipeline-card-score.high { background: #28a745; }
+    .pipeline-card-warm { display: flex; gap: 4px; }
+    .warm-badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: bold; }
+    .warm-wp { background: #ffeaa7; color: #6e4d00; }
+    .warm-cb { background: #74b9ff; color: white; }
+    .warm-hv { background: #a29bfe; color: white; }
+    .warm-fr { background: #fab1a0; color: #6e4d00; }
+    .warm-fc { background: #55efc4; color: #006856; }
+    .warm-vt { background: #ff7675; color: white; }
+    .warm-cpg { background: #ffeaa7; color: #6e4d00; }
+
+    .pipeline-card.dragging { opacity: 0.5; }
+    .pipeline-column.drag-over { background: #d1ecf1; border: 2px dashed #0c5460; }
+
+    /* === Targets table === */
+    .targets-table { width: 100%; background: white; border-collapse: collapse;
+                     font-size: 0.9rem; }
+    .targets-table thead th { background: #0A3161; color: white; padding: 10px 8px;
+                              text-align: left; font-weight: bold; position: sticky; top: 0; }
+    .targets-table tbody td { padding: 8px; border-bottom: 1px solid #eee; }
+    .targets-table tbody tr:hover { background: #f8f9fa; cursor: pointer; }
+    .targets-table .score-cell { text-align: center; font-weight: bold; }
+
+    /* === Dashboard KPIs === */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 16px; margin-bottom: 24px; }
+    .kpi-tile { background: white; border-radius: 8px; padding: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08); border-left: 4px solid #0A3161; }
+    .kpi-label { font-size: 0.85rem; color: #666; text-transform: uppercase;
+                 letter-spacing: 0.5px; margin-bottom: 8px; }
+    .kpi-value { font-size: 2rem; font-weight: bold; color: #0A3161; }
+    .kpi-secondary { font-size: 0.9rem; color: #28a745; margin-top: 4px; }
+
+    /* === Buttons === */
+    .btn { background: #0A3161; color: white; border: none; padding: 8px 16px;
+           border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;
+           transition: all 0.2s ease; text-decoration: none; display: inline-block; }
+    .btn:hover { background: #1a4c80; transform: translateY(-1px); }
+    .btn-secondary { background: #6c757d; }
+    .btn-secondary:hover { background: #5a6268; }
+    .btn-success { background: #28a745; }
+    .btn-success:hover { background: #218838; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+    .empty-state h3 { color: #555; margin-bottom: 8px; }
+
+    /* === Modal === */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+             background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center;
+             align-items: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 10px; padding: 30px;
+                     max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-content h2 { margin-top: 0; color: #0A3161; }
+    .modal-close { float: right; background: none; border: none; font-size: 1.5rem;
+                   cursor: pointer; color: #888; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #555; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 0.95rem; box-sizing: border-box; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    /* === Status banner === */
+    #statusBanner { position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+                    border-radius: 6px; color: white; z-index: 2000; display: none;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 400px; }
+    #statusBanner.success { background: #28a745; }
+    #statusBanner.error { background: #dc3545; }
+    #statusBanner.info { background: #17a2b8; }
+
+    /* === Loading === */
+    .loading { display: inline-block; width: 16px; height: 16px;
+               border: 2px solid #f3f3f3; border-top: 2px solid #0A3161;
+               border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .pipeline { grid-template-columns: 1fr; }
+      .deals-grid { grid-template-columns: 1fr; }
+      .navbar nav ul { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="logo.jpg" alt="Victory Vision Logo"
+         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="companyprofile">Profile</a></li>
+      <li><a href="campaigns">Campaigns</a></li>
+      <li><a href="media">Media</a></li>
+      <li><a href="pages">Pages</a></li>
+      <li><a href="social">Social</a></li>
+      <li><a href="contacts">Contacts</a></li>
+      <li><a href="ads">Ads</a></li>
+      <li><a href="messages">Messages</a></li>
+      <li><a href="meetings">Meetings</a></li>
+      <li><a href="ai">Analytics</a></li>
+      <li><a href="deals" class="active">Deals</a></li>
+      <li><a href="settings">Settings</a></li>
+    </ul>
+  </nav>
+  <div class="user-info">
+    <span id="userEmail"></span>
+    <div id="subscriptionMedallion" class="subscription-medallion bronze">
+      <span class="plan-name">Bronze</span>
+    </div>
+  </div>
+</header>
+
+<div id="statusBanner"></div>
+
+<div class="content">
+  <div class="page-header">
+    <h1 class="page-title">Deals</h1>
+    <p class="page-subtitle">Manage placement mandates and capital-raise pipelines</p>
+  </div>
+
+  <!-- Top: list of all deals as cards -->
+  <div class="card">
+    <div class="section-header">
+      <h2>Active Deals (<span id="dealCount">0</span>)</h2>
+      <div>
+        <button class="btn btn-success btn-sm" onclick="openNewDealModal()">+ New Deal</button>
+      </div>
+    </div>
+    <div id="dealsList" class="deals-grid">
+      <div class="empty-state"><div class="loading"></div> Loading deals...</div>
+    </div>
+  </div>
+
+  <!-- Selected deal detail -->
+  <div id="dealDetail" style="display: none;">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2 id="selectedDealName" style="color: #0A3161; margin: 0;">—</h2>
+        <p id="selectedDealMeta" style="color: #666; margin: 4px 0 0 0;">—</p>
+      </div>
+      <div>
+        <button class="btn btn-sm" onclick="editDealMeta()">Edit Deal</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="pipeline">Pipeline</div>
+      <div class="tab" data-tab="targets">Targets</div>
+      <div class="tab" data-tab="activity">Activity</div>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="card">
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div id="dealNarrative"></div>
+      </div>
+    </div>
+
+    <!-- PIPELINE TAB -->
+    <div class="tab-content" id="tab-pipeline">
+      <div class="card">
+        <div class="section-header">
+          <h2>Pipeline (drag cards to move stages)</h2>
+          <div style="font-size: 0.85rem;">
+            <button class="btn btn-sm btn-secondary" onclick="renderPipeline()">Refresh</button>
+          </div>
+        </div>
+        <div class="pipeline" id="pipelineBoard"></div>
+      </div>
+    </div>
+
+    <!-- TARGETS TAB -->
+    <div class="tab-content" id="tab-targets">
+      <div class="card">
+        <div class="section-header">
+          <h2>All Targets (sortable)</h2>
+          <div>
+            <button class="btn btn-sm btn-secondary" onclick="downloadTargetsCSV()">Download CSV</button>
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="targets-table" id="targetsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTargets('name')">Name ↕</th>
+                <th onclick="sortTargets('company')">Company ↕</th>
+                <th onclick="sortTargets('title')">Title ↕</th>
+                <th onclick="sortTargets('location')">Location ↕</th>
+                <th onclick="sortTargets('score')">Score ↕</th>
+                <th>Warm</th>
+                <th onclick="sortTargets('stage')">Stage ↕</th>
+                <th onclick="sortTargets('last_touch')">Last Touch ↕</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="targetsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY TAB -->
+    <div class="tab-content" id="tab-activity">
+      <div class="card">
+        <div class="section-header">
+          <h2>Activity Feed</h2>
+        </div>
+        <div id="activityFeed">Loading activity...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Deal modal -->
+<div class="modal" id="newDealModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeNewDealModal()">×</button>
+    <h2>New Deal</h2>
+    <div class="form-group">
+      <label>Deal Name *</label>
+      <input type="text" id="newDealName" placeholder="e.g. Provenance Consumer - $10M"/>
+    </div>
+    <div class="form-group">
+      <label>Campaign Target</label>
+      <input type="text" id="newDealTarget" placeholder="$10M or 'Increase brand awareness'"/>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="newDealStatus">
+        <option value="pre-launch">Pre-Launch</option>
+        <option value="pre-marketing">Pre-Marketing</option>
+        <option value="launched">Launched</option>
+        <option value="soft-circle">Soft-Circle</option>
+        <option value="final-close">Final Close</option>
+        <option value="closed">Closed</option>
+        <option value="paused">Paused</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Goal Description</label>
+      <textarea id="newDealGoal" placeholder="What is this deal about? Who is the client?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>ICP (target LP profile)</label>
+      <textarea id="newDealICP" placeholder="Who are the ideal LPs/investors for this deal?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Co-Advisor (if any)</label>
+      <input type="text" id="newDealCoAdvisor" placeholder="e.g. Lincoln International"/>
+    </div>
+    <div class="form-group">
+      <label>Target Close Date</label>
+      <input type="date" id="newDealCloseDate"/>
+    </div>
+    <button class="btn btn-success" onclick="createNewDeal()">Create Deal</button>
+    <button class="btn btn-secondary" onclick="closeNewDealModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Edit Deal Meta modal -->
+<div class="modal" id="editDealModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeEditDealModal()">×</button>
+    <h2>Edit Deal</h2>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="editDealStatus">
+        <option value="pre-launch">Pre-Launch</option>
+        <option value="pre-marketing">Pre-Marketing</option>
+        <option value="launched">Launched</option>
+        <option value="soft-circle">Soft-Circle</option>
+        <option value="final-close">Final Close</option>
+        <option value="closed">Closed</option>
+        <option value="paused">Paused</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Campaign Target</label>
+      <input type="text" id="editDealTarget"/>
+    </div>
+    <div class="form-group">
+      <label>Co-Advisor</label>
+      <input type="text" id="editDealCoAdvisor"/>
+    </div>
+    <div class="form-group">
+      <label>Target Close Date</label>
+      <input type="date" id="editDealCloseDate"/>
+    </div>
+    <div class="form-group">
+      <label>Soft-Circle Amount (USD)</label>
+      <input type="number" id="editDealSoftCircle" placeholder="0"/>
+    </div>
+    <button class="btn btn-success" onclick="saveDealMeta()">Save</button>
+    <button class="btn btn-secondary" onclick="closeEditDealModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Supabase configuration (matches contacts page exactly)
+// ============================================================
+const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+// ============================================================
+// Global state
+// ============================================================
+let CUSTOMER_ID = null;
+let authToken = null;
+let allDeals = [];           // from deals_dashboard view
+let selectedDealId = null;
+let selectedDeal = null;
+let dealTargets = [];        // all contacts tagged for current deal
+let targetsSortField = 'score';
+let targetsSortDir = 'desc';
+
+const STAGES = [
+  { key: 'not-contacted', label: 'Not Contacted', color: '#6c757d' },
+  { key: 'soft-touch',    label: 'Soft Touch',    color: '#17a2b8' },
+  { key: 'pitched',       label: 'Pitched',       color: '#007bff' },
+  { key: 'soft-circle',   label: 'Soft Circle',   color: '#ffc107' },
+  { key: 'committed',     label: 'Committed',     color: '#28a745' },
+  { key: 'closed',        label: 'Closed',        color: '#155724' },
+  { key: 'declined',      label: 'Declined',      color: '#dc3545' },
+];
+
+// ============================================================
+// Utility: derive deal slug from deal name (must match SQL view)
+// "Provenance Consumer - $10M" -> "provenance-consumer"
+// ============================================================
+function dealSlug(dealName) {
+  const beforeDash = dealName.split(' - ')[0];
+  return beforeDash.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// ============================================================
+// Status banner
+// ============================================================
+function showStatus(message, type = 'info') {
+  const banner = document.getElementById('statusBanner');
+  banner.className = type;
+  banner.textContent = message;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 4000);
+}
+
+// ============================================================
+// Auth (same pattern as contacts page)
+// ============================================================
+async function checkAuthentication() {
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session || !session.user) return false;
+    CUSTOMER_ID = session.user.email;
+    authToken = session.access_token;
+    document.getElementById('userEmail').textContent = CUSTOMER_ID;
+    return true;
+  } catch (e) {
+    console.error('Auth check error:', e);
+    return false;
+  }
+}
+
+function redirectToLogin() {
+  localStorage.removeItem('vv_session');
+  window.location.href = 'login.html';
+}
+
+// ============================================================
+// Load deals from the SQL view
+// ============================================================
+async function loadDeals() {
+  const { data, error } = await supabaseClient
+    .from('deals_dashboard')
+    .select('*')
+    .eq('cus_id', CUSTOMER_ID)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Load deals error:', error);
+    showStatus('Failed to load deals: ' + error.message, 'error');
+    return;
+  }
+
+  allDeals = data || [];
+  renderDealsList();
+}
+
+function renderDealsList() {
+  const container = document.getElementById('dealsList');
+  document.getElementById('dealCount').textContent = allDeals.length;
+
+  if (allDeals.length === 0) {
+    container.innerHTML = '<div class="empty-state"><h3>No deals yet</h3><p>Click "+ New Deal" to create your first placement mandate.</p></div>';
+    return;
+  }
+
+  container.innerHTML = allDeals.map(d => {
+    const statusClass = 'status-' + (d.status || 'pre-launch').replace(/_/g, '-');
+    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo mandate';
+    const daysLine = d.target_close_date
+      ? `Day ${d.days_active}/${daysBetween(d.created_at, d.target_close_date)}`
+      : `Day ${d.days_active}`;
+    return `
+      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" onclick="selectDeal('${d.deal_id}')">
+        <div class="deal-card-header">
+          <div class="deal-card-name">${esc(d.deal_name)}</div>
+          <div class="deal-card-target">${esc(d.campaign_target || '—')}</div>
+        </div>
+        <div class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</div>
+        <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
+        <div class="deal-card-stats">
+          <div class="deal-card-stat-label">Prospects</div>
+          <div class="deal-card-stat-value">${d.total_prospects}</div>
+          <div class="deal-card-stat-label">Soft Circle</div>
+          <div class="deal-card-stat-value">$${formatMoney(d.soft_circle_amount_usd || 0)}</div>
+          <div class="deal-card-stat-label">Pitched</div>
+          <div class="deal-card-stat-value">${d.pitched_count}</div>
+          <div class="deal-card-stat-label">Committed</div>
+          <div class="deal-card-stat-value">${d.committed_count}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function daysBetween(start, end) {
+  if (!end) return '—';
+  const diff = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
+  return Math.round(diff);
+}
+
+function formatMoney(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return String(n);
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================
+// Select a deal
+// ============================================================
+async function selectDeal(dealId) {
+  selectedDealId = dealId;
+  selectedDeal = allDeals.find(d => d.deal_id === dealId);
+  renderDealsList();
+  if (!selectedDeal) return;
+
+  document.getElementById('dealDetail').style.display = 'block';
+  document.getElementById('selectedDealName').textContent = selectedDeal.deal_name;
+  document.getElementById('selectedDealMeta').textContent =
+    `${selectedDeal.campaign_target || ''} · ${selectedDeal.status || ''} · ${selectedDeal.co_advisor ? 'Co-advisor: ' + selectedDeal.co_advisor : 'Solo mandate'} · Day ${selectedDeal.days_active}${selectedDeal.target_close_date ? '/' + daysBetween(selectedDeal.created_at, selectedDeal.target_close_date) : ''}`;
+
+  // Load all targets for this deal
+  await loadDealTargets();
+  // Render whichever tab is active
+  renderDashboard();
+  renderPipeline();
+  renderTargets();
+  renderActivity();
+
+  // Scroll into view
+  document.getElementById('dealDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadDealTargets() {
+  const slug = dealSlug(selectedDeal.deal_name);
+  const { data, error } = await supabaseClient
+    .from('contacts')
+    .select('id, name, first_name, title, company, location, tags, scores, linkedin, email, last_emailed_date, last_responded, meeting_date, customer_journey, personal_summary')
+    .eq('cus_id', CUSTOMER_ID)
+    .ilike('tags', `%deal:${slug}%`);
+
+  if (error) {
+    console.error('Load targets error:', error);
+    showStatus('Failed to load targets: ' + error.message, 'error');
+    dealTargets = [];
+    return;
+  }
+  // Annotate each target with its deal-specific stage (from tags)
+  dealTargets = (data || []).map(c => {
+    const tagsStr = c.tags || '';
+    const stageMatch = tagsStr.match(new RegExp(`deal:${slug}:([a-z-]+)`));
+    const stage = stageMatch ? stageMatch[1] : 'not-contacted';
+    const score = c.scores && c.scores[slug] != null ? c.scores[slug] : null;
+    return { ...c, _stage: stage, _score: score };
+  });
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('tab')) {
+    const tabKey = e.target.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    document.getElementById('tab-' + tabKey).classList.add('active');
+  }
+});
+
+// ============================================================
+// DASHBOARD TAB
+// ============================================================
+function renderDashboard() {
+  if (!selectedDeal) return;
+
+  const kpis = [
+    { label: 'Total Prospects', value: selectedDeal.total_prospects || 0 },
+    { label: 'Pitched', value: selectedDeal.pitched_count || 0 },
+    { label: 'Soft-Circle', value: selectedDeal.soft_circle_count || 0,
+      secondary: '$' + formatMoney(selectedDeal.soft_circle_amount_usd || 0) },
+    { label: 'Committed', value: selectedDeal.committed_count || 0 },
+    { label: 'Closed', value: selectedDeal.closed_count || 0 },
+    { label: 'Declined', value: selectedDeal.declined_count || 0 },
+  ];
+
+  // Add days/timeline KPI
+  if (selectedDeal.target_close_date) {
+    const daysRemaining = daysBetween(new Date().toISOString(), selectedDeal.target_close_date);
+    kpis.unshift({
+      label: 'Days to Close',
+      value: daysRemaining,
+      secondary: `target ${selectedDeal.target_close_date}`
+    });
+  }
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-tile">
+      <div class="kpi-label">${esc(k.label)}</div>
+      <div class="kpi-value">${esc(k.value)}</div>
+      ${k.secondary ? `<div class="kpi-secondary">${esc(k.secondary)}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Narrative block
+  const slug = dealSlug(selectedDeal.deal_name);
+  const top3 = [...dealTargets]
+    .filter(t => t._score != null)
+    .sort((a, b) => (b._score || 0) - (a._score || 0))
+    .slice(0, 3);
+
+  const warmCounts = countWarmAngles(dealTargets);
+  document.getElementById('dealNarrative').innerHTML = `
+    <h3 style="color:#0A3161;">Pipeline Composition</h3>
+    <p><strong>Warm-angle coverage:</strong>
+      West Point: ${warmCounts.wp} ·
+      Columbia: ${warmCounts.cb} ·
+      Harvard: ${warmCounts.hv} ·
+      Friend/Personal: ${warmCounts.fr} ·
+      Former Coworker: ${warmCounts.fc} ·
+      Veteran: ${warmCounts.vt}
+    </p>
+    ${top3.length > 0 ? `
+      <h3 style="color:#0A3161;">Top 3 Targets</h3>
+      <ol style="line-height: 1.8;">
+        ${top3.map(t => `<li><strong>${esc(t.name)}</strong> (${esc(t.company || '—')}) — score ${t._score}</li>`).join('')}
+      </ol>` : ''
+    }
+    ${selectedDeal.goal_description ? `
+      <h3 style="color:#0A3161;">Mandate</h3>
+      <p style="white-space: pre-wrap;">${esc(selectedDeal.goal_description)}</p>
+    ` : ''}
+  `;
+}
+
+function countWarmAngles(targets) {
+  const c = { wp: 0, cb: 0, hv: 0, fr: 0, fc: 0, vt: 0 };
+  for (const t of targets) {
+    const tags = (t.tags || '').toLowerCase();
+    if (tags.includes('west-point')) c.wp++;
+    if (tags.includes('columbia')) c.cb++;
+    if (tags.includes('harvard')) c.hv++;
+    if (tags.includes('friend')) c.fr++;
+    if (tags.includes('former-coworker')) c.fc++;
+    if (tags.includes('veteran')) c.vt++;
+  }
+  return c;
+}
+
+// ============================================================
+// PIPELINE TAB (kanban with drag-drop)
+// ============================================================
+function renderPipeline() {
+  if (!selectedDeal) return;
+  const slug = dealSlug(selectedDeal.deal_name);
+  const board = document.getElementById('pipelineBoard');
+
+  const grouped = {};
+  STAGES.forEach(s => { grouped[s.key] = []; });
+  dealTargets.forEach(t => {
+    const stage = t._stage || 'not-contacted';
+    if (!grouped[stage]) grouped[stage] = [];
+    grouped[stage].push(t);
+  });
+
+  board.innerHTML = STAGES.map(stage => {
+    const cards = grouped[stage.key] || [];
+    return `
+      <div class="pipeline-column" data-stage="${stage.key}"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event, '${stage.key}')">
+        <div class="pipeline-column-header">
+          <span>${stage.label}</span>
+          <span class="pipeline-column-count">${cards.length}</span>
+        </div>
+        ${cards.map(c => renderPipelineCard(c)).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPipelineCard(c) {
+  const scoreClass = c._score == null ? 'low' : (c._score >= 70 ? 'high' : (c._score >= 50 ? 'mid' : 'low'));
+  const tags = (c.tags || '').toLowerCase();
+  const warmBadges = [];
+  if (tags.includes('west-point')) warmBadges.push('<span class="warm-badge warm-wp">WP</span>');
+  if (tags.includes('columbia')) warmBadges.push('<span class="warm-badge warm-cb">CB</span>');
+  if (tags.includes('harvard')) warmBadges.push('<span class="warm-badge warm-hv">HV</span>');
+  if (tags.includes('friend')) warmBadges.push('<span class="warm-badge warm-fr">FR</span>');
+  if (tags.includes('former-coworker')) warmBadges.push('<span class="warm-badge warm-fc">FC</span>');
+  if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
+  if (tags.includes('cpg') || tags.includes('consumer')) warmBadges.push('<span class="warm-badge warm-cpg">CPG</span>');
+
+  return `
+    <div class="pipeline-card" draggable="true" data-contact-id="${c.id}" ondragstart="handleDragStart(event, '${c.id}')">
+      <div class="pipeline-card-name">${esc(c.name)}</div>
+      <div class="pipeline-card-company">${esc(c.company || '')}</div>
+      <div class="pipeline-card-meta">
+        <div class="pipeline-card-warm">${warmBadges.join('')}</div>
+        ${c._score != null ? `<div class="pipeline-card-score ${scoreClass}">${c._score}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+let dragSource = null;
+function handleDragStart(e, contactId) {
+  dragSource = contactId;
+  e.target.classList.add('dragging');
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+async function handleDrop(e, newStage) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragSource) return;
+
+  await moveContactToStage(dragSource, newStage);
+  dragSource = null;
+}
+
+async function moveContactToStage(contactId, newStage) {
+  const slug = dealSlug(selectedDeal.deal_name);
+  const contact = dealTargets.find(t => t.id === contactId);
+  if (!contact) return;
+
+  // Build new tags: remove any existing "deal:<slug>:<oldstage>" and add new
+  const currentTags = (contact.tags || '').split(/,\s*/).filter(Boolean);
+  const baseTagPattern = new RegExp(`^deal:${slug}(:.+)?$`);
+  let baseTag = `deal:${slug}`; // preserve the base tag for the deal
+  const filteredTags = currentTags.filter(t => !baseTagPattern.test(t));
+  filteredTags.push(baseTag);
+  if (newStage !== 'not-contacted') {
+    filteredTags.push(`deal:${slug}:${newStage}`);
+  }
+  const newTagsStr = filteredTags.join(', ');
+
+  // Append journey event
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'deal_stage_changed',
+    deal: slug,
+    from: contact._stage,
+    to: newStage
+  };
+  const existingJourney = contact.customer_journey || [];
+  const newJourney = [...existingJourney, journeyEntry];
+
+  const { error } = await supabaseClient
+    .from('contacts')
+    .update({ tags: newTagsStr, customer_journey: newJourney })
+    .eq('id', contactId);
+
+  if (error) {
+    showStatus('Failed to move card: ' + error.message, 'error');
+    console.error(error);
+    return;
+  }
+
+  // Update local state and re-render
+  contact._stage = newStage;
+  contact.tags = newTagsStr;
+  contact.customer_journey = newJourney;
+  renderPipeline();
+  showStatus(`Moved ${contact.name} to ${newStage}`, 'success');
+
+  // Refresh aggregates (dashboard counts)
+  await loadDeals();
+  // selectedDeal updated by loadDeals -> renderDealsList
+  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
+  renderDashboard();
+}
+
+// ============================================================
+// TARGETS TAB (sortable table)
+// ============================================================
+function renderTargets() {
+  if (!selectedDeal) return;
+  const sorted = [...dealTargets].sort((a, b) => {
+    let av, bv;
+    switch (targetsSortField) {
+      case 'name': av = a.name || ''; bv = b.name || ''; break;
+      case 'company': av = a.company || ''; bv = b.company || ''; break;
+      case 'title': av = a.title || ''; bv = b.title || ''; break;
+      case 'location': av = a.location || ''; bv = b.location || ''; break;
+      case 'score': av = a._score == null ? -1 : a._score; bv = b._score == null ? -1 : b._score; break;
+      case 'stage': av = a._stage || ''; bv = b._stage || ''; break;
+      case 'last_touch': av = a.last_emailed_date || ''; bv = b.last_emailed_date || ''; break;
+      default: av = a.name || ''; bv = b.name || '';
+    }
+    if (typeof av === 'number') return targetsSortDir === 'asc' ? av - bv : bv - av;
+    return targetsSortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+
+  document.getElementById('targetsTableBody').innerHTML = sorted.map(t => {
+    const tags = (t.tags || '').toLowerCase();
+    const warmBadges = [];
+    if (tags.includes('west-point')) warmBadges.push('<span class="warm-badge warm-wp">WP</span>');
+    if (tags.includes('columbia')) warmBadges.push('<span class="warm-badge warm-cb">CB</span>');
+    if (tags.includes('harvard')) warmBadges.push('<span class="warm-badge warm-hv">HV</span>');
+    if (tags.includes('friend')) warmBadges.push('<span class="warm-badge warm-fr">FR</span>');
+    if (tags.includes('former-coworker')) warmBadges.push('<span class="warm-badge warm-fc">FC</span>');
+    if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
+
+    return `
+      <tr>
+        <td><strong>${esc(t.name || '')}</strong></td>
+        <td>${esc(t.company || '')}</td>
+        <td>${esc(t.title || '')}</td>
+        <td>${esc(t.location || '')}</td>
+        <td class="score-cell">${t._score != null ? t._score : '—'}</td>
+        <td>${warmBadges.join(' ')}</td>
+        <td>${esc(t._stage || 'not-contacted')}</td>
+        <td>${esc(t.last_emailed_date || '—')}</td>
+        <td>
+          ${t.linkedin ? `<a href="${esc(t.linkedin)}" target="_blank" class="btn btn-sm">LI</a>` : ''}
+          <button class="btn btn-sm btn-secondary" onclick="advanceStage('${t.id}')">→</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function sortTargets(field) {
+  if (targetsSortField === field) {
+    targetsSortDir = targetsSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    targetsSortField = field;
+    targetsSortDir = field === 'score' ? 'desc' : 'asc';
+  }
+  renderTargets();
+}
+
+async function advanceStage(contactId) {
+  const contact = dealTargets.find(t => t.id === contactId);
+  if (!contact) return;
+  const currentIdx = STAGES.findIndex(s => s.key === (contact._stage || 'not-contacted'));
+  if (currentIdx < 0 || currentIdx >= STAGES.length - 1) return;
+  await moveContactToStage(contactId, STAGES[currentIdx + 1].key);
+  renderTargets();
+}
+
+function downloadTargetsCSV() {
+  if (!dealTargets.length) {
+    showStatus('No targets to export', 'info');
+    return;
+  }
+  const headers = ['Name','Company','Title','Location','Score','Stage','LinkedIn','Email','Tags'];
+  const rows = dealTargets.map(t => [
+    t.name, t.company, t.title, t.location, t._score, t._stage, t.linkedin, t.email, t.tags
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${(v || '').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${dealSlug(selectedDeal.deal_name)}-targets.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// ACTIVITY TAB
+// ============================================================
+function renderActivity() {
+  if (!selectedDeal) return;
+  // Collect all journey events from all targets, sort by ts desc
+  const events = [];
+  dealTargets.forEach(t => {
+    (t.customer_journey || []).forEach(ev => {
+      events.push({ ...ev, contact_name: t.name });
+    });
+  });
+  events.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+
+  if (events.length === 0) {
+    document.getElementById('activityFeed').innerHTML = '<p style="color: #888;">No activity yet for this deal.</p>';
+    return;
+  }
+
+  document.getElementById('activityFeed').innerHTML = events.slice(0, 100).map(ev => {
+    const tsDate = ev.ts ? new Date(ev.ts).toLocaleString() : '—';
+    return `
+      <div style="border-left: 3px solid #0A3161; padding: 8px 12px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 0.8rem; color: #666;">${tsDate}</div>
+        <div><strong>${esc(ev.contact_name)}</strong> — <span style="color: #0A3161;">${esc(ev.event || 'event')}</span></div>
+        ${ev.note ? `<div style="font-size: 0.85rem; color: #555; margin-top: 4px;">${esc(ev.note)}</div>` : ''}
+        ${ev.from && ev.to ? `<div style="font-size: 0.85rem; color: #555;">${esc(ev.from)} → ${esc(ev.to)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// NEW DEAL modal
+// ============================================================
+function openNewDealModal() {
+  document.getElementById('newDealName').value = '';
+  document.getElementById('newDealTarget').value = '';
+  document.getElementById('newDealStatus').value = 'pre-launch';
+  document.getElementById('newDealGoal').value = '';
+  document.getElementById('newDealICP').value = '';
+  document.getElementById('newDealCoAdvisor').value = '';
+  document.getElementById('newDealCloseDate').value = '';
+  document.getElementById('newDealModal').classList.add('active');
+}
+
+function closeNewDealModal() {
+  document.getElementById('newDealModal').classList.remove('active');
+}
+
+async function createNewDeal() {
+  const name = document.getElementById('newDealName').value.trim();
+  if (!name) {
+    showStatus('Deal Name is required', 'error');
+    return;
+  }
+  const meta = {};
+  const coAdv = document.getElementById('newDealCoAdvisor').value.trim();
+  if (coAdv) meta.co_advisor = coAdv;
+  const closeDate = document.getElementById('newDealCloseDate').value;
+  if (closeDate) meta.target_close_date = closeDate;
+  meta.soft_circle_amount_usd = 0;
+  meta.broker_dealer = 'GT Securities';
+
+  const payload = {
+    name: name,
+    type: 'deal',
+    customer_id: CUSTOMER_ID,
+    campaign_target: document.getElementById('newDealTarget').value.trim() || null,
+    status: document.getElementById('newDealStatus').value,
+    goal_description: document.getElementById('newDealGoal').value.trim() || null,
+    icp: document.getElementById('newDealICP').value.trim() || null,
+    meta: meta
+  };
+
+  const { data, error } = await supabaseClient.from('campaigns').insert(payload).select();
+  if (error) {
+    showStatus('Failed to create deal: ' + error.message, 'error');
+    console.error(error);
+    return;
+  }
+  closeNewDealModal();
+  showStatus('Deal created', 'success');
+  await loadDeals();
+}
+
+// ============================================================
+// EDIT DEAL modal
+// ============================================================
+function editDealMeta() {
+  if (!selectedDeal) return;
+  document.getElementById('editDealStatus').value = selectedDeal.status || 'pre-launch';
+  document.getElementById('editDealTarget').value = selectedDeal.campaign_target || '';
+  document.getElementById('editDealCoAdvisor').value = selectedDeal.co_advisor || '';
+  document.getElementById('editDealCloseDate').value = selectedDeal.target_close_date || '';
+  document.getElementById('editDealSoftCircle').value = selectedDeal.soft_circle_amount_usd || 0;
+  document.getElementById('editDealModal').classList.add('active');
+}
+
+function closeEditDealModal() {
+  document.getElementById('editDealModal').classList.remove('active');
+}
+
+async function saveDealMeta() {
+  if (!selectedDeal) return;
+  const updatedMeta = { ...(selectedDeal.meta || {}) };
+  updatedMeta.co_advisor = document.getElementById('editDealCoAdvisor').value.trim() || null;
+  updatedMeta.target_close_date = document.getElementById('editDealCloseDate').value || null;
+  updatedMeta.soft_circle_amount_usd = parseInt(document.getElementById('editDealSoftCircle').value, 10) || 0;
+
+  const { error } = await supabaseClient
+    .from('campaigns')
+    .update({
+      status: document.getElementById('editDealStatus').value,
+      campaign_target: document.getElementById('editDealTarget').value.trim() || null,
+      meta: updatedMeta,
+      last_updated: new Date().toISOString()
+    })
+    .eq('id', selectedDeal.deal_id);
+
+  if (error) {
+    showStatus('Failed to save: ' + error.message, 'error');
+    return;
+  }
+  closeEditDealModal();
+  showStatus('Deal updated', 'success');
+  await loadDeals();
+  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
+  renderDashboard();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  try {
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    await loadDeals();
+  } catch (e) {
+    console.error('Init error:', e);
+    showStatus('Failed to initialize. Please refresh.', 'error');
+  }
+}
+
+// Session validation every 5 min (same as contacts page)
+setInterval(async () => {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) redirectToLogin();
+    else authToken = session.access_token;
+  } catch (e) { console.error(e); }
+}, 300000);
+
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden) {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) redirectToLogin();
+      else authToken = session.access_token;
+    } catch (e) { console.error(e); }
+  }
+});
+
+// Globals exposed for inline handlers
+window.selectDeal = selectDeal;
+window.openNewDealModal = openNewDealModal;
+window.closeNewDealModal = closeNewDealModal;
+window.createNewDeal = createNewDeal;
+window.editDealMeta = editDealMeta;
+window.closeEditDealModal = closeEditDealModal;
+window.saveDealMeta = saveDealMeta;
+window.sortTargets = sortTargets;
+window.advanceStage = advanceStage;
+window.downloadTargetsCSV = downloadTargetsCSV;
+window.handleDragStart = handleDragStart;
+window.handleDragOver = handleDragOver;
+window.handleDragLeave = handleDragLeave;
+window.handleDrop = handleDrop;
+window.renderPipeline = renderPipeline;
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
