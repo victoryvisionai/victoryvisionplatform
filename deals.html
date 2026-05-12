@@ -170,6 +170,55 @@
       font-size: 0.95rem; box-sizing: border-box; }
     .form-group textarea { resize: vertical; min-height: 80px; }
 
+    /* === Contact modal (wider, two-column) === */
+    .contact-modal-content { max-width: 900px; width: 100%; }
+    .contact-modal-header { display: flex; justify-content: space-between; align-items: flex-start;
+                            padding-bottom: 12px; border-bottom: 1px solid #eee; margin-bottom: 16px; }
+    .contact-modal-header h2 { margin: 0; color: #0A3161; font-size: 1.4rem; }
+    .contact-modal-sub { color: #666; font-size: 0.95rem; margin-top: 4px; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
+    .contact-section { background: #f8f9fa; border-radius: 6px; padding: 12px; }
+    .contact-section h3 { margin: 0 0 10px 0; color: #0A3161; font-size: 0.9rem;
+                          text-transform: uppercase; letter-spacing: 0.5px; }
+    .contact-field { display: flex; justify-content: space-between; padding: 4px 0;
+                     font-size: 0.9rem; border-bottom: 1px dashed #e5e5e5; }
+    .contact-field:last-child { border-bottom: none; }
+    .contact-field-label { color: #666; flex: 0 0 130px; }
+    .contact-field-value { color: #222; text-align: right; flex: 1; word-break: break-word; }
+    .contact-field-value a { color: #0A3161; text-decoration: none; }
+    .contact-field-value a:hover { text-decoration: underline; }
+    .contact-summary { background: #fff; border: 1px solid #eee; border-radius: 6px;
+                       padding: 12px; max-height: 180px; overflow-y: auto;
+                       font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
+    .contact-journey { background: #fff; border: 1px solid #eee; border-radius: 6px;
+                       padding: 8px; max-height: 220px; overflow-y: auto; }
+    .journey-entry { border-left: 3px solid #0A3161; padding: 6px 10px; margin-bottom: 6px;
+                     background: #f8f9fa; border-radius: 4px; font-size: 0.82rem; }
+    .journey-ts { color: #888; font-size: 0.75rem; }
+    .journey-event { font-weight: bold; color: #0A3161; }
+    .contact-actions { display: flex; gap: 8px; flex-wrap: wrap;
+                       padding-top: 12px; border-top: 1px solid #eee; margin-top: 12px; }
+    .scores-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .score-pill { background: #e9ecef; border-radius: 12px; padding: 2px 8px; font-size: 0.75rem; }
+    .score-pill.high { background: #d4edda; color: #155724; }
+    .score-pill.mid { background: #fff3cd; color: #856404; }
+    .score-pill.low { background: #f8d7da; color: #721c24; }
+
+    /* === Add Contact autocomplete === */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0;
+                         background: white; border: 1px solid #ddd; border-top: none;
+                         border-radius: 0 0 6px 6px; max-height: 280px; overflow-y: auto;
+                         z-index: 100; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+    .autocomplete-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+                         font-size: 0.9rem; }
+    .autocomplete-item:hover, .autocomplete-item.highlighted { background: #f0f6ff; }
+    .autocomplete-item-name { font-weight: bold; color: #0A3161; }
+    .autocomplete-item-meta { color: #666; font-size: 0.8rem; }
+    .autocomplete-item.already-in-deal { opacity: 0.5; }
+    .autocomplete-item.already-in-deal .autocomplete-item-name::after {
+      content: ' · already in deal'; color: #888; font-weight: normal; }
+
     /* === Status banner === */
     #statusBanner { position: fixed; top: 20px; right: 20px; padding: 12px 20px;
                     border-radius: 6px; color: white; z-index: 2000; display: none;
@@ -274,8 +323,9 @@
     <div class="tab-content" id="tab-pipeline">
       <div class="card">
         <div class="section-header">
-          <h2>Pipeline (drag cards to move stages)</h2>
+          <h2>Pipeline (drag cards to move stages · click a card for details)</h2>
           <div style="font-size: 0.85rem;">
+            <button class="btn btn-sm btn-success" onclick="openAddContactModal()">+ Add Contact</button>
             <button class="btn btn-sm btn-secondary" onclick="renderPipeline()">Refresh</button>
           </div>
         </div>
@@ -406,6 +456,130 @@
     </div>
     <button class="btn btn-success" onclick="saveDealMeta()">Save</button>
     <button class="btn btn-secondary" onclick="closeEditDealModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CONTACT DETAIL MODAL -->
+<!-- ============================================================ -->
+<div class="modal" id="contactModal">
+  <div class="modal-content contact-modal-content">
+    <div class="contact-modal-header">
+      <div>
+        <h2 id="cmName">—</h2>
+        <div class="contact-modal-sub" id="cmTitleCompany">—</div>
+      </div>
+      <button class="modal-close" onclick="closeContactModal()">×</button>
+    </div>
+
+    <div class="contact-grid">
+      <!-- Left: Identity + Deal context -->
+      <div>
+        <div class="contact-section">
+          <h3>Contact</h3>
+          <div class="contact-field"><span class="contact-field-label">LinkedIn</span><span class="contact-field-value" id="cmLinkedIn">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Email</span><span class="contact-field-value" id="cmEmail">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Phone</span><span class="contact-field-value" id="cmPhone">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Location</span><span class="contact-field-value" id="cmLocation">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Industry</span><span class="contact-field-value" id="cmIndustry">—</span></div>
+        </div>
+
+        <div class="contact-section" style="margin-top: 12px;">
+          <h3>Deal Context</h3>
+          <div class="contact-field"><span class="contact-field-label">Stage</span><span class="contact-field-value">
+            <select id="cmStage" onchange="changeContactStage()" style="padding: 4px; border-radius: 4px;">
+              <option value="not-contacted">Not Contacted</option>
+              <option value="soft-touch">Soft Touch</option>
+              <option value="pitched">Pitched</option>
+              <option value="soft-circle">Soft Circle</option>
+              <option value="committed">Committed</option>
+              <option value="closed">Closed</option>
+              <option value="declined">Declined</option>
+            </select></span></div>
+          <div class="contact-field"><span class="contact-field-label">Score (this deal)</span><span class="contact-field-value">
+            <input type="number" id="cmScore" min="0" max="100" style="width: 70px; padding: 4px; border-radius: 4px;"/>
+            <button class="btn btn-sm" onclick="saveContactScore()" style="margin-left: 4px;">Save</button></span></div>
+          <div class="contact-field"><span class="contact-field-label">All Scores</span><span class="contact-field-value scores-row" id="cmAllScores">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Tags</span><span class="contact-field-value" id="cmTags" style="font-size: 0.78rem;">—</span></div>
+        </div>
+      </div>
+
+      <!-- Right: Engagement metrics + activity -->
+      <div>
+        <div class="contact-section">
+          <h3>Engagement</h3>
+          <div class="contact-field"><span class="contact-field-label">Emails Sent</span><span class="contact-field-value" id="cmEmailsSent">0</span></div>
+          <div class="contact-field"><span class="contact-field-label">Opens</span><span class="contact-field-value" id="cmOpens">0</span></div>
+          <div class="contact-field"><span class="contact-field-label">Clicks</span><span class="contact-field-value" id="cmClicks">0</span></div>
+          <div class="contact-field"><span class="contact-field-label">Last Emailed</span><span class="contact-field-value" id="cmLastEmailed">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Last Opened</span><span class="contact-field-value" id="cmLastOpened">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Last Responded</span><span class="contact-field-value" id="cmLastResponded">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Call Attempts</span><span class="contact-field-value" id="cmCallAttempts">0</span></div>
+          <div class="contact-field"><span class="contact-field-label">Last Called</span><span class="contact-field-value" id="cmLastCalled">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile summary -->
+    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0;">Profile</h3>
+    <div class="contact-summary" id="cmSummary">—</div>
+
+    <!-- Customer journey -->
+    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0;">Activity</h3>
+    <div class="contact-journey" id="cmJourney">—</div>
+
+    <!-- Add note -->
+    <div style="margin-top: 12px;">
+      <textarea id="cmNoteInput" placeholder="Add a note (logs to customer_journey)" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; min-height: 50px; font-family: inherit; box-sizing: border-box;"></textarea>
+      <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+        <button class="btn btn-sm" onclick="saveContactNote()">Add Note</button>
+      </div>
+    </div>
+
+    <!-- Action footer -->
+    <div class="contact-actions">
+      <button class="btn btn-sm btn-secondary" onclick="enrichContact()" title="Run Apollo/Hunter enrichment via existing n8n webhook">Enrich</button>
+      <button class="btn btn-sm btn-secondary" onclick="enrollWarmOutreach()" title="Enroll in warm outreach sequence">Warm Outreach</button>
+      <button class="btn btn-sm btn-secondary" onclick="openInContacts()">Edit in Contacts page →</button>
+      <div style="flex: 1;"></div>
+      <button class="btn btn-sm" style="background: #dc3545;" onclick="removeFromDeal()">Mark No-Fit (remove from deal)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ADD CONTACT TO DEAL modal -->
+<!-- ============================================================ -->
+<div class="modal" id="addContactModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeAddContactModal()">×</button>
+    <h2>Add Contact to <span id="acDealName">Deal</span></h2>
+    <p style="color: #666; font-size: 0.9rem;">Search existing CRM contacts. To add brand-new contacts not yet in the CRM, upload them via the <a href="contacts">Contacts page</a> first.</p>
+    <div class="form-group autocomplete-wrap">
+      <label>Search by name or company</label>
+      <input type="text" id="acSearch" placeholder="Start typing a name or company..." autocomplete="off" oninput="onAddContactSearch()"/>
+      <div class="autocomplete-list" id="acResults"></div>
+    </div>
+    <div class="form-group">
+      <label>Initial stage in this deal</label>
+      <select id="acStage">
+        <option value="not-contacted">Not Contacted (default)</option>
+        <option value="soft-touch">Soft Touch</option>
+        <option value="pitched">Pitched</option>
+        <option value="soft-circle">Soft Circle</option>
+        <option value="committed">Committed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Initial score (optional, 0-100)</label>
+      <input type="number" id="acScore" min="0" max="100" placeholder="Leave blank if unscored"/>
+    </div>
+    <div class="form-group">
+      <label>Rationale (logged to customer_journey)</label>
+      <textarea id="acRationale" placeholder="Why are you adding this contact?"></textarea>
+    </div>
+    <button class="btn btn-success" onclick="addContactToDeal()" id="acAddBtn" disabled>Add to Deal</button>
+    <button class="btn btn-secondary" onclick="closeAddContactModal()">Cancel</button>
   </div>
 </div>
 
@@ -587,7 +761,7 @@ async function loadDealTargets() {
   const slug = dealSlug(selectedDeal.deal_name);
   const { data, error } = await supabaseClient
     .from('contacts')
-    .select('id, name, first_name, title, company, location, tags, scores, linkedin, email, last_emailed_date, last_responded, meeting_date, customer_journey, personal_summary')
+    .select('id, name, first_name, title, company, industry, location, tags, scores, linkedin, email, phone_number, personal_summary, company_summary, last_emailed_date, last_opened_date, last_clicked_date, last_responded, last_called, meeting_date, number_emails_sent, num_emails_opened, num_links_clicked, number_call_attempts, customer_journey')
     .eq('cus_id', CUSTOMER_ID)
     .ilike('tags', `%deal:${slug}%`);
 
@@ -597,9 +771,15 @@ async function loadDealTargets() {
     dealTargets = [];
     return;
   }
+  // Filter out contacts marked as no-fit for this deal — they should not reappear.
+  // (Match: tag is exactly `deal:<slug>:no-fit` somewhere in tags string.)
+  const noFitRe = new RegExp(`\\bdeal:${slug}:no-fit\\b`);
+  const filtered = (data || []).filter(c => !noFitRe.test(c.tags || ''));
+
   // Annotate each target with its deal-specific stage (from tags)
-  dealTargets = (data || []).map(c => {
+  dealTargets = filtered.map(c => {
     const tagsStr = c.tags || '';
+    // Extract a non-no-fit stage if any
     const stageMatch = tagsStr.match(new RegExp(`deal:${slug}:([a-z-]+)`));
     const stage = stageMatch ? stageMatch[1] : 'not-contacted';
     const score = c.scores && c.scores[slug] != null ? c.scores[slug] : null;
@@ -745,7 +925,10 @@ function renderPipelineCard(c) {
   if (tags.includes('cpg') || tags.includes('consumer')) warmBadges.push('<span class="warm-badge warm-cpg">CPG</span>');
 
   return `
-    <div class="pipeline-card" draggable="true" data-contact-id="${c.id}" ondragstart="handleDragStart(event, '${c.id}')">
+    <div class="pipeline-card" draggable="true" data-contact-id="${c.id}"
+         ondragstart="handleDragStart(event, '${c.id}')"
+         onmousedown="handleCardMouseDown(event)"
+         onclick="handleCardClick(event, '${c.id}')">
       <div class="pipeline-card-name">${esc(c.name)}</div>
       <div class="pipeline-card-company">${esc(c.company || '')}</div>
       <div class="pipeline-card-meta">
@@ -754,6 +937,22 @@ function renderPipelineCard(c) {
       </div>
     </div>
   `;
+}
+
+let cardMouseDownPos = null;
+function handleCardMouseDown(e) {
+  cardMouseDownPos = { x: e.clientX, y: e.clientY };
+}
+function handleCardClick(e, contactId) {
+  // Distinguish click from drag: if the mouse moved more than a few px between mousedown
+  // and click, treat as drag and skip opening the modal.
+  if (cardMouseDownPos) {
+    const dx = Math.abs(e.clientX - cardMouseDownPos.x);
+    const dy = Math.abs(e.clientY - cardMouseDownPos.y);
+    cardMouseDownPos = null;
+    if (dx > 5 || dy > 5) return; // was a drag
+  }
+  openContactModal(contactId);
 }
 
 let dragSource = null;
@@ -861,7 +1060,7 @@ function renderTargets() {
     if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
 
     return `
-      <tr>
+      <tr onclick="openContactModal('${t.id}')" style="cursor: pointer;">
         <td><strong>${esc(t.name || '')}</strong></td>
         <td>${esc(t.company || '')}</td>
         <td>${esc(t.title || '')}</td>
@@ -870,9 +1069,9 @@ function renderTargets() {
         <td>${warmBadges.join(' ')}</td>
         <td>${esc(t._stage || 'not-contacted')}</td>
         <td>${esc(t.last_emailed_date || '—')}</td>
-        <td>
-          ${t.linkedin ? `<a href="${esc(t.linkedin)}" target="_blank" class="btn btn-sm">LI</a>` : ''}
-          <button class="btn btn-sm btn-secondary" onclick="advanceStage('${t.id}')">→</button>
+        <td onclick="event.stopPropagation()">
+          ${t.linkedin ? `<a href="${esc(t.linkedin)}" target="_blank" class="btn btn-sm" onclick="event.stopPropagation()">LI</a>` : ''}
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); advanceStage('${t.id}')">→</button>
         </td>
       </tr>
     `;
@@ -1084,6 +1283,414 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 
+// ============================================================
+// CONTACT DETAIL MODAL — open, populate, edit stage/score/note
+// ============================================================
+let currentContact = null;  // contact row currently open in the modal
+
+// Existing n8n webhooks we'll reuse (same as contacts.html)
+const N8N_ENDPOINTS = {
+  enrichContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich',
+  enrollWarmOutreach: 'https://victoryvision.app.n8n.cloud/webhook/outreach/friends'
+};
+
+async function openContactModal(contactId) {
+  currentContact = dealTargets.find(t => t.id === contactId);
+  if (!currentContact) {
+    showStatus('Contact not found in current deal', 'error');
+    return;
+  }
+  const c = currentContact;
+  const tags = c.tags || '';
+
+  // Header
+  document.getElementById('cmName').textContent = c.name || '—';
+  document.getElementById('cmTitleCompany').textContent =
+    [c.title, c.company].filter(Boolean).join(' · ') || '—';
+
+  // Contact links (clickable when populated)
+  const liEl = document.getElementById('cmLinkedIn');
+  if (c.linkedin && c.linkedin.trim()) {
+    liEl.innerHTML = `<a href="${esc(c.linkedin)}" target="_blank">${esc(c.linkedin.replace(/^https?:\/\//, ''))}</a>`;
+  } else { liEl.textContent = '—'; }
+
+  const emEl = document.getElementById('cmEmail');
+  if (c.email && c.email !== 'N/A' && c.email.trim()) {
+    emEl.innerHTML = `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`;
+  } else { emEl.textContent = '—'; }
+
+  const phEl = document.getElementById('cmPhone');
+  // contacts table has phone_number (used in contacts page) — but our query selects 'phone' alias is none; we use c.phone_number
+  const phone = c.phone_number || c.phone || '';
+  if (phone && phone !== 'N/A' && phone.trim()) {
+    phEl.innerHTML = `<a href="tel:${esc(phone)}">${esc(phone)}</a>`;
+  } else { phEl.textContent = '—'; }
+
+  document.getElementById('cmLocation').textContent = c.location || '—';
+  document.getElementById('cmIndustry').textContent = c.industry || '—';
+
+  // Deal context
+  document.getElementById('cmStage').value = c._stage || 'not-contacted';
+  document.getElementById('cmScore').value = c._score != null ? c._score : '';
+  document.getElementById('cmTags').textContent = tags || '—';
+
+  // All scores across deals
+  const scoresContainer = document.getElementById('cmAllScores');
+  if (c.scores && Object.keys(c.scores).length > 0) {
+    scoresContainer.innerHTML = Object.entries(c.scores)
+      .sort((a, b) => b[1] - a[1])
+      .map(([deal, score]) => {
+        const cls = score >= 70 ? 'high' : (score >= 50 ? 'mid' : 'low');
+        return `<span class="score-pill ${cls}">${esc(deal)}: ${esc(score)}</span>`;
+      }).join(' ');
+  } else {
+    scoresContainer.textContent = '—';
+  }
+
+  // Engagement metrics
+  document.getElementById('cmEmailsSent').textContent = c.number_emails_sent || 0;
+  document.getElementById('cmOpens').textContent = c.num_emails_opened || 0;
+  document.getElementById('cmClicks').textContent = c.num_links_clicked || 0;
+  document.getElementById('cmLastEmailed').textContent = c.last_emailed_date || '—';
+  document.getElementById('cmLastOpened').textContent = c.last_opened_date || '—';
+  document.getElementById('cmLastResponded').textContent = c.last_responded ? new Date(c.last_responded).toLocaleString() : '—';
+  document.getElementById('cmCallAttempts').textContent = c.number_call_attempts || 0;
+  document.getElementById('cmLastCalled').textContent = c.last_called || '—';
+
+  // Profile summary
+  document.getElementById('cmSummary').textContent = c.personal_summary || '—';
+
+  // Customer journey (reverse chrono)
+  const journey = (c.customer_journey || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+  if (journey.length === 0) {
+    document.getElementById('cmJourney').innerHTML = '<p style="color: #888; margin: 0; font-size: 0.85rem;">No activity logged yet.</p>';
+  } else {
+    document.getElementById('cmJourney').innerHTML = journey.slice(0, 50).map(ev => {
+      const ts = ev.ts ? new Date(ev.ts).toLocaleString() : '—';
+      const details = [];
+      if (ev.rationale) details.push(esc(ev.rationale));
+      if (ev.note) details.push(esc(ev.note));
+      if (ev.from && ev.to) details.push(`${esc(ev.from)} → ${esc(ev.to)}`);
+      if (ev.score != null) details.push(`score: ${esc(ev.score)}`);
+      if (ev.old != null && ev.new != null) details.push(`${esc(ev.old)} → ${esc(ev.new)}`);
+      return `
+        <div class="journey-entry">
+          <div class="journey-ts">${ts}</div>
+          <div><span class="journey-event">${esc(ev.event || 'event')}</span></div>
+          ${details.length ? `<div style="color: #555; margin-top: 2px;">${details.join(' · ')}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // Clear note input
+  document.getElementById('cmNoteInput').value = '';
+
+  document.getElementById('contactModal').classList.add('active');
+}
+
+function closeContactModal() {
+  document.getElementById('contactModal').classList.remove('active');
+  currentContact = null;
+}
+
+// Stage change from the modal dropdown — reuses the existing moveContactToStage
+async function changeContactStage() {
+  if (!currentContact) return;
+  const newStage = document.getElementById('cmStage').value;
+  if (newStage === currentContact._stage) return;
+  await moveContactToStage(currentContact.id, newStage);
+  // Refresh modal state from the now-mutated currentContact
+  const updated = dealTargets.find(t => t.id === currentContact.id);
+  if (updated) {
+    currentContact = updated;
+    document.getElementById('cmStage').value = updated._stage;
+  }
+}
+
+// Save score change
+async function saveContactScore() {
+  if (!currentContact) return;
+  const slug = dealSlug(selectedDeal.deal_name);
+  const newScore = parseInt(document.getElementById('cmScore').value, 10);
+  if (isNaN(newScore) || newScore < 0 || newScore > 100) {
+    showStatus('Score must be 0-100', 'error');
+    return;
+  }
+  const oldScore = currentContact._score;
+  if (newScore === oldScore) return;
+
+  const newScores = Object.assign({}, currentContact.scores || {}, { [slug]: newScore });
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'score_changed_in_deals_page',
+    deal: slug,
+    old: oldScore,
+    new: newScore,
+    rationale: 'Manual edit from Deals page contact modal'
+  };
+  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+
+  const { error } = await supabaseClient.from('contacts')
+    .update({ scores: newScores, customer_journey: newJourney })
+    .eq('id', currentContact.id);
+
+  if (error) { showStatus('Failed to save score: ' + error.message, 'error'); return; }
+
+  currentContact.scores = newScores;
+  currentContact._score = newScore;
+  currentContact.customer_journey = newJourney;
+  showStatus(`Score updated: ${oldScore ?? '—'} → ${newScore}`, 'success');
+  renderPipeline();
+  renderTargets();
+  // Refresh modal in place
+  openContactModal(currentContact.id);
+}
+
+// Add a note (appends to customer_journey)
+async function saveContactNote() {
+  if (!currentContact) return;
+  const noteText = document.getElementById('cmNoteInput').value.trim();
+  if (!noteText) return;
+
+  const slug = dealSlug(selectedDeal.deal_name);
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'note_added',
+    deal: slug,
+    note: noteText
+  };
+  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+
+  const { error } = await supabaseClient.from('contacts')
+    .update({ customer_journey: newJourney })
+    .eq('id', currentContact.id);
+
+  if (error) { showStatus('Failed to save note: ' + error.message, 'error'); return; }
+
+  currentContact.customer_journey = newJourney;
+  showStatus('Note added', 'success');
+  document.getElementById('cmNoteInput').value = '';
+  openContactModal(currentContact.id);  // refresh in place
+}
+
+// Remove from deal — marks as "no-fit" so contact won't come back to pipeline
+// Strategy: tag with deal:<slug>:declined + permanent deal:<slug>:no-fit flag
+async function removeFromDeal() {
+  if (!currentContact) return;
+  if (!confirm(`Mark ${currentContact.name} as a no-fit for "${selectedDeal.deal_name}" and remove from pipeline?\n\nContact stays in CRM but won't appear in this deal again.`)) return;
+
+  const slug = dealSlug(selectedDeal.deal_name);
+  // Strip any existing deal:<slug> and deal:<slug>:<stage> tags, then add deal:<slug>:no-fit
+  const currentTags = (currentContact.tags || '').split(/,\s*/).filter(Boolean);
+  const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
+  const filtered = currentTags.filter(t => !baseRe.test(t));
+  filtered.push(`deal:${slug}:no-fit`);
+  const newTagsStr = filtered.join(', ');
+
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'removed_from_deal_no_fit',
+    deal: slug,
+    from: currentContact._stage || 'not-contacted',
+    rationale: 'Marked no-fit from Deals page — will not return to pipeline.'
+  };
+  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+
+  const { error } = await supabaseClient.from('contacts')
+    .update({ tags: newTagsStr, customer_journey: newJourney })
+    .eq('id', currentContact.id);
+
+  if (error) { showStatus('Failed to remove: ' + error.message, 'error'); return; }
+
+  showStatus(`Removed ${currentContact.name} as no-fit`, 'success');
+  closeContactModal();
+  // Refresh the deal's target list (which filters by deal:<slug> base tag — no-fit doesn't match)
+  await loadDealTargets();
+  renderPipeline();
+  renderTargets();
+  renderDashboard();
+  await loadDeals();
+  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
+}
+
+// Reuse existing n8n webhooks: enrich + warm outreach
+async function enrichContact() {
+  if (!currentContact) return;
+  showStatus('Enriching contact via Apollo/Hunter...', 'info');
+  try {
+    const res = await fetch(N8N_ENDPOINTS.enrichContact, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID })
+    });
+    if (!res.ok) throw new Error('Enrichment webhook returned ' + res.status);
+    showStatus('Enrichment kicked off. Refresh in 30s to see results.', 'success');
+  } catch (e) {
+    showStatus('Enrichment failed: ' + e.message, 'error');
+  }
+}
+
+async function enrollWarmOutreach() {
+  if (!currentContact) return;
+  if (!confirm(`Enroll ${currentContact.name} in the warm-outreach email sequence?`)) return;
+  try {
+    const res = await fetch(N8N_ENDPOINTS.enrollWarmOutreach, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID, deal_slug: dealSlug(selectedDeal.deal_name) })
+    });
+    if (!res.ok) throw new Error('Outreach webhook returned ' + res.status);
+    showStatus('Enrolled in warm outreach', 'success');
+  } catch (e) {
+    showStatus('Enrollment failed: ' + e.message, 'error');
+  }
+}
+
+function openInContacts() {
+  // Open the contacts page; the user can search by name/linkedin once there
+  window.open('contacts', '_blank');
+}
+
+// ============================================================
+// ADD CONTACT TO DEAL — autocomplete search of existing CRM
+// ============================================================
+let allCrmContacts = [];   // cached list of all contacts for the tenant
+let acSelectedContact = null;
+
+async function openAddContactModal() {
+  if (!selectedDeal) return;
+  document.getElementById('acDealName').textContent = selectedDeal.deal_name;
+  document.getElementById('acSearch').value = '';
+  document.getElementById('acStage').value = 'not-contacted';
+  document.getElementById('acScore').value = '';
+  document.getElementById('acRationale').value = '';
+  document.getElementById('acResults').style.display = 'none';
+  document.getElementById('acAddBtn').disabled = true;
+  acSelectedContact = null;
+
+  // Lazy-load CRM contacts (cache for the session)
+  if (allCrmContacts.length === 0) {
+    showStatus('Loading CRM contacts...', 'info');
+    const { data, error } = await supabaseClient.from('contacts')
+      .select('id, name, first_name, title, company, location, tags, scores, linkedin')
+      .eq('cus_id', CUSTOMER_ID)
+      .order('name', { ascending: true });
+    if (error) {
+      showStatus('Failed to load CRM contacts: ' + error.message, 'error');
+      return;
+    }
+    allCrmContacts = data || [];
+  }
+  document.getElementById('addContactModal').classList.add('active');
+  setTimeout(() => document.getElementById('acSearch').focus(), 100);
+}
+
+function closeAddContactModal() {
+  document.getElementById('addContactModal').classList.remove('active');
+  acSelectedContact = null;
+}
+
+function onAddContactSearch() {
+  const q = document.getElementById('acSearch').value.trim().toLowerCase();
+  const resultsEl = document.getElementById('acResults');
+  if (q.length < 2) {
+    resultsEl.style.display = 'none';
+    return;
+  }
+  const slug = dealSlug(selectedDeal.deal_name);
+  const dealTagBase = `deal:${slug}`;
+  // Existing-in-deal set (so we can dim them)
+  const inDealIds = new Set(dealTargets.map(t => t.id));
+
+  // Match name or company, case-insensitive
+  const matches = allCrmContacts.filter(c => {
+    const nm = (c.name || '').toLowerCase();
+    const co = (c.company || '').toLowerCase();
+    return nm.includes(q) || co.includes(q);
+  }).slice(0, 20);
+
+  if (matches.length === 0) {
+    resultsEl.innerHTML = '<div class="autocomplete-item" style="color: #888;">No matches. To add new contacts not in CRM, upload via the <a href="contacts">Contacts page</a> first.</div>';
+    resultsEl.style.display = 'block';
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(c => {
+    const inDeal = inDealIds.has(c.id);
+    return `
+      <div class="autocomplete-item ${inDeal ? 'already-in-deal' : ''}"
+           ${inDeal ? '' : `onclick="pickAddContact('${c.id}')"`}>
+        <div class="autocomplete-item-name">${esc(c.name || '—')}</div>
+        <div class="autocomplete-item-meta">${esc([c.title, c.company, c.location].filter(Boolean).join(' · ') || '')}</div>
+      </div>`;
+  }).join('');
+  resultsEl.style.display = 'block';
+}
+
+function pickAddContact(contactId) {
+  const c = allCrmContacts.find(x => x.id === contactId);
+  if (!c) return;
+  acSelectedContact = c;
+  document.getElementById('acSearch').value = `${c.name} (${c.company || ''})`;
+  document.getElementById('acResults').style.display = 'none';
+  document.getElementById('acAddBtn').disabled = false;
+}
+
+async function addContactToDeal() {
+  if (!acSelectedContact || !selectedDeal) return;
+  const slug = dealSlug(selectedDeal.deal_name);
+  const stage = document.getElementById('acStage').value;
+  const scoreInput = document.getElementById('acScore').value.trim();
+  const score = scoreInput === '' ? null : parseInt(scoreInput, 10);
+  const rationale = document.getElementById('acRationale').value.trim() || 'Manually added from Deals page';
+
+  // Refetch the canonical row to be safe (autocomplete cache may be stale)
+  const { data: fetched, error: fetchErr } = await supabaseClient.from('contacts')
+    .select('id, tags, scores, customer_journey')
+    .eq('id', acSelectedContact.id)
+    .single();
+  if (fetchErr) { showStatus('Failed to load contact: ' + fetchErr.message, 'error'); return; }
+
+  // Build new tags
+  const currentTags = (fetched.tags || '').split(/,\s*/).filter(Boolean);
+  const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
+  const filtered = currentTags.filter(t => !baseRe.test(t));
+  filtered.push(`deal:${slug}`);
+  if (stage !== 'not-contacted') {
+    filtered.push(`deal:${slug}:${stage}`);
+  }
+  const newTagsStr = filtered.join(', ');
+
+  // Build new scores (merge)
+  const newScores = Object.assign({}, fetched.scores || {});
+  if (score != null && !isNaN(score)) newScores[slug] = score;
+
+  // Append journey entry
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'added_to_deal',
+    deal: slug,
+    stage: stage,
+    score: score,
+    rationale: rationale
+  };
+  const newJourney = [...(fetched.customer_journey || []), journeyEntry];
+
+  const { error: updErr } = await supabaseClient.from('contacts')
+    .update({ tags: newTagsStr, scores: newScores, customer_journey: newJourney })
+    .eq('id', acSelectedContact.id);
+  if (updErr) { showStatus('Failed to add: ' + updErr.message, 'error'); return; }
+
+  showStatus(`Added ${acSelectedContact.name} to ${selectedDeal.deal_name}`, 'success');
+  closeAddContactModal();
+  await loadDealTargets();
+  renderPipeline();
+  renderTargets();
+  renderDashboard();
+  await loadDeals();
+  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
+}
+
 // Globals exposed for inline handlers
 window.selectDeal = selectDeal;
 window.openNewDealModal = openNewDealModal;
@@ -1100,6 +1707,22 @@ window.handleDragOver = handleDragOver;
 window.handleDragLeave = handleDragLeave;
 window.handleDrop = handleDrop;
 window.renderPipeline = renderPipeline;
+window.openContactModal = openContactModal;
+window.closeContactModal = closeContactModal;
+window.changeContactStage = changeContactStage;
+window.saveContactScore = saveContactScore;
+window.saveContactNote = saveContactNote;
+window.removeFromDeal = removeFromDeal;
+window.enrichContact = enrichContact;
+window.enrollWarmOutreach = enrollWarmOutreach;
+window.openInContacts = openInContacts;
+window.openAddContactModal = openAddContactModal;
+window.closeAddContactModal = closeAddContactModal;
+window.onAddContactSearch = onAddContactSearch;
+window.pickAddContact = pickAddContact;
+window.addContactToDeal = addContactToDeal;
+window.handleCardMouseDown = handleCardMouseDown;
+window.handleCardClick = handleCardClick;
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
