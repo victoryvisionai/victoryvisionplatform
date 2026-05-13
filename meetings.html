@@ -434,7 +434,7 @@
       <div id="dailyContainer" style="width: 100%; height: 100%;"></div>
     </div>
 
-    <!-- Host-only AI Coach Panel (shown only when invite.rsvp === 'host') -->
+    <!-- Host-only AI Coach Panel (shown only when invite.email === invite.customer_id) -->
     <div id="coachPanel" class="coach-panel" style="display:none">
       <div class="coach-header">
         <span class="coach-title">🎯 Live Coach</span>
@@ -628,6 +628,33 @@ async function joinMeeting(invite) {
     loadingState.style.display = 'flex';
     loadingState.querySelector('span').textContent = 'Joining meeting...';
 
+    // Detect host: in this schema the host's invite row has email === customer_id
+    // (also typically rsvp === 'accepted'). Non-host invitees have a different email.
+    const isHost = !!(invite.email && invite.customer_id && invite.email === invite.customer_id);
+
+    // For hosts, fetch meetings.host_token (real Daily admin JWT) and the invitee's
+    // email from the sibling meeting_invites row keyed by the same meeting_id.
+    let hostToken = null;
+    let contactEmail = '';
+    if (isHost && invite.meeting_id) {
+      try {
+        const { data: mtg } = await supabaseClient
+          .from('meetings')
+          .select('host_token')
+          .eq('id', invite.meeting_id)
+          .maybeSingle();
+        hostToken = mtg?.host_token || null;
+      } catch (e) { console.warn('host_token lookup failed', e); }
+      try {
+        const { data: siblings } = await supabaseClient
+          .from('meeting_invites')
+          .select('email')
+          .eq('meeting_id', invite.meeting_id)
+          .neq('email', invite.customer_id);
+        if (Array.isArray(siblings) && siblings.length) contactEmail = siblings[0].email || '';
+      } catch (e) { console.warn('sibling invitee lookup failed', e); }
+    }
+
     // Initialize Daily.co call frame
     callFrame = DailyIframe.createFrame(dailyContainer, {
       showLeaveButton: false,
@@ -636,22 +663,23 @@ async function joinMeeting(invite) {
       showParticipantsBar: true,
     });
 
-    // Join the meeting — pass Daily meeting-token for host row so startTranscription()
-    // has admin permission. Non-host rows join without a token (guest privileges).
+    // Join the meeting — pass Daily admin meeting-token for host so startTranscription()
+    // works. Non-host rows join without a token (guest privileges).
     const joinOpts = {
       url: invite.room_url,
       userName: invite.name || userEmail.split('@')[0],
     };
-    if (invite.rsvp === 'host' && invite.token) joinOpts.token = invite.token;
+    if (isHost && hostToken) joinOpts.token = hostToken;
     await callFrame.join(joinOpts);
 
     loadingState.style.display = 'none';
     videoContainer.style.display = 'block';
     meetingControls.style.display = 'block';
 
-    // Host-only: start the AI Live Coach
-    if (invite.rsvp === 'host') {
-      startCoach(invite);
+    // Host-only: start the AI Live Coach. If host_token is missing, surface a clear
+    // error in the panel rather than silently failing inside Daily.
+    if (isHost) {
+      startCoach(invite, { hostToken, contactEmail });
     }
 
     showSuccess('Successfully joined the meeting!');
@@ -671,10 +699,12 @@ async function joinMeeting(invite) {
    - POSTs window to /webhook/meeting/coach → renders the returned tip
 ══════════════════════════════════════════════ */
 const COACH_EP = 'https://victoryvision.app.n8n.cloud/webhook/meeting/coach';
+const COACH_MIN_GAP_MS = 25000; // throttle: don't fire more than once per 25s
 let coachBuffer = [];
 let coachFlushTimer = null;
 let coachSilenceTimer = null;
 let coachLastEventAt = 0;
+let coachLastFlushAt = 0;
 let coachStarted = false;
 let coachMeta = null;
 let coachInflight = false;
@@ -701,9 +731,13 @@ function setCoachStatus(s) {
 
 async function flushCoachBuffer(reason) {
   if (coachInflight) return;
+  // Throttle: don't fire faster than COACH_MIN_GAP_MS unless the buffer is huge
+  const since = Date.now() - coachLastFlushAt;
+  if (since < COACH_MIN_GAP_MS && coachBuffer.length < 25) return;
   const transcript = coachBuffer.map(e => e.text).join(' ').trim();
   if (transcript.length < 40) return; // too short — skip
   coachInflight = true;
+  coachLastFlushAt = Date.now();
   setCoachStatus('thinking…');
   const payload = {
     customer_id: coachMeta.customer_id,
@@ -720,7 +754,14 @@ async function flushCoachBuffer(reason) {
       body: JSON.stringify(payload)
     });
     const j = await r.json().catch(() => ({}));
-    if (j && j.tip) renderCoachTip(j.tip);
+    if (j && j.tip) {
+      renderCoachTip(j.tip);
+    } else if (j && j._err) {
+      console.warn('coach backend error:', j._err);
+    } else if (j && j.skipped) {
+      // Buffer was too short server-side — silent, just keep listening
+      console.debug('coach skipped:', j.skipped);
+    }
   } catch (err) {
     console.error('coach flush failed', err);
   } finally {
@@ -730,11 +771,14 @@ async function flushCoachBuffer(reason) {
 }
 
 function onTranscriptionMessage(ev) {
-  // Daily fires transcription-message with { text, participantId, timestamp, is_final }
-  // Only buffer final fragments to avoid duplicating interim results.
-  const text = ev?.text || ev?.data?.text;
-  const isFinal = ev?.is_final !== false; // default true if undefined
-  if (!text || !isFinal) return;
+  // Daily fires transcription-message with { text, participantId, timestamp, rawResponse, ... }
+  // Some configurations include is_final on the top level; others nest it in rawResponse.
+  const text = (ev?.text || ev?.data?.text || '').trim();
+  if (!text) return;
+  // Accept unless explicitly marked interim
+  const finalFlag = ev?.is_final;
+  const rawFinal = ev?.rawResponse?.is_final;
+  if (finalFlag === false || rawFinal === false) return;
   coachBuffer.push({ text, at: Date.now() });
   coachLastEventAt = Date.now();
   // Silence-based flush: if 8s elapses without new transcript, flush
@@ -742,16 +786,24 @@ function onTranscriptionMessage(ev) {
   coachSilenceTimer = setTimeout(() => flushCoachBuffer('silence'), 8000);
 }
 
-function startCoach(invite) {
+function startCoach(invite, extras) {
   if (coachStarted || !callFrame) return;
   coachStarted = true;
+  extras = extras || {};
   coachMeta = {
-    customer_id: invite.customer_id || userEmail,
-    contact_email: '', // unknown here — invitee email lives on a sibling row, coach still works without
+    customer_id: invite.customer_id || invite.email || userEmail,
+    contact_email: extras.contactEmail || '',
     meeting_id: invite.meeting_id || null
   };
   document.getElementById('coachPanel').style.display = 'flex';
   setCoachStatus('connecting…');
+
+  // If we don't have the Daily admin token, transcription will fail — tell the host now.
+  if (!extras.hostToken) {
+    setCoachStatus('host token missing');
+    renderCoachTip('⚠️ This meeting was created before live coaching was enabled (no host token saved). The coach will only work for newly scheduled meetings.');
+    return;
+  }
 
   // Subscribe to Daily transcription events
   try {
@@ -794,6 +846,7 @@ function stopCoach() {
   if (coachFlushTimer) { clearInterval(coachFlushTimer); coachFlushTimer = null; }
   if (coachSilenceTimer) { clearTimeout(coachSilenceTimer); coachSilenceTimer = null; }
   coachBuffer = [];
+  coachLastFlushAt = 0;
   coachStarted = false;
   coachMeta = null;
   const panel = document.getElementById('coachPanel');
