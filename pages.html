@@ -444,6 +444,7 @@
     pagesUpdate:      'https://victoryvision.app.n8n.cloud/webhook/pages/update',
     pagesEditMeta:    'https://victoryvision.app.n8n.cloud/webhook/pages/edit-meta',
     pagesRemove:      'https://victoryvision.app.n8n.cloud/webhook/pages/remove',
+    pagesPublish:     'https://victoryvision.app.n8n.cloud/webhook/pages/publish',
     pagesLeadMagnet:  'https://victoryvision.app.n8n.cloud/webhook/pages/lead-magnet-create',
     pagesNewsletter:  'https://victoryvision.app.n8n.cloud/webhook/pages/newsletter-create',
     pagesAnalytics:   'https://victoryvision.app.n8n.cloud/webhook/pages/analytics',
@@ -510,12 +511,27 @@
       }
 
       var response = await fetch(url, { method: method, headers: headers, body: body, mode: 'cors', credentials: 'omit', signal: AbortSignal.timeout(30000) });
-      if (!response.ok) { var t = await response.text(); throw new Error('HTTP ' + response.status + ': ' + t); }
+      if (!response.ok) {
+        var t = await response.text();
+        // Try to extract a clean user-facing message from the response body. n8n workflows
+        // that throw structured errors return JSON like {"success":false,"error":"slug already in use","code":"SLUG_EXISTS"}.
+        // Fall back to the raw text if it isn't JSON.
+        var msg = '';
+        try {
+          var parsed = JSON.parse(t);
+          msg = parsed.message || parsed.error || parsed.detail || '';
+        } catch (e) { /* not JSON */ }
+        var finalMsg = msg ? msg : ('HTTP ' + response.status + ': ' + t);
+        var err = new Error(finalMsg);
+        err.status = response.status;
+        err.code = (function(){ try { return JSON.parse(t).code; } catch(e) { return null; } })();
+        throw err;
+      }
       var text = await response.text();
       return text ? JSON.parse(text) : { success: true };
     } catch (error) {
       console.error('API call failed:', error);
-      if (error.message.indexOf('401') > -1 || error.message.indexOf('403') > -1) { showStatus('Session expired. Please log in again.', true); setTimeout(redirectToLogin, 2000); }
+      if (error.status === 401 || error.status === 403) { showStatus('Session expired. Please log in again.', true); setTimeout(redirectToLogin, 2000); }
       throw error;
     }
   }
@@ -667,8 +683,12 @@
         document.getElementById('abTestLanding').checked = false;
         await loadPages(); applyFilters();
       } else { throw new Error(result && result.message ? result.message : 'Page creation failed'); }
-    } catch(e) { console.error(e); showStatus('Error creating page: ' + e.message, true);
-    } finally { btn.disabled = false; btn.textContent = '📄 Create Landing Page'; }
+    } catch(e) {
+      console.error(e);
+      showStatus('Error creating page: ' + e.message, true);
+      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLanding'); if (s) { s.focus(); s.select(); } }
+    }
+    finally { btn.disabled = false; btn.textContent = '📄 Create Landing Page'; }
   }
 
   async function createLeadMagnetPage() {
@@ -692,7 +712,11 @@
         selectedLmFile = null;
         await loadPages(); applyFilters();
       } else { throw new Error(result && result.message ? result.message : 'Creation failed'); }
-    } catch(e) { console.error(e); showStatus('Error: ' + e.message, true); }
+    } catch(e) {
+      console.error(e);
+      showStatus('Error: ' + e.message, true);
+      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLeadMagnet'); if (s) { s.focus(); s.select(); } }
+    }
   }
 
   async function createNewsletterPage() {
@@ -712,7 +736,11 @@
         document.getElementById('abTestNl').checked = false;
         await loadPages(); applyFilters();
       } else { throw new Error(result && result.message ? result.message : 'Creation failed'); }
-    } catch(e) { console.error(e); showStatus('Error: ' + e.message, true); }
+    } catch(e) {
+      console.error(e);
+      showStatus('Error: ' + e.message, true);
+      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugNewsletter'); if (s) { s.focus(); s.select(); } }
+    }
   }
 
   // ─── Load pages ───────────────────────────────────────────────────────────────
@@ -728,6 +756,11 @@
     try {
       var data = await apiCall(ENDPOINTS.pagesGet);
       var raw = Array.isArray(data) ? data : (data && data.pages ? data.pages : []);
+      // IMPORTANT: do NOT coerce views/conversions/revenue/subscribers to 0. The pages
+      // table stores null until the analytics rollup runs. fmtNum() / fmtMoney() in
+      // the card render distinguish "no data yet" (—) from "zero events" (0). Coercing
+      // to 0 here loses that distinction.
+      function passthrough(v) { return (v === undefined || v === 'NULL' || v === '') ? null : v; }
       allPages = raw.map(function(page) {
         return Object.assign({}, page, {
           title: (page.name || page.title || 'Untitled Page').replace(/['"'>]/g, ''),
@@ -737,12 +770,13 @@
           slug: page.slug || '',
           ab_test: page.ab_test || false,
           ab_variant: page.ab_variant || null,
-          subscribers: page.subscribers || 0,
-          revenue: page.revenue || 0,
-          views: page.views || 0,
-          conversions: page.conversions || 0,
-          visitor_sources: page.visitor_sources || null,
-          status: 'active'
+          ab_parent_id: page.ab_parent_id || null,
+          customer_id: page.customer_id || '',
+          subscribers: passthrough(page.subscribers),
+          revenue: passthrough(page.revenue),
+          views: passthrough(page.views),
+          conversions: passthrough(page.conversions),
+          visitor_sources: page.visitor_sources || null
         });
       });
       filteredPages = allPages.slice();
@@ -825,24 +859,38 @@
     wrap.style.cssText = 'background:#fff;border:1px solid #dde2e8;border-radius:8px;overflow:hidden;';
     var typeLabels = { landing: 'Landing', lead_magnet: 'Lead Magnet', newsletter: 'Newsletter' };
     var header = document.createElement('div');
-    header.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 100px 100px 100px 220px;gap:12px;padding:10px 14px;background:#f5f6f8;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#555;font-weight:600;border-bottom:1px solid #dde2e8;';
-    header.innerHTML = '<div>Name</div><div>Type</div><div>Views</div><div>Conv.</div><div>Revenue</div><div>Actions</div>';
+    header.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 90px 80px 80px 90px 240px;gap:12px;padding:10px 14px;background:#f5f6f8;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#555;font-weight:600;border-bottom:1px solid #dde2e8;';
+    header.innerHTML = '<div>Name</div><div>Type</div><div>Status</div><div>Views</div><div>Conv.</div><div>Revenue</div><div>Actions</div>';
     wrap.appendChild(header);
+    // Reuse the same null-aware formatters used in the card view, so the list and
+    // grid show the same values for the same row.
+    function fmtNumL(v) { return (v === null || v === undefined || v === 'NULL') ? '—' : Number(v).toLocaleString(); }
+    function fmtMoneyL(v) {
+      if (v === null || v === undefined || v === 'NULL') return '—';
+      var n = parseFloat(v);
+      return isNaN(n) ? '—' : '$' + n.toLocaleString();
+    }
     filteredPages.forEach(function(page) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 100px 100px 100px 220px;gap:12px;padding:12px 14px;border-bottom:1px solid #eef0f3;align-items:center;font-size:13px;';
+      row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 90px 80px 80px 90px 240px;gap:12px;padding:12px 14px;border-bottom:1px solid #eef0f3;align-items:center;font-size:13px;';
       var typeClass = page.page_type || 'landing';
+      var isPub = !!(page.slug && page.url && page.url !== 'No URL set');
+      var statusChip = isPub
+        ? '<span style="background:#28a745;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;">ACTIVE</span>'
+        : '<span style="background:#6c757d;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;">DRAFT</span>';
       row.innerHTML =
         '<div><div style="font-weight:600;color:#0A3161;">' + escHtml(page.title||'Untitled') + '</div>' +
           '<div style="color:#888;font-size:11px;margin-top:2px;">' + escHtml(page.slug||'') + '</div></div>' +
         '<div><span class="page-type-badge ' + typeClass + '" style="font-size:10px;padding:2px 8px;">' + (typeLabels[page.page_type] || page.page_type) + '</span></div>' +
-        '<div>' + (page.views||0).toLocaleString() + '</div>' +
-        '<div>' + (page.conversions||0).toLocaleString() + '</div>' +
-        '<div>$' + parseFloat(page.revenue||0).toLocaleString() + '</div>' +
+        '<div>' + statusChip + '</div>' +
+        '<div>' + fmtNumL(page.views) + '</div>' +
+        '<div>' + fmtNumL(page.conversions) + '</div>' +
+        '<div>' + fmtMoneyL(page.revenue) + '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-          '<button class="btn-small secondary" data-act="view" data-id="' + page.id + '">👁 View</button>' +
-          '<button class="btn-small" data-act="edit" data-id="' + page.id + '">✏️ Edit</button>' +
-          '<button class="btn-small" data-act="copy" data-id="' + page.id + '">🔗 Copy</button>' +
+          '<button class="btn-small secondary" data-act="view" data-id="' + page.id + '">👁</button>' +
+          '<button class="btn-small" data-act="edit" data-id="' + page.id + '">✏️</button>' +
+          '<button class="btn-small" data-act="copy" data-id="' + page.id + '">🔗</button>' +
+          (!isPub ? '<button class="btn-small" data-act="publish" data-id="' + page.id + '" style="background:#28a745;">🚀</button>' : '') +
           '<button class="btn-small danger" data-act="delete" data-id="' + page.id + '">🗑</button>' +
         '</div>';
       row.addEventListener('click', function(e) {
@@ -850,10 +898,11 @@
         e.stopPropagation();
         var id = btn.dataset.id;
         var p = allPages.find(function(x){ return String(x.id) === String(id); }) || {};
-        if (btn.dataset.act === 'view')   viewPage(p.url || '', p.slug || '');
-        if (btn.dataset.act === 'copy')   copyPageUrl(p.url || '', p.slug || '');
+        if (btn.dataset.act === 'view')   viewPage(p.url || '', p.slug || '', p.customer_id);
+        if (btn.dataset.act === 'copy')   copyPageUrl(p.url || '', p.slug || '', p.customer_id);
         if (btn.dataset.act === 'edit')   openEditPageModal(p);
         if (btn.dataset.act === 'delete') deletePage(p.id);
+        if (btn.dataset.act === 'publish') publishPage(p.id);
       });
       wrap.appendChild(row);
     });
@@ -895,13 +944,50 @@
       return '<button class="tw-btn ' + (w==='7D'?'active':'') + '" onclick="event.stopPropagation(); loadAnalytics(\'' + page.id + '\',\'' + w + '\',this)">' + w + '</button>';
     }).join('');
 
+    // Status is computed, not hardcoded. A page is "published" when both slug AND URL
+    // are present in the DB. Anything else is a draft (the Create workflow finished
+    // generating the body but the URL/routing step hasn't completed, OR the user
+    // hasn't fired Publish yet).
+    var isPublished = !!(page.slug && pageUrl && pageUrl !== 'No URL set');
+    var statusBadge = isPublished
+      ? '<div class="page-status active">ACTIVE</div>'
+      : '<div class="page-status draft" style="background:#6c757d;color:#fff;">DRAFT</div>';
+
+    // Render numeric meta values. The pages table stores null when no rollup has
+    // happened yet — show "—" instead of "0" so the user can tell apart "no data"
+    // from "zero events".
+    function fmtNum(v) { return (v === null || v === undefined || v === 'NULL') ? '—' : Number(v).toLocaleString(); }
+    function fmtMoney(v) {
+      if (v === null || v === undefined || v === 'NULL') return '—';
+      var n = parseFloat(v);
+      return isNaN(n) ? '—' : '$' + n.toLocaleString();
+    }
+
+    // A/B link state. If this page is variant A of an A/B test, there should be a
+    // sibling row with ab_parent_id = this.id. If this page has ab_parent_id set,
+    // it is variant B and we can link back to its parent.
+    var sibling = page.ab_test
+      ? allPages.find(function(x) {
+          return String(x.ab_parent_id) === String(page.id)
+              || (page.ab_parent_id && String(x.id) === String(page.ab_parent_id));
+        })
+      : null;
+    var abBadgeHtml = '';
+    if (page.ab_test) {
+      var variantLabel = page.ab_variant || (page.ab_parent_id ? 'B' : 'A');
+      abBadgeHtml = '<div class="ab-badge">A/B ' + variantLabel +
+        (sibling ? ' · <a href="#" style="color:#fff;text-decoration:underline;" onclick="event.stopPropagation(); document.getElementById(\'page_' + sibling.id + '\')?.scrollIntoView({behavior:\'smooth\'});">see ' + (variantLabel === 'A' ? 'B' : 'A') + '</a>' : '') +
+        '</div>';
+    }
+
+    card.id = 'page_' + page.id;
     card.innerHTML =
       '<button class="close-btn" onclick="event.stopPropagation(); closeExpandedCard();">&times;</button>' +
       '<div class="page-preview">' +
         previewContent +
-        '<div class="page-status active">ACTIVE</div>' +
+        statusBadge +
         '<div class="page-type-badge ' + page.page_type + '">' + typeLabel + '</div>' +
-        (page.ab_test ? '<div class="ab-badge">A/B ' + (page.ab_variant||'') + '</div>' : '') +
+        abBadgeHtml +
       '</div>' +
       '<div class="page-card-header">' +
         '<div class="page-card-title">' + escHtml(page.title||'Untitled') + '</div>' +
@@ -911,10 +997,10 @@
         '<p class="page-description">' + escHtml(page.description||'No description available') + '</p>' +
         '<div class="page-meta">' +
           '<div class="meta-item"><span class="meta-label">Created:</span>' + createdDate + '</div>' +
-          '<div class="meta-item"><span class="meta-label">Views:</span>' + (page.views||0).toLocaleString() + '</div>' +
-          '<div class="meta-item"><span class="meta-label">Conversions:</span>' + (page.conversions||0).toLocaleString() + '</div>' +
-          '<div class="meta-item"><span class="meta-label">Subscribers:</span>' + (page.subscribers||0).toLocaleString() + '</div>' +
-          '<div class="meta-item"><span class="meta-label">Revenue:</span>$' + parseFloat(page.revenue||0).toLocaleString() + '</div>' +
+          '<div class="meta-item"><span class="meta-label">Views:</span>' + fmtNum(page.views) + '</div>' +
+          '<div class="meta-item"><span class="meta-label">Conversions:</span>' + fmtNum(page.conversions) + '</div>' +
+          '<div class="meta-item"><span class="meta-label">Subscribers:</span>' + fmtNum(page.subscribers) + '</div>' +
+          '<div class="meta-item"><span class="meta-label">Revenue:</span>' + fmtMoney(page.revenue) + '</div>' +
           '<div class="meta-item"><span class="meta-label">Campaign:</span>' + escHtml(page.campaign_name||'None') + '</div>' +
         '</div>' +
         '<div class="analytics-section" id="analytics_' + page.id + '">' +
@@ -931,8 +1017,9 @@
         '</div>' +
       '</div>' +
       '<div class="page-actions">' +
-        '<button onclick="event.stopPropagation(); viewPage(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\')" class="btn-small secondary">👁 View</button>' +
-        '<button onclick="event.stopPropagation(); copyPageUrl(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\')" class="btn-small">🔗 Copy URL</button>' +
+        '<button onclick="event.stopPropagation(); viewPage(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\',\'' + escHtml(page.customer_id||'') + '\')" class="btn-small secondary">👁 View</button>' +
+        '<button onclick="event.stopPropagation(); copyPageUrl(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\',\'' + escHtml(page.customer_id||'') + '\')" class="btn-small">🔗 Copy URL</button>' +
+        (!isPublished ? '<button onclick="event.stopPropagation(); publishPage(\'' + page.id + '\')" class="btn-small" style="background:#28a745;">🚀 Publish</button>' : '') +
         '<button onclick="event.stopPropagation(); openEditPageById(\'' + page.id + '\')" class="btn-small">✏️ Edit</button>' +
         '<button onclick="event.stopPropagation(); deletePage(\'' + page.id + '\')" class="btn-small danger">🗑 Delete</button>' +
       '</div>';
@@ -1094,9 +1181,9 @@
             '</select>' +
           '</div>' +
           '<div class="form-group" style="margin-bottom:18px;">' +
-            '<label for="editPageSlug" style="font-size:12px;color:#555;">Slug (URL path)</label>' +
-            '<input type="text" id="editPageSlug" style="width:100%;padding:10px;border:1px solid #dde2e8;border-radius:6px;font-size:14px;font-family:monospace;">' +
-            '<div style="font-size:11px;color:#888;margin-top:4px;">Lowercase letters, numbers, dashes only.</div>' +
+            '<label style="font-size:12px;color:#555;">Slug (URL path) — <span style="color:#888;">cannot be changed after creation</span></label>' +
+            '<div id="editPageSlugDisplay" style="width:100%;padding:10px;border:1px solid #dde2e8;border-radius:6px;font-size:14px;font-family:monospace;background:#f5f6f8;color:#555;user-select:all;"></div>' +
+            '<div style="font-size:11px;color:#888;margin-top:4px;">To use a different URL, delete this page and create a new one. The slug becomes available again after deletion.</div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
             '<button type="button" id="editPageCancel" class="secondary" style="padding:10px 18px;">Cancel</button>' +
@@ -1122,7 +1209,7 @@
     });
     camSel.value = page.campaign_id || '';
     document.getElementById('editPageType').value = page.page_type || 'landing';
-    document.getElementById('editPageSlug').value = page.slug || '';
+    document.getElementById('editPageSlugDisplay').textContent = page.slug || '(no slug — page is a draft)';
     overlay.style.display = 'flex';
   }
 
@@ -1134,20 +1221,29 @@
     var campaign_id = camSel.value || null;
     var campaign_name = campaign_id ? (camSel.selectedOptions[0]?.dataset?.name || camSel.selectedOptions[0]?.textContent || '') : null;
     var page_type = document.getElementById('editPageType').value;
-    var slug = document.getElementById('editPageSlug').value.trim();
     if (!id) { overlay.style.display = 'none'; return; }
-    // If the user typed an obviously invalid slug, surface it before the PATCH blanks the live one.
-    if (slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-      showStatus('Slug must be lowercase letters, numbers, and single dashes only.', true);
-      return;
+
+    // Warn when changing page_type — different types use different content systems
+    // (landing uses header_video / campaign_file; newsletter has no video). Switching
+    // can leave the served HTML broken (referencing a missing video) until the user
+    // re-runs Create or AI-edits the body.
+    var existing = allPages.find(function(x){ return String(x.id) === String(id); });
+    if (existing && existing.page_type && existing.page_type !== page_type) {
+      var warnMsg = 'Changing page type from "' + existing.page_type + '" to "' + page_type +
+        '" will not regenerate the page body. The served HTML may reference fields that no longer apply ' +
+        '(e.g. switching landing→newsletter leaves the old header video in the saved HTML).\n\n' +
+        'After saving, you should re-run the Create flow or use the AI edit chat to refresh the body.\n\n' +
+        'Continue?';
+      if (!confirm(warnMsg)) return;
     }
+
     var btn = document.getElementById('editPageSave');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
-      // Only send slug in the payload if the user actually typed one. Sending an empty string
-      // causes the Edit Meta workflow (which treats `undefined` as "leave alone") to overwrite.
+      // Slug is intentionally NOT in the payload — it's immutable post-creation. To change
+      // a URL, the user deletes the page and creates a new one (the unique partial index
+      // frees the slug automatically on delete).
       var payload = { page_id: id, name: name, campaign_id: campaign_id, campaign_name: campaign_name, page_type: page_type };
-      if (slug) payload.slug = slug;
       var res = await apiCall(ENDPOINTS.pagesEditMeta, payload);
       if (res && (res.success || res.page)) { showStatus('Page updated!'); overlay.style.display = 'none'; await loadPages(); applyFilters(); }
       else throw new Error(res && res.message ? res.message : 'Update failed');
@@ -1200,23 +1296,43 @@
     } catch(e) { showStatus('Error deleting page: ' + e.message, true); }
   }
 
-  // Build the live-preview URL. n8n production webhooks don't support path params, so
-  // slug must be a query param. cid is no longer needed (lookup is slug-only server-side).
-  function buildPreviewUrl(slug) {
-    if (!slug) return '';
-    return 'https://victoryvision.app.n8n.cloud/webhook/p?slug=' + encodeURIComponent(slug);
+  // Publish (or republish) a page. Calls the Pages - Publish workflow which sets the
+  // URL column and runs any DNS/routing wiring. Useful for pages that were created
+  // but never got a URL (Create workflow timed out, or routing step failed).
+  async function publishPage(pageId) {
+    if (!confirm('Publish this page? This will set its live URL and make it reachable.')) return;
+    try {
+      var result = await apiCall(ENDPOINTS.pagesPublish, { id: pageId, page_id: pageId });
+      if (result && result.success !== false) {
+        showStatus('Page published!' + (result.url ? ' Live at: ' + result.url : ''));
+        await loadPages(); applyFilters();
+      } else {
+        throw new Error(result && result.message ? result.message : 'Publish failed');
+      }
+    } catch(e) { showStatus('Error publishing page: ' + e.message, true); }
   }
 
-  function viewPage(url, slug) {
+  // Build the live-preview URL. n8n production webhooks don't support path params, so
+  // slug must be a query param. Pass cid as well so duplicate slugs across customers
+  // resolve to the right page (e.g. "aideal" exists for both glaze@vvdoh.com tenants).
+  function buildPreviewUrl(slug, customerId) {
+    if (!slug) return '';
+    var u = 'https://victoryvision.app.n8n.cloud/webhook/p?slug=' + encodeURIComponent(slug);
+    var cid = customerId || CUSTOMER_ID;
+    if (cid) u += '&cid=' + encodeURIComponent(cid);
+    return u;
+  }
+
+  function viewPage(url, slug, customerId) {
     // Prefer slug-based preview (always reachable); fall back to stored URL
-    var target = slug ? buildPreviewUrl(slug) : '';
+    var target = slug ? buildPreviewUrl(slug, customerId) : '';
     if (!target && url && url !== 'No URL set' && url !== 'NULL' && url !== 'null') target = url;
     if (target) window.open(target, '_blank', 'noopener,noreferrer');
     else showStatus('No URL available for this page', true);
   }
 
-  function copyPageUrl(url, slug) {
-    var target = slug ? buildPreviewUrl(slug) : url;
+  function copyPageUrl(url, slug, customerId) {
+    var target = slug ? buildPreviewUrl(slug, customerId) : url;
     if (target && target !== 'No URL set') navigator.clipboard.writeText(target).then(function() { showStatus('URL copied!'); }).catch(function() { showStatus('Failed to copy URL', true); });
     else showStatus('No URL available', true);
   }
@@ -1297,6 +1413,7 @@
   window.viewPage = viewPage;
   window.copyPageUrl = copyPageUrl;
   window.deletePage = deletePage;
+  window.publishPage = publishPage;
   window.logout = logout;
   window.startTour = startTour;
   window.loadAnalytics = loadAnalytics;
