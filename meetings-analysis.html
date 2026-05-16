@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meetings — Victory Vision</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; min-height: 100vh; color: #1f2937; }
+
+  /* Navbar — matches ai.html */
+  .navbar { background: #0A3161; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .navbar .logo img { height: 50px; }
+  .navbar nav ul { display: flex; list-style: none; gap: 25px; margin: 0; padding: 0; }
+  .navbar nav ul li a { color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background-color 0.3s; }
+  .navbar nav ul li a.active, .navbar nav ul li a:hover { background-color: rgba(255, 255, 255, 0.2); }
+  .navbar .user-info { display: flex; align-items: center; gap: 15px; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #0A3161 0%, #1a5fa8 100%); color: #fff; padding: 28px 32px; border-radius: 14px; box-shadow: 0 8px 24px rgba(10,49,97,0.18); margin-bottom: 24px; }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+  .hero p { color: rgba(255,255,255,0.85); font-size: 15px; line-height: 1.5; }
+  .hero .gold { color: #C9A84C; font-weight: 700; }
+
+  /* Top KPI strip */
+  .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .kpi .label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .kpi .value { font-size: 28px; font-weight: 700; color: #0A3161; line-height: 1; }
+  .kpi .delta { font-size: 12px; color: #64748b; margin-top: 6px; }
+  .kpi .delta.pos { color: #16a34a; }
+  .kpi .delta.neg { color: #dc2626; }
+
+  /* Section card */
+  .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+  .section > summary, .section .section-head { cursor: pointer; padding: 16px 20px; font-size: 16px; font-weight: 700; color: #0A3161; list-style: none; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+  .section > .section-body { padding: 0 20px 20px 20px; }
+
+  /* Filters bar */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filter-pill { padding: 6px 14px; border: 1.5px solid #e2e8f0; background: #fff; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569; transition: all 0.15s; user-select: none; }
+  .filter-pill:hover { border-color: #0A3161; color: #0A3161; }
+  .filter-pill.active { background: #0A3161; color: #fff; border-color: #0A3161; }
+
+  /* Charts row */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .chart-box h3 { font-size: 14px; font-weight: 700; color: #0A3161; margin-bottom: 10px; }
+  .chart-wrap { position: relative; height: 220px; }
+  @media (max-width: 760px) { .charts-row { grid-template-columns: 1fr; } }
+
+  /* Meeting list cards */
+  .meeting-card { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 8px; background: #fff; transition: all 0.15s; overflow: hidden; }
+  .meeting-card:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .meeting-row { padding: 12px 16px; display: grid; grid-template-columns: minmax(110px, 130px) 1fr minmax(100px, 130px) minmax(80px, 100px) auto; align-items: center; gap: 14px; cursor: pointer; }
+  .mc-type { display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+  .mc-type.discovery { background: #dbeafe; color: #1e40af; }
+  .mc-type.demo { background: #ede9fe; color: #6d28d9; }
+  .mc-type.followup { background: #fef3c7; color: #92400e; }
+  .mc-type.proposal_review { background: #fce7f3; color: #be185d; }
+  .mc-type.closing { background: #fee2e2; color: #991b1b; }
+  .mc-type.renewal { background: #d1fae5; color: #065f46; }
+  .mc-type.partnership { background: #cffafe; color: #155e75; }
+  .mc-type.internal { background: #f1f5f9; color: #475569; }
+  .mc-type.recruiting { background: #fef3c7; color: #78350f; }
+  .mc-type.unknown { background: #f1f5f9; color: #64748b; }
+  .mc-participant { font-size: 14px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mc-participant .sub { font-size: 12px; color: #64748b; font-weight: 400; }
+  .mc-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+  .mc-status.held { background: #d1fae5; color: #065f46; }
+  .mc-status.no_show { background: #fee2e2; color: #991b1b; }
+  .mc-status.rescheduled { background: #fef3c7; color: #92400e; }
+  .mc-status.cancelled { background: #f1f5f9; color: #6b7280; }
+  .mc-status.confirmed { background: #dbeafe; color: #1e40af; }
+  .mc-status.unknown { background: #f1f5f9; color: #64748b; }
+  .mc-score { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 8px; text-align: center; }
+  .mc-score.high { background: #d1fae5; color: #065f46; }
+  .mc-score.mid { background: #fef3c7; color: #92400e; }
+  .mc-score.low { background: #fee2e2; color: #991b1b; }
+  .mc-score.none { background: #f1f5f9; color: #94a3b8; }
+  .mc-expand { color: #94a3b8; font-size: 12px; transition: transform 0.2s; }
+  .meeting-card.open .mc-expand { transform: rotate(180deg); }
+
+  .meeting-detail { display: none; padding: 0 18px 18px 18px; border-top: 1px solid #f1f5f9; background: #fafbfc; }
+  .meeting-card.open .meeting-detail { display: block; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 16px; }
+  @media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } .meeting-row { grid-template-columns: 1fr; } }
+  .detail-block { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+  .detail-block .h { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .detail-block .b { font-size: 13px; color: #374151; line-height: 1.55; white-space: pre-wrap; }
+  .detail-action-bar { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; }
+
+  /* Coach Replay (live AI tips captured during meeting) */
+  .coach-replay { background: linear-gradient(180deg, #fffbeb 0%, #fef9c3 100%); border: 1px solid #fde68a; border-left: 4px solid #C9A84C; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+  .coach-replay-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .coach-replay-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+  .coach-tip-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid #fde68a; border-radius: 8px; }
+  .coach-tip-marker { width: 22px; height: 22px; border-radius: 50%; background: #C9A84C; color: #0A3161; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .coach-tip-body { min-width: 0; }
+  .coach-tip-time { font-size: 10px; color: #92400e; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 2px; }
+  .coach-tip-text { font-size: 13px; color: #0A3161; font-weight: 600; line-height: 1.45; }
+  .coach-tip-quote { font-size: 11px; color: #78350f; font-style: italic; margin-top: 4px; border-left: 2px solid #fde68a; padding-left: 8px; line-height: 1.4; }
+  .coach-replay-empty { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; margin-top: 14px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 10px; }
+
+  /* Live tips badge in collapsed row */
+  .coach-count-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: #C9A84C; color: #0A3161; margin-left: 6px; }
+
+  .btn { padding: 7px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .btn-primary { background: #0A3161; color: #fff; }
+  .btn-primary:hover { background: #082749; }
+  .btn-gold { background: #C9A84C; color: #0A3161; }
+  .btn-gold:hover { background: #b89540; }
+  .btn-outline { background: #fff; color: #0A3161; border: 1px solid #0A3161; }
+  .btn-outline:hover { background: #f1f5f9; }
+  .btn-ghost { background: transparent; color: #64748b; border: 1px solid #cbd5e1; }
+
+  /* Insights blocks */
+  .insights-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 880px) { .insights-grid { grid-template-columns: 1fr; } }
+  .insight-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+  .insight-card .ih { font-size: 12px; font-weight: 700; color: #0A3161; margin-bottom: 8px; }
+  .insight-card .ib { font-size: 13px; color: #374151; line-height: 1.55; }
+  .insight-card ul { list-style: none; padding: 0; margin: 0; }
+  .insight-card li { padding: 5px 0; border-bottom: 1px dashed #f1f5f9; font-size: 12px; color: #475569; }
+  .insight-card li:last-child { border-bottom: none; }
+  .insight-card.good { border-left: 4px solid #16a34a; }
+  .insight-card.warn { border-left: 4px solid #f59e0b; }
+  .insight-card.bad  { border-left: 4px solid #dc2626; }
+
+  /* AI Coach digest (running rollup of users.meeting_notes) */
+  .coach-digest { background: linear-gradient(135deg, #fefce8, #fef9c3); border-left: 4px solid #C9A84C; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; }
+  .coach-digest h3 { font-size: 14px; font-weight: 700; color: #78350f; margin-bottom: 8px; }
+  .coach-digest pre { font-family: inherit; font-size: 12.5px; color: #57340a; white-space: pre-wrap; line-height: 1.55; max-height: 220px; overflow-y: auto; padding-right: 8px; }
+
+  .loading { text-align: center; padding: 30px; color: #94a3b8; font-size: 14px; }
+  .empty-state { text-align: center; padding: 50px 20px; color: #94a3b8; font-size: 14px; }
+  .badge-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+  .badge-very_high { background: #16a34a; color: #fff; }
+  .badge-high      { background: #22c55e; color: #fff; }
+  .badge-medium    { background: #f59e0b; color: #fff; }
+  .badge-low       { background: #f97316; color: #fff; }
+  .badge-very_low  { background: #dc2626; color: #fff; }
+  .badge-won       { background: #065f46; color: #fff; }
+  .badge-lost      { background: #6b7280; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="logo">
+    <img src="logo.jpg" alt="Victory Vision Logo"
+      onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'">
+  </div>
+  <nav>
+    <ul>
+      <li><a href="/companyprofile">Profile</a></li>
+      <li><a href="/campaigns">Campaigns</a></li>
+      <li><a href="/media">Media</a></li>
+      <li><a href="/pages">Pages</a></li>
+      <li><a href="/social">Social</a></li>
+      <li><a href="/contacts">Contacts</a></li>
+      <li><a href="/ads">Ads</a></li>
+      <li><a href="/messages">Messages</a></li>
+      <li><a href="/meetings-analysis" class="active">Meetings</a></li>
+      <li><a href="/ai">AI SDR</a></li>
+      <li><a href="/settings">Settings</a></li>
+    </ul>
+  </nav>
+  <div class="user-info">
+    <span id="userEmail">Loading…</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>🎯 Meetings — the Tip of the Spear</h1>
+    <p>Every meeting is a chance to move closer to your goal. Higher meeting conversion = <span class="gold">faster victory</span>. This page is where you turn raw meeting data into the next move.</p>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip" id="kpiStrip">
+    <div class="kpi"><div class="label">Meetings Held</div><div class="value" id="kpiHeld">—</div><div class="delta" id="kpiHeldDelta"></div></div>
+    <div class="kpi"><div class="label">Avg Score</div><div class="value" id="kpiAvgScore">—</div><div class="delta" id="kpiAvgScoreDelta">out of 10</div></div>
+    <div class="kpi"><div class="label">Win Probability ≥ High</div><div class="value" id="kpiHighProb">—</div><div class="delta" id="kpiHighProbDelta"></div></div>
+    <div class="kpi"><div class="label">Pipeline Tied to Meetings</div><div class="value" id="kpiPipe">$—</div><div class="delta">est. ARR</div></div>
+    <div class="kpi"><div class="label">No-Show Rate</div><div class="value" id="kpiNoShow">—</div><div class="delta" id="kpiNoShowDelta"></div></div>
+    <div class="kpi"><div class="label">Avg Mtgs to Close</div><div class="value" id="kpiToClose">—</div><div class="delta">meetings</div></div>
+  </div>
+
+  <!-- AI COACH DIGEST -->
+  <div class="coach-digest" id="coachDigest" style="display:none;">
+    <h3>💡 AI Meeting Coach — what your meetings have been teaching the platform</h3>
+    <pre id="coachDigestBody"></pre>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-box">
+      <h3>Conversion by meeting type</h3>
+      <div class="chart-wrap"><canvas id="chartType"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Score distribution (1–10)</h3>
+      <div class="chart-wrap"><canvas id="chartScore"></canvas></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="section">
+    <div class="section-head">
+      <span>🔍 What's working &amp; what isn't (from your last 30 days of meetings)</span>
+    </div>
+    <div class="section-body">
+      <div class="insights-grid">
+        <div class="insight-card good">
+          <div class="ih">✅ What's Working</div>
+          <ul id="insightWorking"><li class="loading">Analyzing…</li></ul>
+        </div>
+        <div class="insight-card bad">
+          <div class="ih">⚠️ Top Objections Raised</div>
+          <ul id="insightObjections"><li class="loading">Analyzing…</li></ul>
+        </div>
+        <div class="insight-card warn">
+          <div class="ih">🎯 Followups You Owe</div>
+          <ul id="insightFollowups"><li class="loading">Analyzing…</li></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEETINGS LIST -->
+  <div class="section">
+    <div class="section-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <span>📋 All Meetings <span id="meetingCount" style="font-size:12px; color:#64748b; font-weight:500;"></span></span>
+      <div class="filters" id="filterBar">
+        <span class="filter-pill active" data-filter="all">All</span>
+        <span class="filter-pill" data-filter="held">Held</span>
+        <span class="filter-pill" data-filter="upcoming">Upcoming</span>
+        <span class="filter-pill" data-filter="no_show">No-shows</span>
+        <span class="filter-pill" data-filter="high_score">High score (≥7)</span>
+        <span class="filter-pill" data-filter="needs_followup">Needs followup</span>
+      </div>
+    </div>
+    <div class="section-body">
+      <div id="meetingsList"><div class="loading">Loading meetings…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const ENDPOINTS = {
+    getMeetings:   'https://victoryvision.app.n8n.cloud/webhook/meetings/get',
+    getContacts:   'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+    getUser:       'https://victoryvision.app.n8n.cloud/webhook/user/get',
+    sendEmail:     'https://victoryvision.app.n8n.cloud/webhook/emails/send',
+    followup:      'https://victoryvision.app.n8n.cloud/webhook/emails/followup',
+    updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update'
+  };
+
+  let CUSTOMER_ID = null, AUTH_TOKEN = null;
+  let allMeetings = [], allContacts = [], currentUser = null;
+  let activeFilter = 'all';
+  let chartType, chartScore;
+
+  // ─── Helpers ───────────────────────────────────────────────────────────
+  function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+  function unwrap(r) { if (!r) return []; if (Array.isArray(r)) return r; if (Array.isArray(r.data)) return r.data; if (Array.isArray(r.meetings)) return r.meetings; if (Array.isArray(r.contacts)) return r.contacts; return typeof r === 'object' ? [r] : []; }
+  function parseMoney(s) {
+    if (!s) return 0;
+    if (typeof s === 'number') return s;
+    const t = String(s).replace(/[\$,\s]/g, '');
+    const m = t.match(/(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+  function timeAgo(d) {
+    if (!d) return '—';
+    const ms = Date.now() - new Date(d).getTime();
+    const days = Math.floor(ms / 86400000);
+    if (days < 0) return Math.abs(days) + 'd from now';
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return days + 'd ago';
+    if (days < 30) return Math.floor(days/7) + 'w ago';
+    return new Date(d).toLocaleDateString();
+  }
+  function scoreClass(s) {
+    if (s == null || s === 0) return 'none';
+    if (s >= 7) return 'high';
+    if (s >= 4) return 'mid';
+    return 'low';
+  }
+  function normStatus(s) {
+    if (!s) return 'unknown';
+    const v = String(s).toLowerCase();
+    if (['held','no_show','rescheduled','cancelled','confirmed'].includes(v)) return v;
+    return 'unknown';
+  }
+  function normType(t) { return t || 'unknown'; }
+
+  // ─── Auth ──────────────────────────────────────────────────────────────
+  async function init() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user) { window.location.href = 'login.html'; return; }
+    CUSTOMER_ID = session.user.email;
+    AUTH_TOKEN = session.access_token;
+    document.getElementById('userEmail').textContent = CUSTOMER_ID;
+    await loadAll();
+  }
+
+  async function api(url, body) {
+    const opts = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Customer-ID': CUSTOMER_ID, 'Authorization': AUTH_TOKEN ? `Bearer ${AUTH_TOKEN}` : '' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, ...(body||{}) })
+    };
+    try {
+      const r = await fetch(url, opts);
+      if (!r.ok) return null;
+      const txt = await r.text();
+      return txt ? JSON.parse(txt) : null;
+    } catch (e) { console.error('api error', url, e); return null; }
+  }
+
+  async function apiGetUser() {
+    try {
+      const r = await fetch(ENDPOINTS.getUser + '?customer_id=' + encodeURIComponent(CUSTOMER_ID), {
+        method: 'GET',
+        headers: { 'X-Customer-ID': CUSTOMER_ID, 'Authorization': AUTH_TOKEN ? `Bearer ${AUTH_TOKEN}` : '' }
+      });
+      if (!r.ok) return null;
+      const txt = await r.text();
+      const parsed = txt ? JSON.parse(txt) : null;
+      return Array.isArray(parsed) ? parsed[0] : parsed;
+    } catch (e) { return null; }
+  }
+
+  async function loadAll() {
+    const [mtgs, contacts, user] = await Promise.all([
+      api(ENDPOINTS.getMeetings),
+      api(ENDPOINTS.getContacts),
+      apiGetUser()
+    ]);
+    allMeetings = unwrap(mtgs);
+    allContacts = unwrap(contacts);
+    currentUser = user || {};
+
+    // Newest first
+    allMeetings.sort((a,b) => new Date(b.start_at || b.created_at || 0) - new Date(a.start_at || a.created_at || 0));
+
+    renderKPIs();
+    renderCharts();
+    renderInsights();
+    renderCoachDigest();
+    renderList();
+  }
+
+  // ─── KPIs ──────────────────────────────────────────────────────────────
+  function renderKPIs() {
+    const now = Date.now();
+    const day30 = now - 30 * 86400000;
+    const day60 = now - 60 * 86400000;
+
+    const last30 = allMeetings.filter(m => new Date(m.start_at || m.created_at) >= day30);
+    const prev30 = allMeetings.filter(m => {
+      const t = new Date(m.start_at || m.created_at).getTime();
+      return t >= day60 && t < day30;
+    });
+
+    const held = last30.filter(m => normStatus(m.status) === 'held').length;
+    const heldPrev = prev30.filter(m => normStatus(m.status) === 'held').length;
+    const heldDelta = heldPrev > 0 ? Math.round(((held - heldPrev) / heldPrev) * 100) : null;
+    document.getElementById('kpiHeld').textContent = held;
+    const heldD = document.getElementById('kpiHeldDelta');
+    if (heldDelta != null) {
+      heldD.textContent = (heldDelta >= 0 ? '+' : '') + heldDelta + '% vs prev 30d';
+      heldD.className = 'delta ' + (heldDelta >= 0 ? 'pos' : 'neg');
+    } else heldD.textContent = 'vs prev 30d';
+
+    const scored = last30.filter(m => m.score != null && m.score > 0);
+    const avgScore = scored.length ? (scored.reduce((s,m) => s + (m.score||0), 0) / scored.length).toFixed(1) : '—';
+    document.getElementById('kpiAvgScore').textContent = avgScore;
+
+    // High-probability contacts that touched a meeting
+    const meetingEmails = new Set();
+    allMeetings.forEach(m => { if (m.attendees_emails) m.attendees_emails.split(',').forEach(e => meetingEmails.add(e.trim().toLowerCase())); });
+    const tied = allContacts.filter(c => c.email && meetingEmails.has(c.email.toLowerCase()));
+    const highProb = tied.filter(c => ['high','very_high','won'].includes((c.close_probability||'').toLowerCase())).length;
+    document.getElementById('kpiHighProb').textContent = highProb;
+    document.getElementById('kpiHighProbDelta').textContent = 'of ' + tied.length + ' tied to meetings';
+
+    // Pipeline tied to meetings
+    const pipe = tied.reduce((s,c) => s + parseMoney(c.client_ann_est), 0);
+    document.getElementById('kpiPipe').textContent = pipe >= 1000 ? '$' + Math.round(pipe/1000) + 'K' : '$' + pipe;
+
+    // No-show rate
+    const decided = last30.filter(m => ['held','no_show','cancelled'].includes(normStatus(m.status)));
+    const noshows = last30.filter(m => normStatus(m.status) === 'no_show').length;
+    const noShowPct = decided.length ? Math.round((noshows / decided.length) * 100) : 0;
+    document.getElementById('kpiNoShow').textContent = noShowPct + '%';
+    const nsD = document.getElementById('kpiNoShowDelta');
+    nsD.textContent = noshows + ' of ' + decided.length + ' last 30d';
+    nsD.className = 'delta ' + (noShowPct > 20 ? 'neg' : 'pos');
+
+    // Avg meetings to close (per contact)
+    const m2c = tied.map(c => c.meetings_to_close).filter(n => n != null && n > 0);
+    const avgM2C = m2c.length ? (m2c.reduce((s,n) => s + n, 0) / m2c.length).toFixed(1) : '—';
+    document.getElementById('kpiToClose').textContent = avgM2C;
+  }
+
+  // ─── Charts ────────────────────────────────────────────────────────────
+  function renderCharts() {
+    const typeBuckets = {};
+    allMeetings.filter(m => normStatus(m.status) === 'held').forEach(m => {
+      const t = normType(m.type);
+      if (!typeBuckets[t]) typeBuckets[t] = { count: 0, scored: [], emails: new Set() };
+      typeBuckets[t].count += 1;
+      if (m.score != null && m.score > 0) typeBuckets[t].scored.push(m.score);
+      if (m.attendees_emails) m.attendees_emails.split(',').forEach(e => typeBuckets[t].emails.add(e.trim().toLowerCase()));
+    });
+
+    const types = Object.keys(typeBuckets);
+    const conversionPct = types.map(t => {
+      const emails = Array.from(typeBuckets[t].emails);
+      if (!emails.length) return 0;
+      const won = emails.filter(e => allContacts.some(c => c.email && c.email.toLowerCase() === e && (c.close_probability === 'won' || c.client_won_date))).length;
+      return Math.round((won / emails.length) * 100);
+    });
+    const counts = types.map(t => typeBuckets[t].count);
+
+    if (chartType) chartType.destroy();
+    chartType = new Chart(document.getElementById('chartType'), {
+      type: 'bar',
+      data: {
+        labels: types.map(t => t.replace(/_/g,' ')),
+        datasets: [
+          { label: 'Meetings', data: counts, backgroundColor: '#1a5fa8', yAxisID: 'y' },
+          { label: 'Conversion %', data: conversionPct, backgroundColor: '#C9A84C', yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+        scales: {
+          y:  { beginAtZero: true, position: 'left',  title: { display: true, text: 'Meetings', font: { size: 11 } } },
+          y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Conv %',   font: { size: 11 } }, grid: { drawOnChartArea: false }, max: 100 }
+        }
+      }
+    });
+
+    // Score distribution
+    const buckets = [0,0,0,0,0,0,0,0,0,0];
+    allMeetings.forEach(m => { if (m.score >= 1 && m.score <= 10) buckets[m.score - 1] += 1; });
+    if (chartScore) chartScore.destroy();
+    chartScore = new Chart(document.getElementById('chartScore'), {
+      type: 'bar',
+      data: {
+        labels: ['1','2','3','4','5','6','7','8','9','10'],
+        datasets: [{
+          label: 'Meetings',
+          data: buckets,
+          backgroundColor: buckets.map((_, i) => i + 1 >= 7 ? '#16a34a' : i + 1 >= 4 ? '#f59e0b' : '#dc2626')
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  // ─── Insights ──────────────────────────────────────────────────────────
+  function renderInsights() {
+    const day30 = Date.now() - 30 * 86400000;
+    const recent = allMeetings.filter(m => new Date(m.start_at || m.created_at) >= day30 && normStatus(m.status) === 'held');
+
+    // Working: pull review fields where score >= 7
+    const wins = recent.filter(m => (m.score||0) >= 7 && m.review).slice(0, 4);
+    const workEl = document.getElementById('insightWorking');
+    if (wins.length === 0) workEl.innerHTML = '<li style="color:#94a3b8;">Not enough high-score data yet. Score ≥7 meetings will surface here.</li>';
+    else workEl.innerHTML = wins.map(m => `<li><b>${esc(m.participant_name || 'Meeting')}</b> (${m.score}/10): ${esc((m.review||'').slice(0,180))}${(m.review||'').length>180?'…':''}</li>`).join('');
+
+    // Top objections — naive: collect from review/summary text
+    // Better: would need an objections_raised array per meeting. For now, surface from low-score reviews.
+    const losses = recent.filter(m => (m.score||0) > 0 && (m.score||0) < 5 && m.review).slice(0, 5);
+    const objEl = document.getElementById('insightObjections');
+    if (losses.length === 0) objEl.innerHTML = '<li style="color:#94a3b8;">No low-score reviews captured yet.</li>';
+    else objEl.innerHTML = losses.map(m => `<li><b>${esc(m.participant_name||'Meeting')}</b>: ${esc((m.review||'').slice(0,160))}${(m.review||'').length>160?'…':''}</li>`).join('');
+
+    // Followups you owe — recent meetings with followup text where the contact isn't won yet
+    const owed = recent.filter(m => m.followup && (m.followup||'').trim()).slice(0, 6);
+    const fuEl = document.getElementById('insightFollowups');
+    if (owed.length === 0) fuEl.innerHTML = '<li style="color:#94a3b8;">No open followups. Hold more meetings to generate them.</li>';
+    else fuEl.innerHTML = owed.map(m => {
+      const email = (m.attendees_emails||'').split(',')[0].trim();
+      return `<li>
+        <b>${esc(m.participant_name||'?')}</b>: ${esc((m.followup||'').slice(0,140))}${(m.followup||'').length>140?'…':''}
+        ${email ? `<button class="btn btn-gold" style="margin-left:8px; padding:3px 10px; font-size:11px;" onclick="fireFollowup('${esc(email)}', ${m.id})">📧 Send Followup</button>` : ''}
+      </li>`;
+    }).join('');
+  }
+
+  // ─── Coach digest (running rollup from user.meeting_notes) ────────────
+  function renderCoachDigest() {
+    const notes = currentUser && currentUser.meeting_notes;
+    if (notes && String(notes).trim().length > 30) {
+      document.getElementById('coachDigest').style.display = 'block';
+      // Show last 1500 chars (most recent meetings)
+      const text = String(notes);
+      document.getElementById('coachDigestBody').textContent = text.length > 1500 ? '…' + text.slice(-1500) : text;
+    }
+  }
+
+  // ─── Meeting list ──────────────────────────────────────────────────────
+  function filterMeetings() {
+    const now = Date.now();
+    if (activeFilter === 'all')         return allMeetings;
+    if (activeFilter === 'held')        return allMeetings.filter(m => normStatus(m.status) === 'held');
+    if (activeFilter === 'upcoming')    return allMeetings.filter(m => new Date(m.start_at || 0).getTime() > now);
+    if (activeFilter === 'no_show')     return allMeetings.filter(m => normStatus(m.status) === 'no_show');
+    if (activeFilter === 'high_score')  return allMeetings.filter(m => (m.score||0) >= 7);
+    if (activeFilter === 'needs_followup') return allMeetings.filter(m => m.followup && String(m.followup).trim());
+    return allMeetings;
+  }
+
+  function renderList() {
+    const meetings = filterMeetings();
+    const el = document.getElementById('meetingsList');
+    document.getElementById('meetingCount').textContent = '· ' + meetings.length + ' shown';
+
+    if (!meetings.length) { el.innerHTML = '<div class="empty-state">No meetings match this filter yet.</div>'; return; }
+
+    el.innerHTML = meetings.map(m => renderMeetingCard(m)).join('');
+  }
+
+  function renderMeetingCard(m) {
+    const type = normType(m.type);
+    const status = normStatus(m.status);
+    const score = m.score || 0;
+    const startStr = m.start_at ? new Date(m.start_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    const participant = m.participant_name || m.title || 'Untitled';
+    const contact = findContactFor(m);
+    const probBadge = contact && contact.close_probability ? `<span class="badge-pill badge-${esc(contact.close_probability)}">${esc(contact.close_probability.replace('_',' '))}</span>` : '';
+    const coachCount = getCoachEntries(m).length;
+    const coachBadge = coachCount > 0 ? `<span class="coach-count-badge">💡 ${coachCount} tip${coachCount>1?'s':''}</span>` : '';
+
+    return `
+      <div class="meeting-card" id="card-${m.id}">
+        <div class="meeting-row" onclick="toggleCard(${m.id})">
+          <span class="mc-type ${type}">${type.replace(/_/g,' ')}</span>
+          <div class="mc-participant">${esc(participant)} <span class="sub">${probBadge} ${esc(startStr)} ${coachBadge}</span></div>
+          <span class="mc-status ${status}">${status.replace(/_/g,' ')}</span>
+          <span class="mc-score ${scoreClass(score)}">${score ? score+'/10' : '—'}</span>
+          <span class="mc-expand">▼</span>
+        </div>
+        <div class="meeting-detail">
+          <div class="detail-grid">
+            <div class="detail-block">
+              <div class="h">📝 Summary</div>
+              <div class="b">${esc(m.summary) || '<span style="color:#94a3b8;">No summary yet. Will be generated after the meeting transcript is processed.</span>'}</div>
+            </div>
+            <div class="detail-block">
+              <div class="h">🎯 Your Followup</div>
+              <div class="b">${esc(m.followup) || '<span style="color:#94a3b8;">No followup recommendation yet.</span>'}</div>
+            </div>
+            <div class="detail-block">
+              <div class="h">🪞 AI Review of Your Performance</div>
+              <div class="b">${esc(m.review) || '<span style="color:#94a3b8;">Pending transcript analysis.</span>'}</div>
+            </div>
+            <div class="detail-block">
+              <div class="h">👤 Contact Analysis</div>
+              <div class="b">${contact && contact.analysis ? esc(String(contact.analysis).slice(-1200)) : '<span style="color:#94a3b8;">No contact-side analysis yet.</span>'}
+              ${contact ? `<div style="margin-top:8px; font-size:11px; color:#64748b;">
+                Probability: <b>${esc(contact.close_probability||'unknown')}</b> ·
+                Mtgs to close: <b>${esc(contact.meetings_to_close||'—')}</b> ·
+                Est. value: <b>${esc(contact.client_ann_est||'—')}</b>
+              </div>` : ''}
+              </div>
+            </div>
+            <div class="detail-block">
+              <div class="h">📞 Title / Type / Description</div>
+              <div class="b"><b>Title:</b> ${esc(m.title)||'—'}<br><b>Type:</b> ${esc(m.type)||'—'}<br><b>Description:</b> ${esc(m.description)||'—'}<br><b>Duration:</b> ${m.duration ? Math.round(m.duration/60)+' min' : '—'}<br><b>Attendees:</b> ${esc(m.attendees_emails)||'—'}</div>
+            </div>
+            <div class="detail-block">
+              <div class="h">🔗 Next Steps for This Contact</div>
+              <div class="b">${contact && contact.next_steps ? esc(contact.next_steps) : '<span style="color:#94a3b8;">No tracked next step. Update from the followup recommendation.</span>'}</div>
+            </div>
+          </div>
+          ${renderCoachReplay(m)}
+          <div class="detail-action-bar">
+            ${contact && contact.email ? `<button class="btn btn-gold" onclick="fireFollowup('${esc(contact.email)}', ${m.id})">📧 Send AI Followup Email</button>` : ''}
+            ${contact ? `<button class="btn btn-outline" onclick="window.location.href='/contacts?id=${esc(contact.id || contact.contact_id || '')}'">👤 View Contact</button>` : ''}
+            ${m.room_url ? `<button class="btn btn-ghost" onclick="window.open('${esc(m.room_url)}','_blank')">🎥 Open Meeting Room</button>` : ''}
+            <button class="btn btn-ghost" onclick="copyMeetingSummary(${m.id})">📋 Copy Summary</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function findContactFor(m) {
+    if (!m.attendees_emails) return null;
+    const first = m.attendees_emails.split(',')[0].trim().toLowerCase();
+    return allContacts.find(c => c.email && c.email.toLowerCase() === first) || null;
+  }
+
+  // ─── Coach Replay — surfaces meetings.coach_transcript as a timeline ───
+  function getCoachEntries(m) {
+    const raw = m && m.coach_transcript;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') { try { return JSON.parse(raw) || []; } catch { return []; } }
+    return [];
+  }
+  function renderCoachReplay(m) {
+    const entries = getCoachEntries(m);
+    if (!entries.length) {
+      return `
+        <div class="coach-replay-empty">
+          <span style="font-size:18px;">💡</span>
+          <div>
+            <div style="font-size:13px; font-weight:600; color:#64748b;">No live coach tips captured for this meeting.</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Tips fire every ~45 seconds during a meeting if there's a coaching opportunity. Join via the Meeting Room button above to enable.</div>
+          </div>
+        </div>
+      `;
+    }
+    // Sort by ts ascending (replay = chronological)
+    const sorted = entries.slice().sort((a, b) => {
+      const ta = new Date(a.ts || 0).getTime(); const tb = new Date(b.ts || 0).getTime();
+      return ta - tb;
+    });
+    const first = sorted[0].ts ? new Date(sorted[0].ts) : null;
+    return `
+      <div class="coach-replay">
+        <div class="coach-replay-head">
+          <span style="font-size:14px;">💡</span>
+          <span style="font-size:13px; font-weight:700; color:#0A3161;">Live AI Coach Replay</span>
+          <span style="font-size:11px; color:#64748b;">${sorted.length} tip${sorted.length>1?'s':''} captured during meeting</span>
+        </div>
+        <div class="coach-replay-list">
+          ${sorted.map((e, i) => {
+            const t = e.ts ? new Date(e.ts) : null;
+            const offsetLabel = (t && first)
+              ? '+' + Math.max(0, Math.round((t - first) / 1000)) + 's'
+              : '';
+            const tStr = t ? t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '';
+            return `
+              <div class="coach-tip-row">
+                <div class="coach-tip-marker">${i + 1}</div>
+                <div class="coach-tip-body">
+                  <div class="coach-tip-time">${esc(tStr)} <span style="opacity:0.6;">${esc(offsetLabel)}</span></div>
+                  <div class="coach-tip-text">${esc(e.tip || '')}</div>
+                  ${e.transcript_quote ? `<div class="coach-tip-quote">"${esc(e.transcript_quote)}"</div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function toggleCard(id) {
+    document.getElementById('card-' + id).classList.toggle('open');
+  }
+
+  function copyMeetingSummary(id) {
+    const m = allMeetings.find(x => x.id === id); if (!m) return;
+    const text = `MEETING: ${m.title||m.participant_name}\nDate: ${m.start_at}\nType: ${m.type}\nStatus: ${m.status}\nScore: ${m.score}/10\n\nSUMMARY:\n${m.summary||''}\n\nFOLLOWUP:\n${m.followup||''}\n\nREVIEW:\n${m.review||''}`;
+    navigator.clipboard.writeText(text).then(() => alert('Copied summary to clipboard'));
+  }
+
+  async function fireFollowup(email, meetingId) {
+    if (!confirm('Generate and send an AI followup email to ' + email + '?')) return;
+    const m = allMeetings.find(x => x.id === meetingId);
+    const contact = allContacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+    const r = await api(ENDPOINTS.followup, {
+      contact_id: contact ? (contact.id || contact.contact_id) : null,
+      email: email,
+      name: contact ? contact.name : '',
+      meeting_id: meetingId,
+      followup_context: m ? (m.followup || m.summary || '') : ''
+    });
+    if (r) alert('✅ Followup queued. Check Messages.');
+    else alert('Could not queue followup. Try the Messages page.');
+  }
+
+  // ─── Filters wiring ────────────────────────────────────────────────────
+  document.getElementById('filterBar').addEventListener('click', (e) => {
+    if (!e.target.classList.contains('filter-pill')) return;
+    document.querySelectorAll('#filterBar .filter-pill').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    activeFilter = e.target.dataset.filter;
+    renderList();
+  });
+
+  // ─── Boot ──────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', init);
+
+  // Session check every 5 min
+  setInterval(async () => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) window.location.href = 'login.html';
+  }, 300000);
+</script>
+</body>
+</html>
