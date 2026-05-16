@@ -1037,12 +1037,19 @@ async function loadEmails() {
     console.log('[loadEmails] raw response:', JSON.stringify(data).slice(0, 500));
     const arr = Array.isArray(data) ? data : (data.emails || []);
     console.log('[loadEmails] arr length:', arr.length, 'first item:', arr[0] ? JSON.stringify(arr[0]).slice(0,200) : 'none');
-    // Filter warm-up
+    // Filter warm-up + decorate with derived UI flags.
+    // The email table has no 'draft' column — we derive it from campaign/outcome='draft'.
+    // This keeps the Drafts folder filter (which checks e.draft) working without backend changes.
     allEmails = arr.filter(e => {
       const s = (e.subject||'').toLowerCase();
       const tags = (e.tags||[]).map(t=>t.toLowerCase());
       return !s.includes('warm-up') && !s.includes('warmup') && !tags.includes('warm-up') && !tags.includes('warmup') && !tags.includes('test');
-    });
+    }).map(e => ({
+      ...e,
+      draft: e.draft === true || e.campaign === 'draft' || e.outcome === 'draft',
+      replied: e.replied === true || !!e.replied_at,
+      opened: e.opened === true || !!e.opened_at
+    }));
     console.log('[loadEmails] allEmails after filter:', allEmails.length);
     updateUnreadCount();
     renderList();
@@ -1163,8 +1170,17 @@ function renderList() {
    SELECT / VIEW EMAIL
 ══════════════════════════════════════════════ */
 function selectEmail(id) {
-  currentEmail = allEmails.find(e => e.id === id);
-  if (!currentEmail) return;
+  const found = allEmails.find(e => e.id === id);
+  if (!found) return;
+
+  // Drafts open directly into the compose form so user can edit and send.
+  // currentDraftId is set inside editDraft() so sendEmail() cleans up after send.
+  if (found.draft) {
+    editDraft(id);
+    return;
+  }
+
+  currentEmail = found;
 
   // Show email view
   document.getElementById('readingEmpty').style.display = 'none';
@@ -1173,6 +1189,24 @@ function selectEmail(id) {
   document.getElementById('emailView').classList.add('active');
   document.getElementById('emailView').style.display = 'block';
   document.getElementById('evActions').style.display = 'flex';
+
+  // Inject draft-specific action buttons (idempotent — remove old ones, add if viewing a draft)
+  const evActions = document.getElementById('evActions');
+  const oldDraftBtns = evActions.querySelectorAll('.ev-btn-draft-action');
+  oldDraftBtns.forEach(b => b.remove());
+  if (currentEmail.draft) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ev-btn primary ev-btn-draft-action';
+    editBtn.textContent = '✏️ Edit Draft';
+    editBtn.onclick = () => editDraft(currentEmail.id);
+    evActions.insertBefore(editBtn, evActions.firstChild);
+
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'ev-btn ev-btn-draft-action';
+    sendBtn.textContent = '📤 Send As-Is';
+    sendBtn.onclick = () => sendDraftAsIs(currentEmail.id);
+    evActions.insertBefore(sendBtn, evActions.children[1]);
+  }
 
   // Populate
   document.getElementById('evSubject').textContent = currentEmail.subject || '(No subject)';
@@ -1393,6 +1427,105 @@ async function sendEmail() {
       await loadEmails();
     } else { showToast('Failed to send email', true); }
   } catch(e) { showToast('Error sending email', true); }
+}
+
+/* ══════════════════════════════════════════════
+   EDIT DRAFT — open a draft row in the compose form for review/edit/send.
+   Sets currentDraftId so the existing sendEmail() handler deletes the draft
+   after a successful send (existing logic, not duplicated here).
+══════════════════════════════════════════════ */
+function editDraft(emailId) {
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) { showToast('Draft not found', true); return; }
+
+  // Hide the other panes
+  const readEmpty = document.getElementById('readingEmpty');
+  if (readEmpty) readEmpty.style.display = 'none';
+  const emailView = document.getElementById('emailView');
+  if (emailView) { emailView.style.display = 'none'; emailView.classList.remove('active'); }
+
+  // Open the compose form
+  const form = document.getElementById('composeForm');
+  form.style.display = 'flex';
+  form.classList.add('active');
+
+  // Populate fields from the draft row
+  document.getElementById('composeTo').value      = draft.to || '';
+  document.getElementById('composeSubject').value = draft.subject || '';
+  document.getElementById('composeBody').value    = draft.body || '';
+  document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
+  document.getElementById('composeCC').value      = draft.cc || '';
+  document.getElementById('composeBCC').value     = draft.bcc || '';
+
+  if (draft.cc || draft.bcc) {
+    document.getElementById('ccBccFields').style.display = 'block';
+  }
+
+  // Restore attachments. Attachments are campaign_file objects (id, name, URL, file_type)
+  // — when the email is sent, the existing Send Now workflow renders them as hyperlinks,
+  // preserving click tracking at file + campaign + email + contact level.
+  let atts = [];
+  if (Array.isArray(draft.attachments)) {
+    atts = draft.attachments;
+  } else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+  attachedFiles = atts.map(a => ({
+    id: a.id,
+    name: a.name || a.filename || 'Attachment',
+    URL: a.URL || a.url,
+    file_type: a.file_type || a.type,
+    _category: a._category || (typeof detectMediaCategory === 'function' ? detectMediaCategory(a) : 'file')
+  }));
+  updateAttachmentChips();
+
+  // Critical: tells sendEmail() to delete this draft row after successful send
+  currentDraftId = emailId;
+  currentEmail = null;
+
+  document.getElementById('composeTitle').textContent = '✏️ Edit Draft';
+  if (typeof updateSignaturePreview === 'function') updateSignaturePreview();
+}
+
+/* ══════════════════════════════════════════════
+   SEND DRAFT AS-IS — one-click send for Claude-generated drafts
+   that need no edit. Uses the existing sendEmail webhook + cleanup.
+══════════════════════════════════════════════ */
+async function sendDraftAsIs(emailId) {
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) return;
+  if (!confirm('Send draft to ' + draft.to + ' as-is?\n\nSubject: ' + (draft.subject || '(no subject)'))) return;
+
+  let atts = [];
+  if (Array.isArray(draft.attachments)) atts = draft.attachments;
+  else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: draft.from || window.userVVEmail || CUSTOMER_ID,
+    to:   draft.to,
+    cc:   draft.cc || null,
+    bcc:  draft.bcc || null,
+    subject: draft.subject || '',
+    body: draft.body || '',
+    attachments: atts,
+    draft: false
+  };
+
+  try {
+    const r = await fetch(EP.sendEmail, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast('✅ Sent — draft removed');
+      await deleteEmailById(emailId);
+      await loadEmails();
+    } else { showToast('Failed to send', true); }
+  } catch(e) { showToast('Error sending', true); }
 }
 
 async function saveDraft() {
