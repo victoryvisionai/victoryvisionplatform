@@ -1278,8 +1278,16 @@ if (currentEmail.body_html) {
   evBody.classList.remove('plain');
   evBody.innerHTML = currentEmail.body_html;
 } else if (currentEmail.body) {
-  evBody.classList.add('plain');
-  evBody.textContent = currentEmail.body;
+  // Render plain-text body with line breaks preserved.
+  // Escape HTML first (safety), then convert newlines to <br>.
+  evBody.classList.remove('plain');
+  const escaped = String(currentEmail.body)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '<br>');
+  evBody.innerHTML = escaped;
 } else {
   evBody.classList.add('plain');
   evBody.textContent = '(No content)';
@@ -1450,9 +1458,23 @@ function editDraft(emailId) {
   form.classList.add('active');
 
   // Populate fields from the draft row
+  // For the textarea, prefer plain `body`. If only body_html exists, convert <br>/<p> back to \n.
   document.getElementById('composeTo').value      = draft.to || '';
   document.getElementById('composeSubject').value = draft.subject || '';
-  document.getElementById('composeBody').value    = draft.body || '';
+  let bodyForTextarea = draft.body || '';
+  if (!bodyForTextarea && draft.body_html) {
+    bodyForTextarea = String(draft.body_html)
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+      .replace(/<\/?p[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"');
+  }
+  document.getElementById('composeBody').value    = bodyForTextarea;
   document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
   document.getElementById('composeCC').value      = draft.cc || '';
   document.getElementById('composeBCC').value     = draft.bcc || '';
@@ -1502,6 +1524,18 @@ async function sendDraftAsIs(emailId) {
     try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
   }
 
+  // Ensure body_html is populated — the Send Now workflow renders body_html for the HTML email part.
+  // If the draft only has plain body, build the html version here.
+  let bodyHtml = draft.body_html || '';
+  if (!bodyHtml && draft.body) {
+    bodyHtml = String(draft.body)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n/g, '<br>');
+  }
+
   const emailData = {
     customer_id: CUSTOMER_ID,
     from: draft.from || window.userVVEmail || CUSTOMER_ID,
@@ -1510,6 +1544,7 @@ async function sendDraftAsIs(emailId) {
     bcc:  draft.bcc || null,
     subject: draft.subject || '',
     body: draft.body || '',
+    body_html: bodyHtml,
     attachments: atts,
     draft: false
   };
