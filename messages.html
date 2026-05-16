@@ -1438,29 +1438,41 @@ async function sendEmail() {
 }
 
 /* ══════════════════════════════════════════════
-   EDIT DRAFT — open a draft row in the compose form for review/edit/send.
-   Sets currentDraftId so the existing sendEmail() handler deletes the draft
-   after a successful send (existing logic, not duplicated here).
+   EDIT DRAFT — open the existing compose form pre-populated with draft data.
+   Mirrors showComposeForm() exactly so the layout is identical to New Email.
 ══════════════════════════════════════════════ */
 function editDraft(emailId) {
   const draft = allEmails.find(e => e.id === emailId);
   if (!draft) { showToast('Draft not found', true); return; }
 
-  // Hide the other panes
-  const readEmpty = document.getElementById('readingEmpty');
-  if (readEmpty) readEmpty.style.display = 'none';
-  const emailView = document.getElementById('emailView');
-  if (emailView) { emailView.style.display = 'none'; emailView.classList.remove('active'); }
+  // Same setup as showComposeForm — hide the read panes, show the compose form
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('evActions').style.display = 'none';
 
-  // Open the compose form
   const form = document.getElementById('composeForm');
-  form.style.display = 'flex';
+  form.style.display = 'block';
   form.classList.add('active');
 
-  // Populate fields from the draft row
-  // For the textarea, prefer plain `body`. If only body_html exists, convert <br>/<p> back to \n.
+  // Reset everything first (so leftover state from a prior compose doesn't bleed in)
+  ['composeTo','composeCC','composeBCC','composeSubject','composeBody'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  attachedFiles = [];
+  document.getElementById('ccBccFields').style.display = 'none';
+
+  // Now populate fields from the draft row
+  document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
   document.getElementById('composeTo').value      = draft.to || '';
   document.getElementById('composeSubject').value = draft.subject || '';
+  document.getElementById('composeCC').value      = draft.cc || '';
+  document.getElementById('composeBCC').value     = draft.bcc || '';
+  if (draft.cc || draft.bcc) {
+    document.getElementById('ccBccFields').style.display = 'block';
+  }
+
+  // Body — prefer plain body; if only body_html exists, convert <br>/<p> back to newlines
   let bodyForTextarea = draft.body || '';
   if (!bodyForTextarea && draft.body_html) {
     bodyForTextarea = String(draft.body_html)
@@ -1474,18 +1486,9 @@ function editDraft(emailId) {
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"');
   }
-  document.getElementById('composeBody').value    = bodyForTextarea;
-  document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
-  document.getElementById('composeCC').value      = draft.cc || '';
-  document.getElementById('composeBCC').value     = draft.bcc || '';
+  document.getElementById('composeBody').value = bodyForTextarea;
 
-  if (draft.cc || draft.bcc) {
-    document.getElementById('ccBccFields').style.display = 'block';
-  }
-
-  // Restore attachments. Attachments are campaign_file objects (id, name, URL, file_type)
-  // — when the email is sent, the existing Send Now workflow renders them as hyperlinks,
-  // preserving click tracking at file + campaign + email + contact level.
+  // Restore attachments — campaign_file objects with id+name+URL preserve click tracking
   let atts = [];
   if (Array.isArray(draft.attachments)) {
     atts = draft.attachments;
@@ -1501,11 +1504,16 @@ function editDraft(emailId) {
   }));
   updateAttachmentChips();
 
-  // Critical: tells sendEmail() to delete this draft row after successful send
+  // Critical: tells sendEmail() / saveDraft() / scheduleEmail() that this is an existing draft
+  // — saveDraft will update this row (not create a duplicate)
+  // — sendEmail will delete this row after a successful send
   currentDraftId = emailId;
   currentEmail = null;
 
-  document.getElementById('composeTitle').textContent = '✏️ Edit Draft';
+  document.getElementById('composeTitle').textContent = '✏️ Edit Draft: ' + (draft.subject || '(no subject)');
+
+  // Show signature preview underneath (decorative — the actual signature gets appended at send time
+  // by the existing Render Initial Email node in the Send Now workflow, so we don't double-append here)
   if (typeof updateSignaturePreview === 'function') updateSignaturePreview();
 }
 
