@@ -977,6 +977,8 @@ async function loadUserData() {
         updateSignaturePreview();
       }
       if (u.vv_email) window.userVVEmail = u.vv_email;
+      // Re-entry guard for any send operation (prevents double/triple-click duplicate sends)
+      window.isSending = false;
       if (u.subscription_plan) updateMedallion(u.subscription_plan);
       if (u.aireply !== undefined) {
         document.getElementById('autoReplyToggle').checked = !!u.aireply;
@@ -1408,16 +1410,34 @@ function forwardEmail()    { if (currentEmail) showComposeForm(null, currentEmai
    SEND / DRAFT / SCHEDULE / DELETE
 ══════════════════════════════════════════════ */
 async function sendEmail() {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks while the fetch is in flight
+  if (window.isSending) { console.log('[sendEmail] blocked: already in flight'); return; }
+  window.isSending = true;
+  const sendBtn = document.querySelector('.cf-btn.send');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; sendBtn.textContent = '⏳ Sending...'; }
+
   const to = document.getElementById('composeTo').value.trim();
   const subject = document.getElementById('composeSubject').value.trim();
-  if (!to) { showToast('Please enter a recipient', true); return; }
+  if (!to) {
+    showToast('Please enter a recipient', true);
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
+    return;
+  }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
 
   const emailData = {
     customer_id: CUSTOMER_ID,
     from: document.getElementById('composeFrom').value,
     to, subject,
     cc:  document.getElementById('composeCC').value || null,
-    bcc: document.getElementById('composeBCC').value || null,
+    bcc: mergedBcc,
     body: document.getElementById('composeBody').value,
     attachments: attachedFiles,
     draft: false
@@ -1435,6 +1455,10 @@ async function sendEmail() {
       await loadEmails();
     } else { showToast('Failed to send email', true); }
   } catch(e) { showToast('Error sending email', true); }
+  finally {
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -1522,9 +1546,17 @@ function editDraft(emailId) {
    that need no edit. Uses the existing sendEmail webhook + cleanup.
 ══════════════════════════════════════════════ */
 async function sendDraftAsIs(emailId) {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks
+  if (window.isSending) { console.log('[sendDraftAsIs] blocked: already in flight'); return; }
+
   const draft = allEmails.find(e => e.id === emailId);
   if (!draft) return;
   if (!confirm('Send draft to ' + draft.to + ' as-is?\n\nSubject: ' + (draft.subject || '(no subject)'))) return;
+
+  window.isSending = true;
+  // Disable any visible "Send As-Is" buttons during the send
+  const sendAsIsBtns = document.querySelectorAll('[onclick*="sendDraftAsIs"]');
+  sendAsIsBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
 
   let atts = [];
   if (Array.isArray(draft.attachments)) atts = draft.attachments;
@@ -1544,12 +1576,19 @@ async function sendDraftAsIs(emailId) {
       .replace(/\n/g, '<br>');
   }
 
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const draftBcc = draft.bcc || null;
+  const mergedBcc = draftBcc && userBcc && !String(draftBcc).toLowerCase().includes(userBcc.toLowerCase())
+    ? (draftBcc + ', ' + userBcc)
+    : (draftBcc || userBcc);
+
   const emailData = {
     customer_id: CUSTOMER_ID,
     from: draft.from || window.userVVEmail || CUSTOMER_ID,
     to:   draft.to,
     cc:   draft.cc || null,
-    bcc:  draft.bcc || null,
+    bcc:  mergedBcc,
     subject: draft.subject || '',
     body: draft.body || '',
     body_html: bodyHtml,
@@ -1569,6 +1608,10 @@ async function sendDraftAsIs(emailId) {
       await loadEmails();
     } else { showToast('Failed to send', true); }
   } catch(e) { showToast('Error sending', true); }
+  finally {
+    window.isSending = false;
+    sendAsIsBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+  }
 }
 
 async function saveDraft() {
@@ -1607,17 +1650,31 @@ function openScheduleModal() {
 }
 
 async function scheduleEmail() {
+  // RE-ENTRY GUARD — prevents duplicate scheduled-email creation from rapid clicks
+  if (window.isSending) { console.log('[scheduleEmail] blocked: already in flight'); return; }
+
   const date = document.getElementById('schedDate').value;
   const time = document.getElementById('schedTime').value;
   if (!date || !time) { showToast('Please select date and time', true); return; }
   const scheduledTime = `${date}T${time}:00`;
+
+  window.isSending = true;
+  const scheduleBtn = document.querySelector('[onclick*="scheduleEmail"]');
+  if (scheduleBtn) { scheduleBtn.disabled = true; scheduleBtn.style.opacity = '0.5'; }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
 
   const emailData = {
     customer_id: CUSTOMER_ID,
     from: document.getElementById('composeFrom').value,
     to:   document.getElementById('composeTo').value,
     cc:   document.getElementById('composeCC').value || null,
-    bcc:  document.getElementById('composeBCC').value || null,
+    bcc:  mergedBcc,
     subject: document.getElementById('composeSubject').value,
     body: document.getElementById('composeBody').value,
     attachments: attachedFiles,
@@ -1636,6 +1693,10 @@ async function scheduleEmail() {
       await loadEmails();
     } else { showToast('Failed to schedule email', true); }
   } catch(e) { showToast('Error scheduling email', true); }
+  finally {
+    window.isSending = false;
+    if (scheduleBtn) { scheduleBtn.disabled = false; scheduleBtn.style.opacity = '1'; }
+  }
 }
 
 async function deleteEmail() {
