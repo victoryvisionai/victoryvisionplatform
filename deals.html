@@ -279,6 +279,31 @@
     <p class="page-subtitle">Manage placement mandates and capital-raise pipelines</p>
   </div>
 
+  <!-- Pipeline Value Summary - 3 tiles -->
+  <div class="card" id="pipelineSummary" style="margin-bottom:16px;">
+    <div class="section-header">
+      <h2 style="margin:0;">Pipeline Value</h2>
+      <div style="font-size: 0.85rem; color:#666;">Total opportunity · probability-weighted by stage · closed YTD</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; padding:12px 0;">
+      <div style="background:linear-gradient(135deg,#1a3a6e 0%,#2c5aa0 100%); color:white; border-radius:8px; padding:18px;">
+        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Total Pipeline</div>
+        <div id="kpiTotalPipeline" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
+        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Gross deal value × prospects in motion</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0d6b4d 0%,#198754 100%); color:white; border-radius:8px; padding:18px;">
+        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Stage-Weighted PWV</div>
+        <div id="kpiWeightedPwv" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
+        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">What you're likely to book</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#5a3e8c 0%,#7e57c2 100%); color:white; border-radius:8px; padding:18px;">
+        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Closed YTD</div>
+        <div id="kpiClosedYtd" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
+        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Customers with client_won_date set</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Top: list of all deals as cards -->
   <div class="card">
     <div class="section-header">
@@ -613,6 +638,30 @@ const STAGES = [
   { key: 'declined',      label: 'Declined',      color: '#dc3545' },
 ];
 
+// Stage probability multipliers — applied to client_ann_est to compute expected value per prospect.
+// not-contacted 5%, soft-touch 10%, pitched 25%, soft-circle 40%, committed 60%, closed 100%, declined 0%.
+const STAGE_MULTIPLIERS = {
+  'not-contacted': 0.05,
+  'soft-touch':    0.10,
+  'pitched':       0.25,
+  'soft-circle':   0.40,
+  'committed':     0.60,
+  'closed':        1.00,
+  'declined':      0.00
+};
+
+// Parse client_ann_est which is stored as text on contacts; strip $, commas, whitespace.
+function parseAnnEst(val) {
+  if (val == null || val === '') return 0;
+  const cleaned = String(val).replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return isFinite(n) ? n : 0;
+}
+
+function getStageMultiplier(stage) {
+  return STAGE_MULTIPLIERS[stage] ?? 0.05;
+}
+
 // ============================================================
 // Utility: derive deal slug from deal name (must match SQL view)
 // "Provenance Consumer - $10M" -> "provenance-consumer"
@@ -690,6 +739,13 @@ function renderDealsList() {
     const daysLine = d.target_close_date
       ? `Day ${d.days_active}/${daysBetween(d.created_at, d.target_close_date)}`
       : `Day ${d.days_active}`;
+
+    // Deal-level pricing (from campaigns.meta — exposed by deals_dashboard view)
+    const grossValue = Number(d.gross_value_usd || 0);
+    const pwv = Number(d.pwv_usd || 0);
+    const takeRate = Number(d.take_rate_pct || 0);
+    const closeProb = Number(d.base_close_prob_pct || 0);
+
     return `
       <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" onclick="selectDeal('${d.deal_id}')">
         <div class="deal-card-header">
@@ -698,6 +754,19 @@ function renderDealsList() {
         </div>
         <div class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</div>
         <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
+        ${grossValue > 0 ? `
+        <div style="display:flex; gap:6px; margin:8px 0; padding:8px; background:#f3f6fa; border-radius:6px;">
+          <div style="flex:1;">
+            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">Gross</div>
+            <div style="font-size:1.1rem; font-weight:600; color:#1a3a6e;">$${formatMoney(grossValue)}</div>
+            <div style="font-size:0.65rem; color:#888;">${takeRate}% × deal size</div>
+          </div>
+          <div style="flex:1; border-left:1px solid #d0d7e2; padding-left:8px;">
+            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">PWV</div>
+            <div style="font-size:1.1rem; font-weight:600; color:#0d6b4d;">$${formatMoney(pwv)}</div>
+            <div style="font-size:0.65rem; color:#888;">@ ${closeProb}% close</div>
+          </div>
+        </div>` : ''}
         <div class="deal-card-stats">
           <div class="deal-card-stat-label">Prospects</div>
           <div class="deal-card-stat-value">${d.total_prospects}</div>
@@ -711,6 +780,9 @@ function renderDealsList() {
       </div>
     `;
   }).join('');
+
+  // Refresh the 3-tile pipeline summary header whenever deals list re-renders
+  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
 }
 
 function daysBetween(start, end) {
@@ -724,6 +796,42 @@ function formatMoney(n) {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
   return String(n);
+}
+
+// ============================================================
+// Pipeline value summary - sums across all deals
+// Total Pipeline = sum of deal gross_value_usd across active deals (status != closed/declined)
+// Stage-Weighted PWV = sum of deal pwv_usd (already deal-level prob-weighted) — represents what we expect to book
+// Closed YTD = sum of deal gross_value_usd where status = 'closed'
+// ============================================================
+function updatePipelineSummary() {
+  if (!Array.isArray(allDeals)) return;
+  let totalPipeline = 0;
+  let weightedPwv = 0;
+  let closedYtd = 0;
+
+  allDeals.forEach(d => {
+    const status = (d.status || '').toLowerCase();
+    const gross = Number(d.gross_value_usd || 0);
+    const pwv = Number(d.pwv_usd || 0);
+    const closedVal = Number(d.closed_value_usd || 0);
+
+    if (status === 'closed') {
+      closedYtd += gross;
+    } else if (status !== 'declined' && status !== 'archived') {
+      totalPipeline += gross;
+      weightedPwv += pwv;
+    }
+    // Also add per-prospect closed value (in case some deals have signed clients without the deal itself being marked closed)
+    closedYtd += closedVal;
+  });
+
+  const elTotal = document.getElementById('kpiTotalPipeline');
+  const elPwv = document.getElementById('kpiWeightedPwv');
+  const elClosed = document.getElementById('kpiClosedYtd');
+  if (elTotal) elTotal.textContent = '$' + formatMoney(totalPipeline);
+  if (elPwv) elPwv.textContent = '$' + formatMoney(weightedPwv);
+  if (elClosed) elClosed.textContent = '$' + formatMoney(closedYtd);
 }
 
 function esc(s) {
@@ -924,6 +1032,18 @@ function renderPipelineCard(c) {
   if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
   if (tags.includes('cpg') || tags.includes('consumer')) warmBadges.push('<span class="warm-badge warm-cpg">CPG</span>');
 
+  // Expected value per prospect: client_ann_est × stage multiplier
+  const annEst = parseAnnEst(c.client_ann_est);
+  const stage = c._stage || 'not-contacted';
+  const mult = getStageMultiplier(stage);
+  const expectedVal = annEst * mult;
+  const valueDisplay = annEst > 0
+    ? `<div style="margin-top:6px; padding:5px 7px; background:#f0f4f9; border-left:3px solid ${expectedVal >= 50000 ? '#0d6b4d' : '#1a3a6e'}; border-radius:3px; font-size:0.72rem;">
+         <span style="color:#666;">EV:</span> <span style="font-weight:700; color:#0d6b4d;">$${formatMoney(expectedVal)}</span>
+         <span style="color:#999; margin-left:4px;">($${formatMoney(annEst)} × ${Math.round(mult*100)}%)</span>
+       </div>`
+    : '';
+
   return `
     <div class="pipeline-card" draggable="true" data-contact-id="${c.id}"
          ondragstart="handleDragStart(event, '${c.id}')"
@@ -935,6 +1055,7 @@ function renderPipelineCard(c) {
         <div class="pipeline-card-warm">${warmBadges.join('')}</div>
         ${c._score != null ? `<div class="pipeline-card-score ${scoreClass}">${c._score}</div>` : ''}
       </div>
+      ${valueDisplay}
     </div>
   `;
 }
