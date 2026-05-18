@@ -634,17 +634,22 @@ async function joinMeeting(invite) {
 
     // For hosts, fetch meetings.host_token (real Daily admin JWT) and the invitee's
     // email from the sibling meeting_invites row keyed by the same meeting_id.
+    // NOTE: meetings.id is int8, meeting_invites.meeting_id is text. Cast on lookup.
     let hostToken = null;
     let contactEmail = '';
     if (isHost && invite.meeting_id) {
-      try {
-        const { data: mtg } = await supabaseClient
-          .from('meetings')
-          .select('host_token')
-          .eq('id', invite.meeting_id)
-          .maybeSingle();
-        hostToken = mtg?.host_token || null;
-      } catch (e) { console.warn('host_token lookup failed', e); }
+      const mid = parseInt(invite.meeting_id, 10);
+      if (!Number.isNaN(mid)) {
+        try {
+          const { data: mtg, error: mErr } = await supabaseClient
+            .from('meetings')
+            .select('host_token')
+            .eq('id', mid)
+            .maybeSingle();
+          if (mErr) console.warn('meetings lookup error', mErr);
+          hostToken = mtg?.host_token || null;
+        } catch (e) { console.warn('host_token lookup failed', e); }
+      }
       try {
         const { data: siblings } = await supabaseClient
           .from('meeting_invites')
