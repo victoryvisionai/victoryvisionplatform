@@ -632,32 +632,30 @@ async function joinMeeting(invite) {
     // (also typically rsvp === 'accepted'). Non-host invitees have a different email.
     const isHost = !!(invite.email && invite.customer_id && invite.email === invite.customer_id);
 
-    // For hosts, fetch meetings.host_token (real Daily admin JWT) and the invitee's
-    // email from the sibling meeting_invites row keyed by the same meeting_id.
-    // NOTE: meetings.id is int8, meeting_invites.meeting_id is text. Cast on lookup.
+    // For hosts, fetch host_token + invitee email via secure n8n webhook
+    // (server-side service-role lookup; meetings table stays RLS-protected).
     let hostToken = null;
     let contactEmail = '';
     if (isHost && invite.meeting_id) {
-      const mid = parseInt(invite.meeting_id, 10);
-      if (!Number.isNaN(mid)) {
-        try {
-          const { data: mtg, error: mErr } = await supabaseClient
-            .from('meetings')
-            .select('host_token')
-            .eq('id', mid)
-            .maybeSingle();
-          if (mErr) console.warn('meetings lookup error', mErr);
-          hostToken = mtg?.host_token || null;
-        } catch (e) { console.warn('host_token lookup failed', e); }
-      }
       try {
-        const { data: siblings } = await supabaseClient
-          .from('meeting_invites')
-          .select('email')
-          .eq('meeting_id', invite.meeting_id)
-          .neq('email', invite.customer_id);
-        if (Array.isArray(siblings) && siblings.length) contactEmail = siblings[0].email || '';
-      } catch (e) { console.warn('sibling invitee lookup failed', e); }
+        const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/meeting/host-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_id: invite.customer_id,
+            meeting_id: String(invite.meeting_id)
+          })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (j && j.ok) {
+          hostToken = j.host_token || null;
+          contactEmail = j.contact_email || '';
+        } else if (j && j.error) {
+          console.warn('host-token webhook returned error:', j.error);
+        }
+      } catch (e) {
+        console.warn('host-token webhook call failed', e);
+      }
     }
 
     // Initialize Daily.co call frame
