@@ -728,6 +728,7 @@
         <button class="cf-btn" onclick="openScheduleModal()">⏰ Schedule</button>
         <button class="cf-btn" onclick="openMediaSelector()">📎 Attach Media</button>
         <button class="cf-btn" onclick="openSignatureModal()">✍️ Signature</button>
+        <button class="cf-btn danger" id="composeDeleteBtn" onclick="deleteCurrentDraft()" style="display:none;">🗑 Delete Draft</button>
         <button class="cf-btn" onclick="cancelCompose()" style="margin-left:auto;">✕ Cancel</button>
       </div>
     </div>
@@ -1388,6 +1389,9 @@ function cancelCompose() {
   const form = document.getElementById('composeForm');
   form.classList.remove('active');
   form.style.display = 'none';
+  // Hide the Delete Draft button when compose form closes
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'none';
   if (currentEmail) {
     document.getElementById('emailView').style.display = 'block';
     document.getElementById('emailView').classList.add('active');
@@ -1535,6 +1539,10 @@ function editDraft(emailId) {
   currentEmail = null;
 
   document.getElementById('composeTitle').textContent = '✏️ Edit Draft: ' + (draft.subject || '(no subject)');
+
+  // Show the Delete Draft button — only visible when editing an existing draft
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'inline-block';
 
   // Show signature preview underneath (decorative — the actual signature gets appended at send time
   // by the existing Render Initial Email node in the Send Now workflow, so we don't double-append here)
@@ -1700,7 +1708,16 @@ async function scheduleEmail() {
 }
 
 async function deleteEmail() {
-  if (!currentEmail) return;
+  // Two paths:
+  // 1. Reading an email — currentEmail is set, delete that
+  // 2. Editing a draft — currentDraftId is set (compose form is open), delete that
+  if (currentDraftId) {
+    return deleteCurrentDraft();
+  }
+  if (!currentEmail) {
+    showToast('Nothing selected to delete', true);
+    return;
+  }
   if (!confirm('Delete this email permanently?')) return;
   await deleteEmailById(currentEmail.id);
   currentEmail = null;
@@ -1709,6 +1726,19 @@ async function deleteEmail() {
   document.getElementById('emailView').classList.remove('active');
   document.getElementById('evActions').style.display = 'none';
   document.getElementById('readingEmpty').style.display = 'flex';
+  await loadEmails();
+}
+
+// Delete the draft currently being edited in the compose form
+async function deleteCurrentDraft() {
+  if (!currentDraftId) {
+    showToast('No draft to delete', true);
+    return;
+  }
+  if (!confirm('Delete this draft permanently?')) return;
+  await deleteEmailById(currentDraftId);
+  currentDraftId = null;
+  cancelCompose();
   await loadEmails();
 }
 
