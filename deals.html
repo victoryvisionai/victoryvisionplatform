@@ -820,7 +820,7 @@ function updatePipelineSummary() {
 
     if (status === 'closed') {
       closedYtd += gross;
-    } else if (status !== 'declined' && status !== 'archived') {
+    } else if (status !== 'declined' && status !== 'archived' && status !== 'paused') {
       totalPipeline += gross;
       weightedPwv += pwv;
     }
@@ -1004,6 +1004,17 @@ function renderPipeline() {
     const stage = t._stage || 'not-contacted';
     if (!grouped[stage]) grouped[stage] = [];
     grouped[stage].push(t);
+  });
+
+  // Sort each stage column by score (highest first); contacts with no score sink to bottom
+  Object.keys(grouped).forEach(stageKey => {
+    grouped[stageKey].sort((a, b) => {
+      const av = a._score, bv = b._score;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return bv - av;
+    });
   });
 
   board.innerHTML = STAGES.map(stage => {
