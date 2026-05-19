@@ -770,10 +770,12 @@ function renderDealsList() {
         <div class="deal-card-stats">
           <div class="deal-card-stat-label">Prospects</div>
           <div class="deal-card-stat-value">${d.total_prospects}</div>
-          <div class="deal-card-stat-label">Soft Circle</div>
-          <div class="deal-card-stat-value">$${formatMoney(d.soft_circle_amount_usd || 0)}</div>
+          <div class="deal-card-stat-label">Soft Touch</div>
+          <div class="deal-card-stat-value">${d.soft_touch_count || 0}</div>
           <div class="deal-card-stat-label">Pitched</div>
           <div class="deal-card-stat-value">${d.pitched_count}</div>
+          <div class="deal-card-stat-label">Soft Circle</div>
+          <div class="deal-card-stat-value">${d.soft_circle_count || 0}</div>
           <div class="deal-card-stat-label">Committed</div>
           <div class="deal-card-stat-value">${d.committed_count}</div>
         </div>
@@ -916,6 +918,7 @@ function renderDashboard() {
 
   const kpis = [
     { label: 'Total Prospects', value: selectedDeal.total_prospects || 0 },
+    { label: 'Soft Touch', value: selectedDeal.soft_touch_count || 0 },
     { label: 'Pitched', value: selectedDeal.pitched_count || 0 },
     { label: 'Soft-Circle', value: selectedDeal.soft_circle_count || 0,
       secondary: '$' + formatMoney(selectedDeal.soft_circle_amount_usd || 0) },
