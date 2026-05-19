@@ -1,251 +1,553 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Manage your placement deals and pipelines."/>
-  <meta name="author" content="Victory Vision"/>
-  <title>Victory Vision AI - Deals</title>
+  <title>Victory Vision AI - Messages</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
   <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/intro.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0; padding: 0;
+      background: #f0f2f5;
+      color: #1a1a2e;
+    }
 
-    /* === Navbar (matches contacts page) === */
-    .navbar { background-color: #0A3161; color: white; padding: 15px;
-              display: flex; justify-content: space-between; align-items: center; }
-    .navbar nav ul { display: flex; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
-    .navbar nav ul li { margin: 0 10px; }
-    .navbar nav ul li a { color: white; text-decoration: none; }
-    .navbar nav ul li a.active { font-weight: bold; border-bottom: 2px solid #fff; padding-bottom: 4px; }
-    .navbar .user-info { display: flex; align-items: center; gap: 10px; }
-    .subscription-medallion { display: flex; align-items: center; gap: 10px;
-      background: linear-gradient(45deg, #CD7F32, #A0522D); color: white; padding: 8px 15px;
-      border-radius: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase;
-      letter-spacing: 1px; cursor: pointer; position: relative; border: none; transition: all 0.3s ease; }
-    .subscription-medallion.bronze { background: linear-gradient(45deg, #CD7F32, #A0522D); }
+    /* ── NAVBAR ── */
+    .navbar {
+      background: #0a3161;
+      color: white;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 56px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .logo img { height: 44px; width: auto; }
+    .navbar nav ul {
+      display: flex; list-style: none; margin: 0; padding: 0; gap: 2px;
+    }
+    .navbar nav ul li a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    .navbar nav ul li a:hover, .navbar nav ul li a.active {
+      color: white; background: rgba(255,255,255,0.15);
+    }
+    .user-info { display: flex; align-items: center; gap: 8px; }
+    #userEmail { font-size: 12px; color: rgba(255,255,255,0.7); }
+    .subscription-medallion {
+      padding: 4px 12px; border-radius: 12px;
+      font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; border: none; color: white;
+      background: linear-gradient(45deg, #CD7F32, #A0522D);
+    }
     .subscription-medallion.silver { background: linear-gradient(45deg, #C0C0C0, #808080); }
-    .subscription-medallion.gold { background: linear-gradient(45deg, #FFD700, #FFA500); }
-    .logo img { height: 60px; width: auto; max-height: 100px; }
+    .subscription-medallion.gold   { background: linear-gradient(45deg, #FFD700, #FFA500); color: #333; }
+    .btn-tour {
+      background: #28a745; color: white; border: none;
+      padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+    }
 
-    /* === Layout === */
-    .content { padding: 20px 4px; max-width: 1600px; margin: 0 auto; }
-    .page-header { margin-bottom: 20px; padding: 0 16px; }
-    .page-title { font-size: 2.5rem; font-weight: bold; color: #0A3161; margin-bottom: 0.5rem; }
-    .page-subtitle { font-size: 1.1rem; color: #666; }
+    /* ── LAYOUT ── */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: auto 1fr;
+      height: calc(100vh - 56px);
+      overflow: hidden;
+    }
 
-    .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 20px; margin: 0 16px 20px 16px; }
-    .section-header { background: linear-gradient(135deg, #0A3161, #1a4c80); color: white;
-                      padding: 15px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0;
-                      display: flex; justify-content: space-between; align-items: center; }
-    .section-header h2 { margin: 0; font-size: 1.2rem; }
+    /* ── TOOLBAR ── */
+    .toolbar {
+      grid-column: 1 / -1;
+      background: white;
+      border-bottom: 1px solid #d0d4da;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border: 1px solid #c8cdd4;
+      border-radius: 4px; background: white; cursor: pointer;
+      font-size: 13px; color: #333; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .toolbar-btn:hover { background: #f0f2f5; border-color: #aaa; }
+    .toolbar-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .toolbar-btn.primary:hover { background: #0c3e7c; }
+    .toolbar-btn.danger { color: #c0392b; border-color: #e8b4b0; }
+    .toolbar-btn.danger:hover { background: #fdf0ef; }
+    .toolbar-sep { width: 1px; height: 24px; background: #d0d4da; margin: 0 4px; }
+    .toolbar-search {
+      margin-left: auto; display: flex; align-items: center;
+      border: 1px solid #c8cdd4; border-radius: 4px;
+      overflow: hidden; background: #f8f9fa;
+    }
+    .toolbar-search input {
+      border: none; background: transparent; padding: 5px 10px;
+      font-size: 13px; width: 200px; outline: none;
+    }
+    .toolbar-search span { padding: 5px 8px; color: #888; font-size: 13px; }
 
-    /* === Deal list (top of page) === */
-    .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-                  gap: 16px; }
-    .deal-card { background: white; border: 2px solid transparent; border-radius: 8px;
-                 padding: 16px; cursor: pointer; transition: all 0.2s ease;
-                 box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
-    .deal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-    .deal-card.selected { border-color: #0A3161; background: #f0f6ff; }
-    .deal-card-header { display: flex; justify-content: space-between; align-items: flex-start;
-                        margin-bottom: 8px; }
-    .deal-card-name { font-weight: bold; font-size: 1.05rem; color: #0A3161;
-                      flex: 1; padding-right: 8px; }
-    .deal-card-target { font-weight: bold; color: #28a745; font-size: 1.05rem; white-space: nowrap; }
-    .deal-card-status { display: inline-block; padding: 3px 10px; border-radius: 12px;
-                        font-size: 0.75rem; font-weight: bold; text-transform: uppercase;
-                        letter-spacing: 0.5px; margin-bottom: 8px; }
-    .status-pre-launch { background: #fff3cd; color: #856404; }
-    .status-pre-marketing { background: #d1ecf1; color: #0c5460; }
-    .status-launched { background: #d4edda; color: #155724; }
-    .status-soft-circle { background: #cce5ff; color: #004085; }
-    .status-final-close { background: #e2e3e5; color: #383d41; }
-    .status-closed { background: #d6d8db; color: #1b1e21; }
-    .status-paused { background: #f8d7da; color: #721c24; }
+    /* ── INBOX PANEL ── */
+    .inbox-panel {
+      background: white;
+      border-right: 1px solid #d0d4da;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .folder-tabs {
+      display: flex; border-bottom: 1px solid #d0d4da;
+      background: #f8f9fa;
+    }
+    .folder-tab {
+      flex: 1; padding: 10px 8px; text-align: center;
+      font-size: 12px; font-weight: 600; color: #555;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .folder-tab:hover { color: #0a3161; background: #f0f2f5; }
+    .folder-tab.active { color: #0a3161; border-bottom-color: #0a3161; background: white; }
+    .unread-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #bb133e; color: white;
+      border-radius: 10px; font-size: 10px; font-weight: 700;
+      min-width: 17px; height: 17px; padding: 0 4px;
+      margin-left: 4px;
+    }
 
-    .deal-card-meta { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
-    .deal-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-                       font-size: 0.85rem; margin-top: 12px; padding-top: 12px;
-                       border-top: 1px solid #eee; }
-    .deal-card-stat-label { color: #666; }
-    .deal-card-stat-value { font-weight: bold; color: #0A3161; }
+    /* Smart filter pills */
+    .filter-pills {
+      display: flex; gap: 4px; padding: 6px 10px;
+      border-bottom: 1px solid #eee; flex-wrap: wrap;
+    }
+    .pill {
+      padding: 3px 10px; border-radius: 12px; font-size: 11px;
+      cursor: pointer; border: 1px solid #cdd0d6; background: white;
+      color: #555; transition: all 0.15s;
+    }
+    .pill:hover { border-color: #0a3161; color: #0a3161; }
+    .pill.active { background: #0a3161; color: white; border-color: #0a3161; }
 
-    /* === Tabs === */
-    .tabs { display: flex; gap: 0; border-bottom: 2px solid #ddd; margin: 0 16px 20px 16px;
-            padding: 0; }
-    .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent;
-           font-weight: 500; color: #666; transition: all 0.2s ease; user-select: none; }
-    .tab:hover { color: #0A3161; background: #f8f9fa; }
-    .tab.active { color: #0A3161; border-bottom-color: #0A3161; font-weight: bold; }
+    /* Email list rows */
+    .email-list { flex: 1; overflow-y: auto; }
+    .email-row {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f2f5;
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 8px;
+    }
+    .email-row:hover { background: #f5f7fa; }
+    .email-row.selected { background: #dce8f8; }
+    .email-row.unread { background: #fffde7; }
+    .email-row.unread .email-row-from { font-weight: 700; }
+    .email-row.unread .email-row-subject { font-weight: 600; }
+    .email-row-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .email-row-body { min-width: 0; }
+    .email-row-from {
+      font-size: 13px; color: #222;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-subject {
+      font-size: 12px; color: #444;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-preview {
+      font-size: 11px; color: #888;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-meta { text-align: right; flex-shrink: 0; }
+    .email-row-date { font-size: 11px; color: #888; white-space: nowrap; }
+    .status-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: #2196F3; margin-left: 4px;
+    }
+    .email-row-flags { display: flex; gap: 3px; justify-content: flex-end; margin-top: 3px; }
+    .mini-badge {
+      font-size: 9px; padding: 1px 5px; border-radius: 8px;
+      font-weight: 600; line-height: 1.4;
+    }
+    .mini-badge.sent     { background: #e8f5e9; color: #2e7d32; }
+    .mini-badge.draft    { background: #fce4ec; color: #c62828; }
+    .mini-badge.received { background: #e3f2fd; color: #1565c0; }
+    .mini-badge.opened   { background: #fff8e1; color: #f57f17; }
+    .mini-badge.replied  { background: #f3e5f5; color: #6a1b9a; }
+    .mini-badge.scheduled { background: #e0f7fa; color: #006064; }
+    .email-list-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 200px; color: #aaa;
+      font-size: 14px; gap: 8px;
+    }
+    .email-list-empty svg { opacity: 0.4; }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* AI auto-reply strip */
+    .autoreply-strip {
+      padding: 8px 14px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px;
+    }
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc; transition: .3s; border-radius: 22px;
+    }
+    .toggle-slider::before {
+      content: ""; position: absolute;
+      height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .toggle-slider { background: #28a745; }
+    input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-    /* === Pipeline (kanban) === */
-    .pipeline { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr));
-                gap: 12px; overflow-x: auto; padding-bottom: 16px; }
-    .pipeline-column { background: #f0f2f5; border-radius: 8px; padding: 12px;
-                       min-width: 180px; min-height: 400px; }
-    .pipeline-column-header { font-weight: bold; color: #0A3161; margin-bottom: 12px;
-                              font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;
-                              display: flex; justify-content: space-between; align-items: center; }
-    .pipeline-column-count { background: #0A3161; color: white; border-radius: 12px;
-                             padding: 2px 8px; font-size: 0.75rem; }
-    .pipeline-card { background: white; border-radius: 6px; padding: 10px;
-                     margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-                     cursor: move; transition: all 0.15s ease; font-size: 0.85rem; }
-    .pipeline-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
-    .pipeline-card-name { font-weight: bold; color: #0A3161; margin-bottom: 4px; }
-    .pipeline-card-company { color: #666; font-size: 0.8rem; margin-bottom: 6px; }
-    .pipeline-card-meta { display: flex; justify-content: space-between; align-items: center;
-                          font-size: 0.75rem; color: #666; }
-    .pipeline-card-score { background: #28a745; color: white; padding: 2px 6px; border-radius: 10px;
-                           font-weight: bold; font-size: 0.7rem; }
-    .pipeline-card-score.low { background: #6c757d; }
-    .pipeline-card-score.mid { background: #ffc107; color: #333; }
-    .pipeline-card-score.high { background: #28a745; }
-    .pipeline-card-warm { display: flex; gap: 4px; }
-    .warm-badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: bold; }
-    .warm-wp { background: #ffeaa7; color: #6e4d00; }
-    .warm-cb { background: #74b9ff; color: white; }
-    .warm-hv { background: #a29bfe; color: white; }
-    .warm-fr { background: #fab1a0; color: #6e4d00; }
-    .warm-fc { background: #55efc4; color: #006856; }
-    .warm-vt { background: #ff7675; color: white; }
-    .warm-cpg { background: #ffeaa7; color: #6e4d00; }
+    /* ── READING PANE ── */
+    .reading-pane {
+      display: flex; flex-direction: column;
+      background: white; overflow: hidden;
+    }
+    .reading-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: #bbb; gap: 12px; font-size: 14px;
+    }
 
-    .pipeline-card.dragging { opacity: 0.5; }
-    .pipeline-column.drag-over { background: #d1ecf1; border: 2px dashed #0c5460; }
+    /* Email View */
+    .email-view { flex: 1; overflow-y: auto; padding: 24px 32px; display: none; }
+    .email-view.active { display: block; }
+    .ev-subject { font-size: 1.3rem; font-weight: 700; color: #0a3161; margin-bottom: 16px; }
+    .ev-meta-table {
+      display: grid; grid-template-columns: auto 1fr;
+      gap: 4px 16px; font-size: 13px;
+      padding: 12px 0; border-top: 1px solid #e8eaed; border-bottom: 1px solid #e8eaed;
+      margin-bottom: 16px;
+    }
+    .ev-label { color: #888; font-weight: 600; }
+    .ev-value { color: #333; }
+    .ev-row { display: contents; }
+    .ev-body {
+      font-size: 14px; line-height: 1.7; color: #333;
+      background: #fafafa; border: 1px solid #e8eaed;
+      border-radius: 6px; padding: 16px; min-height: 200px;
+      overflow-x: auto;
+    }
+    .ev-body.plain { white-space: pre-wrap; }
+    .ev-attachments {
+      margin: 12px 0; padding: 12px;
+      background: #f8f9fa; border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    .ev-attachments h4 { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .att-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: white; border: 1px solid #d0d4da;
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 12px; cursor: pointer; margin: 3px;
+      transition: all 0.15s;
+    }
+    .att-chip:hover { background: #0a3161; color: white; border-color: #0a3161; }
+    .ev-actions {
+      display: flex; gap: 6px; padding: 12px 32px;
+      border-top: 1px solid #e8eaed; background: #fafafa;
+      flex-wrap: wrap;
+    }
+    .ev-btn {
+      padding: 6px 14px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
+      transition: all 0.15s; display: flex; align-items: center; gap: 5px;
+    }
+    .ev-btn:hover { background: #f0f2f5; }
+    .ev-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .ev-btn.primary:hover { background: #0c3e7c; }
+    .ev-btn.danger { color: #c0392b; border-color: #e8b4b0; }
+    .ev-btn.danger:hover { background: #fdf0ef; }
 
-    /* === Targets table === */
-    .targets-table { width: 100%; background: white; border-collapse: collapse;
-                     font-size: 0.9rem; }
-    .targets-table thead th { background: #0A3161; color: white; padding: 10px 8px;
-                              text-align: left; font-weight: bold; position: sticky; top: 0; }
-    .targets-table tbody td { padding: 8px; border-bottom: 1px solid #eee; }
-    .targets-table tbody tr:hover { background: #f8f9fa; cursor: pointer; }
-    .targets-table .score-cell { text-align: center; font-weight: bold; }
+    /* Compose Form */
+    .compose-form { flex: 1; overflow-y: auto; display: none; padding: 20px 28px; }
+    .compose-form.active { display: block; }
+    .compose-header { font-size: 1rem; font-weight: 700; color: #0a3161; margin-bottom: 16px; border-bottom: 2px solid #0a3161; padding-bottom: 8px; }
+    .compose-field {
+      display: flex; align-items: center;
+      border-bottom: 1px solid #e8eaed; padding: 6px 0;
+    }
+    .compose-field label { width: 50px; font-size: 12px; color: #888; font-weight: 600; flex-shrink: 0; }
+    .compose-field input {
+      flex: 1; border: none; outline: none; font-size: 13px;
+      font-family: inherit; background: transparent; color: #333;
+    }
+    .compose-field .field-action { font-size: 12px; color: #0a3161; cursor: pointer; flex-shrink: 0; }
+    .compose-body {
+      width: 100%; border: none; outline: none;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      min-height: 200px; margin-top: 12px;
+      font-family: inherit; color: #333;
+      background: transparent;
+    }
+    .ai-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: #f0f4ff; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 14px;
+      border: 1px solid #c5d3f0;
+    }
+    .ai-bar label { font-size: 12px; font-weight: 600; color: #0a3161; white-space: nowrap; }
+    .ai-bar select {
+      flex: 1; border: 1px solid #c5d3f0; border-radius: 4px;
+      padding: 4px 8px; font-size: 12px; outline: none;
+    }
+    .ai-btn { padding: 5px 12px; background: #0a3161; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .signature-preview {
+      font-size: 12px; color: #888; white-space: pre-wrap;
+      border-top: 1px solid #e8eaed; padding-top: 12px; margin-top: 8px;
+    }
+    .compose-footer {
+      border-top: 1px solid #e8eaed; padding: 12px 0 0;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .cf-btn {
+      padding: 7px 16px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
+      transition: all 0.15s; display: flex; align-items: center; gap: 5px;
+    }
+    .cf-btn:hover { background: #f0f2f5; }
+    .cf-btn.send { background: #0a3161; color: white; border-color: #0a3161; font-weight: 600; }
+    .cf-btn.send:hover { background: #0c3e7c; }
+    .attachment-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .att-remove {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #edf2ff; border: 1px solid #c5d3f0;
+      border-radius: 16px; padding: 3px 10px;
+      font-size: 12px; color: #0a3161;
+    }
+    .att-remove button {
+      background: none; border: none; cursor: pointer;
+      color: #888; font-size: 14px; line-height: 1; padding: 0;
+    }
+    .att-remove button:hover { color: #c0392b; }
 
-    /* === Dashboard KPIs === */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-                gap: 16px; margin-bottom: 24px; }
-    .kpi-tile { background: white; border-radius: 8px; padding: 20px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.08); border-left: 4px solid #0A3161; }
-    .kpi-label { font-size: 0.85rem; color: #666; text-transform: uppercase;
-                 letter-spacing: 0.5px; margin-bottom: 8px; }
-    .kpi-value { font-size: 2rem; font-weight: bold; color: #0A3161; }
-    .kpi-secondary { font-size: 0.9rem; color: #28a745; margin-top: 4px; }
+    /* ── MODALS ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white; border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-height: 90vh; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #0a3161, #1a4c80);
+      color: white; padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h2 { margin: 0; font-size: 1rem; }
+    .modal-close {
+      background: none; border: none; color: white;
+      font-size: 20px; cursor: pointer; line-height: 1; opacity: 0.8;
+    }
+    .modal-close:hover { opacity: 1; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid #e8eaed; display: flex; justify-content: flex-end; gap: 8px; }
+    .mb-btn {
+      padding: 7px 18px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
+    }
+    .mb-btn:hover { background: #f0f2f5; }
+    .mb-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .mb-btn.primary:hover { background: #0c3e7c; }
 
-    /* === Buttons === */
-    .btn { background: #0A3161; color: white; border: none; padding: 8px 16px;
-           border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;
-           transition: all 0.2s ease; text-decoration: none; display: inline-block; }
-    .btn:hover { background: #1a4c80; transform: translateY(-1px); }
-    .btn-secondary { background: #6c757d; }
-    .btn-secondary:hover { background: #5a6268; }
-    .btn-success { background: #28a745; }
-    .btn-success:hover { background: #218838; }
-    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+    /* Media Selector Modal */
+    .media-modal { width: 740px; }
+    .media-filter-bar {
+      display: flex; gap: 6px; padding: 12px 20px;
+      border-bottom: 1px solid #e8eaed; align-items: center;
+    }
+    .media-filter-bar input {
+      flex: 1; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 6px 10px; font-size: 13px; outline: none;
+    }
+    .type-filter-btn {
+      padding: 5px 12px; border-radius: 16px; border: 1px solid #d0d4da;
+      font-size: 12px; cursor: pointer; background: white; color: #555;
+      transition: all 0.15s;
+    }
+    .type-filter-btn:hover { border-color: #0a3161; color: #0a3161; }
+    .type-filter-btn.active { background: #0a3161; color: white; border-color: #0a3161; }
+    .media-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; padding: 16px 20px; overflow-y: auto; max-height: 420px;
+    }
+    .media-card {
+      border: 2px solid transparent; border-radius: 8px;
+      cursor: pointer; overflow: hidden; position: relative;
+      transition: all 0.15s; background: #f8f9fa;
+    }
+    .media-card:hover { border-color: #aaa; }
+    .media-card.selected { border-color: #0a3161; box-shadow: 0 0 0 2px rgba(10,49,97,0.2); }
+    .media-thumb {
+      width: 100%; aspect-ratio: 1;
+      object-fit: cover; display: block; background: #eee;
+    }
+    .media-thumb-placeholder {
+      width: 100%; aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; background: #f0f2f5;
+    }
+    .media-card-info {
+      padding: 6px 8px; font-size: 11px; color: #555;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .media-card-type {
+      position: absolute; top: 6px; right: 6px;
+      background: rgba(0,0,0,0.6); color: white;
+      font-size: 9px; padding: 2px 5px; border-radius: 8px; font-weight: 600;
+      text-transform: uppercase;
+    }
+    .media-card .check-overlay {
+      display: none; position: absolute; inset: 0;
+      background: rgba(10,49,97,0.15);
+      align-items: flex-start; justify-content: flex-end; padding: 8px;
+    }
+    .media-card.selected .check-overlay { display: flex; }
+    .check-circle {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #0a3161; color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .media-count-label {
+      padding: 4px 20px; font-size: 12px; color: #0a3161; font-weight: 600;
+    }
 
-    .empty-state { text-align: center; padding: 60px 20px; color: #888; }
-    .empty-state h3 { color: #555; margin-bottom: 8px; }
+    /* Schedule Modal */
+    .sched-modal { width: 380px; }
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+    .form-row input, .form-row select {
+      width: 100%; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 7px 10px; font-size: 13px; outline: none;
+      font-family: inherit;
+    }
+    .form-row input:focus, .form-row select:focus { border-color: #0a3161; }
 
-    /* === Modal === */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-             background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center;
-             align-items: center; padding: 20px; }
-    .modal.active { display: flex; }
-    .modal-content { background: white; border-radius: 10px; padding: 30px;
-                     max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; color: #0A3161; }
-    .modal-close { float: right; background: none; border: none; font-size: 1.5rem;
-                   cursor: pointer; color: #888; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #555; }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
-      font-size: 0.95rem; box-sizing: border-box; }
-    .form-group textarea { resize: vertical; min-height: 80px; }
+    /* Signature Modal */
+    .sig-modal { width: 460px; }
+    .sig-textarea {
+      width: 100%; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 10px; font-size: 13px; font-family: inherit;
+      min-height: 120px; resize: vertical; outline: none;
+    }
+    .sig-textarea:focus { border-color: #0a3161; }
 
-    /* === Contact modal (wider, two-column) === */
-    .contact-modal-content { max-width: 900px; width: 100%; }
-    .contact-modal-header { display: flex; justify-content: space-between; align-items: flex-start;
-                            padding-bottom: 12px; border-bottom: 1px solid #eee; margin-bottom: 16px; }
-    .contact-modal-header h2 { margin: 0; color: #0A3161; font-size: 1.4rem; }
-    .contact-modal-sub { color: #666; font-size: 0.95rem; margin-top: 4px; }
-    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
-    .contact-section { background: #f8f9fa; border-radius: 6px; padding: 12px; }
-    .contact-section h3 { margin: 0 0 10px 0; color: #0A3161; font-size: 0.9rem;
-                          text-transform: uppercase; letter-spacing: 0.5px; }
-    .contact-field { display: flex; justify-content: space-between; padding: 4px 0;
-                     font-size: 0.9rem; border-bottom: 1px dashed #e5e5e5; }
-    .contact-field:last-child { border-bottom: none; }
-    .contact-field-label { color: #666; flex: 0 0 130px; }
-    .contact-field-value { color: #222; text-align: right; flex: 1; word-break: break-word; }
-    .contact-field-value a { color: #0A3161; text-decoration: none; }
-    .contact-field-value a:hover { text-decoration: underline; }
-    .contact-summary { background: #fff; border: 1px solid #eee; border-radius: 6px;
-                       padding: 12px; max-height: 180px; overflow-y: auto;
-                       font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
-    .contact-journey { background: #fff; border: 1px solid #eee; border-radius: 6px;
-                       padding: 8px; max-height: 220px; overflow-y: auto; }
-    .journey-entry { border-left: 3px solid #0A3161; padding: 6px 10px; margin-bottom: 6px;
-                     background: #f8f9fa; border-radius: 4px; font-size: 0.82rem; }
-    .journey-ts { color: #888; font-size: 0.75rem; }
-    .journey-event { font-weight: bold; color: #0A3161; }
-    .contact-actions { display: flex; gap: 8px; flex-wrap: wrap;
-                       padding-top: 12px; border-top: 1px solid #eee; margin-top: 12px; }
-    .scores-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .score-pill { background: #e9ecef; border-radius: 12px; padding: 2px 8px; font-size: 0.75rem; }
-    .score-pill.high { background: #d4edda; color: #155724; }
-    .score-pill.mid { background: #fff3cd; color: #856404; }
-    .score-pill.low { background: #f8d7da; color: #721c24; }
+    /* Details Modal */
+    .details-modal { width: 500px; }
+    .field-row {
+      display: grid; grid-template-columns: 120px 1fr;
+      gap: 4px; border-bottom: 1px solid #f0f0f0; padding: 8px 0;
+      font-size: 13px;
+    }
+    .field-row .fl { color: #888; font-weight: 600; }
+    .field-row .fv { color: #333; word-break: break-word; }
 
-    /* === Add Contact autocomplete === */
-    .autocomplete-wrap { position: relative; }
-    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0;
-                         background: white; border: 1px solid #ddd; border-top: none;
-                         border-radius: 0 0 6px 6px; max-height: 280px; overflow-y: auto;
-                         z-index: 100; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
-    .autocomplete-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-                         font-size: 0.9rem; }
-    .autocomplete-item:hover, .autocomplete-item.highlighted { background: #f0f6ff; }
-    .autocomplete-item-name { font-weight: bold; color: #0A3161; }
-    .autocomplete-item-meta { color: #666; font-size: 0.8rem; }
-    .autocomplete-item.already-in-deal { opacity: 0.5; }
-    .autocomplete-item.already-in-deal .autocomplete-item-name::after {
-      content: ' · already in deal'; color: #888; font-weight: normal; }
+    /* Status toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1a1a2e; color: white;
+      padding: 10px 18px; border-radius: 6px;
+      font-size: 13px; z-index: 9999;
+      opacity: 0; transform: translateY(10px);
+      transition: all 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #c0392b; }
 
-    /* === Status banner === */
-    #statusBanner { position: fixed; top: 20px; right: 20px; padding: 12px 20px;
-                    border-radius: 6px; color: white; z-index: 2000; display: none;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 400px; }
-    #statusBanner.success { background: #28a745; }
-    #statusBanner.error { background: #dc3545; }
-    #statusBanner.info { background: #17a2b8; }
+    /* Chat widget */
+    .vv-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 500; }
+    .vv-chat-toggle {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #0a3161; border: none; color: white;
+      font-size: 22px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(10,49,97,0.4);
+      position: relative;
+    }
+    .vv-notification-badge {
+      position: absolute; top: -3px; right: -3px;
+      background: #bb133e; color: white; border-radius: 50%;
+      width: 18px; height: 18px; font-size: 10px;
+      font-weight: 700; display: none; align-items: center; justify-content: center;
+    }
+    .vv-chat-container {
+      position: fixed; bottom: 84px; right: 20px;
+      width: 340px; height: 440px;
+      background: white; border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      display: none; flex-direction: column; overflow: hidden;
+      z-index: 499;
+    }
+    .vv-chat-container.open { display: flex; }
+    .vv-chat-header {
+      background: linear-gradient(135deg, #0a3161, #1a4c80);
+      color: white; padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .vv-chat-title { font-weight: 700; font-size: 14px; }
+    .vv-chat-minimize { background: none; border: none; color: white; cursor: pointer; font-size: 16px; }
+    .vv-chat-messages { flex: 1; overflow-y: auto; padding: 12px; background: #f8f9fa; }
+    .vv-chat-message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 13px; line-height: 1.4; }
+    .vv-chat-message.user { background: #0a3161; color: white; margin-left: auto; }
+    .vv-chat-message.bot { background: white; color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .vv-chat-typing { display: none; padding: 8px 12px; background: white; border-radius: 8px; width: 60px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .vv-chat-typing.show { display: block; }
+    .vv-chat-typing span { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite; }
+    .vv-chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .vv-chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+    .vv-quick-replies { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; background: white; border-top: 1px solid #eee; }
+    .vv-quick-reply { background: #f0f2f5; border: 1px solid #ddd; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; }
+    .vv-quick-reply:hover { background: #0a3161; color: white; border-color: #0a3161; }
+    .vv-chat-input-area { display: flex; gap: 8px; padding: 10px; background: white; border-top: 1px solid #eee; }
+    .vv-chat-input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; resize: none; font-family: inherit; outline: none; max-height: 80px; }
+    .vv-chat-send { background: #0a3161; color: white; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .vv-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* === Loading === */
-    .loading { display: inline-block; width: 16px; height: 16px;
-               border: 2px solid #f3f3f3; border-top: 2px solid #0A3161;
-               border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    @media (max-width: 768px) {
-      .pipeline { grid-template-columns: 1fr; }
-      .deals-grid { grid-template-columns: 1fr; }
-      .navbar nav ul { font-size: 0.85rem; }
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .inbox-panel { max-height: 40vh; }
     }
   </style>
 </head>
 <body>
 
+<!-- NAVBAR -->
 <header class="navbar">
   <div class="logo">
-    <img src="logo.jpg" alt="Victory Vision Logo"
-         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+    <img src="logo.jpg" alt="Victory Vision"
+      onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22/><text x=%225%22 y=%2226%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
   </div>
   <nav>
     <ul>
@@ -256,1600 +558,1584 @@
       <li><a href="social">Social</a></li>
       <li><a href="contacts">Contacts</a></li>
       <li><a href="ads">Ads</a></li>
-      <li><a href="messages">Messages</a></li>
-      <li><a href="meetings">Meetings</a></li>
+      <li><a href="messages" class="active">Messages</a></li>
+      <li><a href="meetings-analysis">Meetings</a></li>
       <li><a href="ai">Analytics</a></li>
-      <li><a href="deals" class="active">Deals</a></li>
       <li><a href="settings">Settings</a></li>
     </ul>
   </nav>
   <div class="user-info">
     <span id="userEmail"></span>
-    <div id="subscriptionMedallion" class="subscription-medallion bronze">
-      <span class="plan-name">Bronze</span>
-    </div>
+    <button class="btn-tour" onclick="startTour()">📖 Tour</button>
+    <div id="subscriptionMedallion" class="subscription-medallion bronze">Bronze</div>
   </div>
 </header>
 
-<div id="statusBanner"></div>
+<!-- MAIN APP SHELL -->
+<div class="app-shell">
 
-<div class="content">
-  <div class="page-header">
-    <h1 class="page-title">Deals</h1>
-    <p class="page-subtitle">Manage placement mandates and capital-raise pipelines</p>
-  </div>
-
-  <!-- Pipeline Value Summary - 3 tiles -->
-  <div class="card" id="pipelineSummary" style="margin-bottom:16px;">
-    <div class="section-header">
-      <h2 style="margin:0;">Pipeline Value</h2>
-      <div style="font-size: 0.85rem; color:#666;">Total opportunity · probability-weighted by stage · closed YTD</div>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; padding:12px 0;">
-      <div style="background:linear-gradient(135deg,#1a3a6e 0%,#2c5aa0 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Total Pipeline</div>
-        <div id="kpiTotalPipeline" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Gross deal value × prospects in motion</div>
-      </div>
-      <div style="background:linear-gradient(135deg,#0d6b4d 0%,#198754 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Stage-Weighted PWV</div>
-        <div id="kpiWeightedPwv" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">What you're likely to book</div>
-      </div>
-      <div style="background:linear-gradient(135deg,#5a3e8c 0%,#7e57c2 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Closed YTD</div>
-        <div id="kpiClosedYtd" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Customers with client_won_date set</div>
-      </div>
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="toolbar-btn primary" onclick="showComposeForm()" id="composeBtn" data-intro="Click to compose a new email" data-step="1">
+      ✉️ New Email
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="replyToEmail()" id="replyBtn" disabled>↩ Reply</button>
+    <button class="toolbar-btn" onclick="replyAllToEmail()" id="replyAllBtn" disabled>↩ Reply All</button>
+    <button class="toolbar-btn" onclick="forwardEmail()" id="fwdBtn" disabled>→ Forward</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="markAsRead()" id="markReadBtn" disabled>✓ Mark Read</button>
+    <button class="toolbar-btn danger" onclick="deleteEmail()" id="deleteBtn" disabled>🗑 Delete</button>
+    <button class="toolbar-btn" onclick="openDetailsModal()" id="detailsBtn" disabled>📋 Details</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="refreshEmails()">🔄 Refresh</button>
+    <div class="toolbar-search">
+      <span>🔍</span>
+      <input type="text" id="emailSearch" placeholder="Search messages..." oninput="applyFilters()">
     </div>
   </div>
 
-  <!-- Top: list of all deals as cards -->
-  <div class="card">
-    <div class="section-header">
-      <h2>Active Deals (<span id="dealCount">0</span>)</h2>
-      <div>
-        <button class="btn btn-success btn-sm" onclick="openNewDealModal()">+ New Deal</button>
+  <!-- INBOX PANEL -->
+  <div class="inbox-panel" data-intro="Your inbox. Click a folder tab to switch views." data-step="2">
+    <!-- Folder tabs -->
+    <div class="folder-tabs">
+      <div class="folder-tab active" onclick="switchFolder('inbox')" id="tab-inbox">
+        Inbox <span class="unread-badge" id="unreadCount" style="display:none">0</span>
+      </div>
+      <div class="folder-tab" onclick="switchFolder('sent')" id="tab-sent">Sent</div>
+      <div class="folder-tab" onclick="switchFolder('drafts')" id="tab-drafts">Drafts</div>
+      <div class="folder-tab" onclick="switchFolder('all')" id="tab-all">All</div>
+    </div>
+
+    <!-- Smart filter pills -->
+    <div class="filter-pills" data-intro="Quick filters to find emails by status." data-step="3">
+      <span class="pill active" onclick="togglePill(this,'all')">All</span>
+      <span class="pill" onclick="togglePill(this,'unread')">Unread</span>
+      <span class="pill" onclick="togglePill(this,'opened')">Opened</span>
+      <span class="pill" onclick="togglePill(this,'replied')">Replied</span>
+    </div>
+
+    <!-- Email list -->
+    <div class="email-list" id="emailList" data-intro="Click any row to read an email." data-step="4">
+      <div class="email-list-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/></svg>
+        Loading emails…
       </div>
     </div>
-    <div id="dealsList" class="deals-grid">
-      <div class="empty-state"><div class="loading"></div> Loading deals...</div>
+
+    <!-- AI Auto-Reply -->
+    <div class="autoreply-strip">
+      <div>
+        <strong style="color:#0a3161;">🤖 AI Auto-Reply</strong>
+        <span style="color:#888; margin-left:6px;">Auto-respond to inbound</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoReplyToggle" onchange="toggleAutoReply(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
   </div>
 
-  <!-- Selected deal detail -->
-  <div id="dealDetail" style="display: none;">
-    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <h2 id="selectedDealName" style="color: #0A3161; margin: 0;">—</h2>
-        <p id="selectedDealMeta" style="color: #666; margin: 4px 0 0 0;">—</p>
-      </div>
-      <div>
-        <button class="btn btn-sm" onclick="editDealMeta()">Edit Deal</button>
-      </div>
+  <!-- READING PANE -->
+  <div class="reading-pane">
+
+    <!-- Empty state -->
+    <div class="reading-empty" id="readingEmpty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.2">
+        <path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/>
+      </svg>
+      <span>Select an email to read</span>
     </div>
 
-    <div class="tabs">
-      <div class="tab active" data-tab="dashboard">Dashboard</div>
-      <div class="tab" data-tab="pipeline">Pipeline</div>
-      <div class="tab" data-tab="targets">Targets</div>
-      <div class="tab" data-tab="activity">Activity</div>
-    </div>
-
-    <!-- DASHBOARD TAB -->
-    <div class="tab-content active" id="tab-dashboard">
-      <div class="card">
-        <div class="kpi-grid" id="kpiGrid"></div>
-        <div id="dealNarrative"></div>
+    <!-- Email View -->
+    <div class="email-view" id="emailView">
+      <div class="ev-subject" id="evSubject"></div>
+      <div class="ev-meta-table">
+        <span class="ev-label">From</span><span class="ev-value" id="evFrom"></span>
+        <span class="ev-label">To</span><span class="ev-value" id="evTo"></span>
+        <span class="ev-label" id="evCcLabel" style="display:none">CC</span><span class="ev-value" id="evCc" style="display:none"></span>
+        <span class="ev-label">Date</span><span class="ev-value" id="evDate"></span>
+        <span class="ev-label">Status</span><span class="ev-value" id="evStatus"></span>
+        <span class="ev-row" id="evCampaignRow" style="display:none"><span class="ev-label">Campaign</span><span class="ev-value" id="evCampaign"></span></span>
+        <span class="ev-row" id="evOpensRow" style="display:none"><span class="ev-label">Opens</span><span class="ev-value" id="evOpens"></span></span>
+        <span class="ev-row" id="evOpenedAtRow" style="display:none"><span class="ev-label">Opened</span><span class="ev-value" id="evOpenedAt"></span></span>
+        <span class="ev-row" id="evClicksRow" style="display:none"><span class="ev-label">Clicks</span><span class="ev-value" id="evClicks"></span></span>
+        <span class="ev-row" id="evClickedAtRow" style="display:none"><span class="ev-label">Clicked</span><span class="ev-value" id="evClickedAt"></span></span>
+        <span class="ev-row" id="evRepliedAtRow" style="display:none"><span class="ev-label">Replied</span><span class="ev-value" id="evRepliedAt"></span></span>
       </div>
+      <div class="ev-attachments" id="evAttachments" style="display:none">
+        <h4>📎 Attachments</h4>
+        <div id="evAttList"></div>
+      </div>
+      <div class="ev-body" id="evBody"></div>
     </div>
 
-    <!-- PIPELINE TAB -->
-    <div class="tab-content" id="tab-pipeline">
-      <div class="card">
-        <div class="section-header">
-          <h2>Pipeline (drag cards to move stages · click a card for details)</h2>
-          <div style="font-size: 0.85rem;">
-            <button class="btn btn-sm btn-success" onclick="openAddContactModal()">+ Add Contact</button>
-            <button class="btn btn-sm btn-secondary" onclick="renderPipeline()">Refresh</button>
-          </div>
+    <!-- Email Actions Bar (shown when email selected) -->
+    <div class="ev-actions" id="evActions" style="display:none">
+      <button class="ev-btn primary" onclick="replyToEmail()">↩ Reply</button>
+      <button class="ev-btn primary" onclick="replyAllToEmail()">↩ Reply All</button>
+      <button class="ev-btn" onclick="forwardEmail()">→ Forward</button>
+      <button class="ev-btn" onclick="markAsRead()">✓ Mark Read</button>
+      <button class="ev-btn danger" onclick="deleteEmail()">🗑 Delete</button>
+      <button class="ev-btn" onclick="openDetailsModal()">📋 Details</button>
+    </div>
+
+    <!-- Compose Form -->
+    <div class="compose-form" id="composeForm" data-intro="Compose emails with AI assistance and attach media files." data-step="5">
+      <div class="compose-header" id="composeTitle">✉️ New Email</div>
+      <div class="ai-bar">
+        <label>🤖 AI Assist:</label>
+        <select id="aiTone">
+          <option value="">Select Tone</option>
+          <option value="professional">Professional</option>
+          <option value="friendly">Friendly</option>
+          <option value="persuasive">Persuasive</option>
+          <option value="casual">Casual</option>
+        </select>
+        <button class="ai-btn" onclick="aiAssist('generate')">Generate</button>
+        <button class="ai-btn" style="background:#5c6bc0;" onclick="aiAssist('improve')">Improve</button>
+      </div>
+      <div class="compose-field">
+        <label>From</label>
+        <input type="email" id="composeFrom" readonly>
+      </div>
+      <div class="compose-field">
+        <label>To</label>
+        <input type="email" id="composeTo" placeholder="recipient@example.com" list="contactsList">
+        <datalist id="contactsList"></datalist>
+        <span class="field-action" onclick="toggleCCBCC()">Cc/Bcc</span>
+      </div>
+      <div id="ccBccFields" style="display:none">
+        <div class="compose-field">
+          <label>Cc</label>
+          <input type="email" id="composeCC" placeholder="cc@example.com">
         </div>
-        <div class="pipeline" id="pipelineBoard"></div>
+        <div class="compose-field">
+          <label>Bcc</label>
+          <input type="email" id="composeBCC" placeholder="bcc@example.com">
+        </div>
+      </div>
+      <div class="compose-field">
+        <label>Subject</label>
+        <input type="text" id="composeSubject" placeholder="Email subject">
+      </div>
+      <textarea class="compose-body" id="composeBody" placeholder="Type your message here…"></textarea>
+      <div class="signature-preview" id="signaturePreview" style="display:none"></div>
+      <div class="attachment-chips" id="attachmentChips"></div>
+      <div class="compose-footer">
+        <button class="cf-btn send" onclick="sendEmail()">📤 Send</button>
+        <button class="cf-btn" onclick="saveDraft()">💾 Draft</button>
+        <button class="cf-btn" onclick="openScheduleModal()">⏰ Schedule</button>
+        <button class="cf-btn" onclick="openMediaSelector()">📎 Attach Media</button>
+        <button class="cf-btn" onclick="openSignatureModal()">✍️ Signature</button>
+        <button class="cf-btn danger" id="composeDeleteBtn" onclick="deleteCurrentDraft()" style="display:none;">🗑 Delete Draft</button>
+        <button class="cf-btn" onclick="cancelCompose()" style="margin-left:auto;">✕ Cancel</button>
       </div>
     </div>
 
-    <!-- TARGETS TAB -->
-    <div class="tab-content" id="tab-targets">
-      <div class="card">
-        <div class="section-header">
-          <h2>All Targets (sortable)</h2>
-          <div>
-            <button class="btn btn-sm btn-secondary" onclick="downloadTargetsCSV()">Download CSV</button>
-          </div>
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="targets-table" id="targetsTable">
-            <thead>
-              <tr>
-                <th onclick="sortTargets('name')">Name ↕</th>
-                <th onclick="sortTargets('company')">Company ↕</th>
-                <th onclick="sortTargets('title')">Title ↕</th>
-                <th onclick="sortTargets('location')">Location ↕</th>
-                <th onclick="sortTargets('score')">Score ↕</th>
-                <th>Warm</th>
-                <th onclick="sortTargets('stage')">Stage ↕</th>
-                <th onclick="sortTargets('last_touch')">Last Touch ↕</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="targetsTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  </div>
+</div>
 
-    <!-- ACTIVITY TAB -->
-    <div class="tab-content" id="tab-activity">
-      <div class="card">
-        <div class="section-header">
-          <h2>Activity Feed</h2>
-        </div>
-        <div id="activityFeed">Loading activity...</div>
-      </div>
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- MEDIA SELECTOR -->
+<div class="modal-overlay" id="mediaSelectorModal">
+  <div class="modal-box media-modal">
+    <div class="modal-header">
+      <h2>📎 Select Media to Attach</h2>
+      <button class="modal-close" onclick="closeMediaSelector()">×</button>
+    </div>
+    <div class="media-filter-bar">
+      <input type="text" id="mediaSearch" placeholder="Search files…" oninput="filterMedia()">
+      <button class="type-filter-btn active" onclick="setMediaType('all', this)">All</button>
+      <button class="type-filter-btn" onclick="setMediaType('image', this)">🖼 Images</button>
+      <button class="type-filter-btn" onclick="setMediaType('video', this)">🎬 Videos</button>
+      <button class="type-filter-btn" onclick="setMediaType('presentation', this)">📊 Presentations</button>
+    </div>
+    <div class="media-count-label" id="mediaCountLabel"></div>
+    <div class="media-grid" id="mediaGrid">
+      <div style="grid-column:1/-1;text-align:center;color:#aaa;padding:40px;">Loading media…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeMediaSelector()">Cancel</button>
+      <button class="mb-btn primary" onclick="attachSelectedMedia()">Attach Selected</button>
     </div>
   </div>
 </div>
 
-<!-- New Deal modal -->
-<div class="modal" id="newDealModal">
-  <div class="modal-content">
-    <button class="modal-close" onclick="closeNewDealModal()">×</button>
-    <h2>New Deal</h2>
-    <div class="form-group">
-      <label>Deal Name *</label>
-      <input type="text" id="newDealName" placeholder="e.g. Provenance Consumer - $10M"/>
+<!-- SCHEDULE EMAIL -->
+<div class="modal-overlay" id="scheduleModal">
+  <div class="modal-box sched-modal">
+    <div class="modal-header">
+      <h2>⏰ Schedule Email</h2>
+      <button class="modal-close" onclick="closeModal('scheduleModal')">×</button>
     </div>
-    <div class="form-group">
-      <label>Campaign Target</label>
-      <input type="text" id="newDealTarget" placeholder="$10M or 'Increase brand awareness'"/>
-    </div>
-    <div class="form-group">
-      <label>Status</label>
-      <select id="newDealStatus">
-        <option value="pre-launch">Pre-Launch</option>
-        <option value="pre-marketing">Pre-Marketing</option>
-        <option value="launched">Launched</option>
-        <option value="soft-circle">Soft-Circle</option>
-        <option value="final-close">Final Close</option>
-        <option value="closed">Closed</option>
-        <option value="paused">Paused</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Goal Description</label>
-      <textarea id="newDealGoal" placeholder="What is this deal about? Who is the client?"></textarea>
-    </div>
-    <div class="form-group">
-      <label>ICP (target LP profile)</label>
-      <textarea id="newDealICP" placeholder="Who are the ideal LPs/investors for this deal?"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Co-Advisor (if any)</label>
-      <input type="text" id="newDealCoAdvisor" placeholder="e.g. Lincoln International"/>
-    </div>
-    <div class="form-group">
-      <label>Target Close Date</label>
-      <input type="date" id="newDealCloseDate"/>
-    </div>
-    <button class="btn btn-success" onclick="createNewDeal()">Create Deal</button>
-    <button class="btn btn-secondary" onclick="closeNewDealModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- Edit Deal Meta modal -->
-<div class="modal" id="editDealModal">
-  <div class="modal-content">
-    <button class="modal-close" onclick="closeEditDealModal()">×</button>
-    <h2>Edit Deal</h2>
-    <div class="form-group">
-      <label>Status</label>
-      <select id="editDealStatus">
-        <option value="pre-launch">Pre-Launch</option>
-        <option value="pre-marketing">Pre-Marketing</option>
-        <option value="launched">Launched</option>
-        <option value="soft-circle">Soft-Circle</option>
-        <option value="final-close">Final Close</option>
-        <option value="closed">Closed</option>
-        <option value="paused">Paused</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Campaign Target</label>
-      <input type="text" id="editDealTarget"/>
-    </div>
-    <div class="form-group">
-      <label>Co-Advisor</label>
-      <input type="text" id="editDealCoAdvisor"/>
-    </div>
-    <div class="form-group">
-      <label>Target Close Date</label>
-      <input type="date" id="editDealCloseDate"/>
-    </div>
-    <div class="form-group">
-      <label>Soft-Circle Amount (USD)</label>
-      <input type="number" id="editDealSoftCircle" placeholder="0"/>
-    </div>
-    <button class="btn btn-success" onclick="saveDealMeta()">Save</button>
-    <button class="btn btn-secondary" onclick="closeEditDealModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- ============================================================ -->
-<!-- CONTACT DETAIL MODAL -->
-<!-- ============================================================ -->
-<div class="modal" id="contactModal">
-  <div class="modal-content contact-modal-content">
-    <div class="contact-modal-header">
-      <div>
-        <h2 id="cmName">—</h2>
-        <div class="contact-modal-sub" id="cmTitleCompany">—</div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Send Date</label>
+        <input type="date" id="schedDate">
       </div>
-      <button class="modal-close" onclick="closeContactModal()">×</button>
-    </div>
-
-    <div class="contact-grid">
-      <!-- Left: Identity + Deal context -->
-      <div>
-        <div class="contact-section">
-          <h3>Contact</h3>
-          <div class="contact-field"><span class="contact-field-label">LinkedIn</span><span class="contact-field-value" id="cmLinkedIn">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Email</span><span class="contact-field-value" id="cmEmail">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Phone</span><span class="contact-field-value" id="cmPhone">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Location</span><span class="contact-field-value" id="cmLocation">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Industry</span><span class="contact-field-value" id="cmIndustry">—</span></div>
-        </div>
-
-        <div class="contact-section" style="margin-top: 12px;">
-          <h3>Deal Context</h3>
-          <div class="contact-field"><span class="contact-field-label">Stage</span><span class="contact-field-value">
-            <select id="cmStage" onchange="changeContactStage()" style="padding: 4px; border-radius: 4px;">
-              <option value="not-contacted">Not Contacted</option>
-              <option value="soft-touch">Soft Touch</option>
-              <option value="pitched">Pitched</option>
-              <option value="soft-circle">Soft Circle</option>
-              <option value="committed">Committed</option>
-              <option value="closed">Closed</option>
-              <option value="declined">Declined</option>
-            </select></span></div>
-          <div class="contact-field"><span class="contact-field-label">Score (this deal)</span><span class="contact-field-value">
-            <input type="number" id="cmScore" min="0" max="100" style="width: 70px; padding: 4px; border-radius: 4px;"/>
-            <button class="btn btn-sm" onclick="saveContactScore()" style="margin-left: 4px;">Save</button></span></div>
-          <div class="contact-field"><span class="contact-field-label">All Scores</span><span class="contact-field-value scores-row" id="cmAllScores">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Tags</span><span class="contact-field-value" id="cmTags" style="font-size: 0.78rem;">—</span></div>
-        </div>
+      <div class="form-row">
+        <label>Send Time</label>
+        <input type="time" id="schedTime">
       </div>
-
-      <!-- Right: Engagement metrics + activity -->
-      <div>
-        <div class="contact-section">
-          <h3>Engagement</h3>
-          <div class="contact-field"><span class="contact-field-label">Emails Sent</span><span class="contact-field-value" id="cmEmailsSent">0</span></div>
-          <div class="contact-field"><span class="contact-field-label">Opens</span><span class="contact-field-value" id="cmOpens">0</span></div>
-          <div class="contact-field"><span class="contact-field-label">Clicks</span><span class="contact-field-value" id="cmClicks">0</span></div>
-          <div class="contact-field"><span class="contact-field-label">Last Emailed</span><span class="contact-field-value" id="cmLastEmailed">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Last Opened</span><span class="contact-field-value" id="cmLastOpened">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Last Responded</span><span class="contact-field-value" id="cmLastResponded">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Call Attempts</span><span class="contact-field-value" id="cmCallAttempts">0</span></div>
-          <div class="contact-field"><span class="contact-field-label">Last Called</span><span class="contact-field-value" id="cmLastCalled">—</span></div>
-        </div>
+      <div class="form-row">
+        <label>Timezone</label>
+        <select id="schedTZ">
+          <option value="America/New_York">Eastern (ET)</option>
+          <option value="America/Chicago">Central (CT)</option>
+          <option value="America/Denver">Mountain (MT)</option>
+          <option value="America/Los_Angeles" selected>Pacific (PT)</option>
+          <option value="UTC">UTC</option>
+        </select>
       </div>
     </div>
-
-    <!-- Profile summary -->
-    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0;">Profile</h3>
-    <div class="contact-summary" id="cmSummary">—</div>
-
-    <!-- Customer journey -->
-    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0;">Activity</h3>
-    <div class="contact-journey" id="cmJourney">—</div>
-
-    <!-- Add note -->
-    <div style="margin-top: 12px;">
-      <textarea id="cmNoteInput" placeholder="Add a note (logs to customer_journey)" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; min-height: 50px; font-family: inherit; box-sizing: border-box;"></textarea>
-      <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-        <button class="btn btn-sm" onclick="saveContactNote()">Add Note</button>
-      </div>
-    </div>
-
-    <!-- Action footer -->
-    <div class="contact-actions">
-      <button class="btn btn-sm btn-secondary" onclick="enrichContact()" title="Run Apollo/Hunter enrichment via existing n8n webhook">Enrich</button>
-      <button class="btn btn-sm btn-secondary" onclick="enrollWarmOutreach()" title="Enroll in warm outreach sequence">Warm Outreach</button>
-      <button class="btn btn-sm btn-secondary" onclick="openInContacts()">Edit in Contacts page →</button>
-      <div style="flex: 1;"></div>
-      <button class="btn btn-sm" style="background: #dc3545;" onclick="removeFromDeal()">Mark No-Fit (remove from deal)</button>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeModal('scheduleModal')">Cancel</button>
+      <button class="mb-btn primary" onclick="scheduleEmail()">⏰ Schedule Send</button>
     </div>
   </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- ADD CONTACT TO DEAL modal -->
-<!-- ============================================================ -->
-<div class="modal" id="addContactModal">
-  <div class="modal-content">
-    <button class="modal-close" onclick="closeAddContactModal()">×</button>
-    <h2>Add Contact to <span id="acDealName">Deal</span></h2>
-    <p style="color: #666; font-size: 0.9rem;">Search existing CRM contacts. To add brand-new contacts not yet in the CRM, upload them via the <a href="contacts">Contacts page</a> first.</p>
-    <div class="form-group autocomplete-wrap">
-      <label>Search by name or company</label>
-      <input type="text" id="acSearch" placeholder="Start typing a name or company..." autocomplete="off" oninput="onAddContactSearch()"/>
-      <div class="autocomplete-list" id="acResults"></div>
+<!-- SIGNATURE -->
+<div class="modal-overlay" id="signatureModal">
+  <div class="modal-box sig-modal">
+    <div class="modal-header">
+      <h2>✍️ Email Signature</h2>
+      <button class="modal-close" onclick="closeModal('signatureModal')">×</button>
     </div>
-    <div class="form-group">
-      <label>Initial stage in this deal</label>
-      <select id="acStage">
-        <option value="not-contacted">Not Contacted (default)</option>
-        <option value="soft-touch">Soft Touch</option>
-        <option value="pitched">Pitched</option>
-        <option value="soft-circle">Soft Circle</option>
-        <option value="committed">Committed</option>
-      </select>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#666;margin:0 0 10px">This signature is saved to your profile and auto-appended to new emails.</p>
+      <textarea class="sig-textarea" id="signatureText" placeholder="Best regards,&#10;Your Name&#10;Victory Vision"></textarea>
     </div>
-    <div class="form-group">
-      <label>Initial score (optional, 0-100)</label>
-      <input type="number" id="acScore" min="0" max="100" placeholder="Leave blank if unscored"/>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeModal('signatureModal')">Cancel</button>
+      <button class="mb-btn primary" onclick="saveSignature()">💾 Save Signature</button>
     </div>
-    <div class="form-group">
-      <label>Rationale (logged to customer_journey)</label>
-      <textarea id="acRationale" placeholder="Why are you adding this contact?"></textarea>
+  </div>
+</div>
+
+<!-- EMAIL DETAILS -->
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal-box details-modal">
+    <div class="modal-header">
+      <h2>📋 Email Details</h2>
+      <button class="modal-close" onclick="closeModal('detailsModal')">×</button>
     </div>
-    <button class="btn btn-success" onclick="addContactToDeal()" id="acAddBtn" disabled>Add to Deal</button>
-    <button class="btn btn-secondary" onclick="closeAddContactModal()">Cancel</button>
+    <div class="modal-body" id="detailsBody"></div>
+    <div class="modal-footer">
+      <button class="mb-btn primary" onclick="closeModal('detailsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CHAT WIDGET -->
+<div class="vv-chat-widget">
+  <button class="vv-chat-toggle" id="vvChatToggle">
+    <span id="vvToggleIcon">💬</span>
+    <span class="vv-notification-badge" id="vvNotificationBadge">1</span>
+  </button>
+</div>
+<div class="vv-chat-container" id="vvChatContainer">
+  <div class="vv-chat-header">
+    <div class="vv-chat-title">Victory Vision AI</div>
+    <button class="vv-chat-minimize" id="vvChatMinimize">✕</button>
+  </div>
+  <div class="vv-chat-messages" id="vvChatMessages">
+    <div class="vv-chat-message bot">👋 Hi! I'm Victory Vision AI. How can I help with your emails today?</div>
+  </div>
+  <div class="vv-chat-typing" id="vvChatTyping"><span></span><span></span><span></span></div>
+  <div class="vv-quick-replies">
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Help me write an email')">✍️ Write email</button>
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Campaign ideas')">💡 Ideas</button>
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Best practices')">📚 Tips</button>
+  </div>
+  <div class="vv-chat-input-area">
+    <textarea class="vv-chat-input" id="vvChatInput" placeholder="Ask me anything…" rows="1"></textarea>
+    <button class="vv-chat-send" id="vvChatSend" disabled>Send</button>
   </div>
 </div>
 
 <script>
-// ============================================================
-// Supabase configuration (matches contacts page exactly)
-// ============================================================
-const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+/* ══════════════════════════════════════════════
+   CONFIG & STATE
+══════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ============================================================
-// Global state
-// ============================================================
-let CUSTOMER_ID = null;
-let authToken = null;
-let allDeals = [];           // from deals_dashboard view
-let selectedDealId = null;
-let selectedDeal = null;
-let dealTargets = [];        // all contacts tagged for current deal
-let targetsSortField = 'score';
-let targetsSortDir = 'desc';
-
-const STAGES = [
-  { key: 'not-contacted', label: 'Not Contacted', color: '#6c757d' },
-  { key: 'soft-touch',    label: 'Soft Touch',    color: '#17a2b8' },
-  { key: 'pitched',       label: 'Pitched',       color: '#007bff' },
-  { key: 'soft-circle',   label: 'Soft Circle',   color: '#ffc107' },
-  { key: 'committed',     label: 'Committed',     color: '#28a745' },
-  { key: 'closed',        label: 'Closed',        color: '#155724' },
-  { key: 'declined',      label: 'Declined',      color: '#dc3545' },
-];
-
-// Stage probability multipliers — applied to client_ann_est to compute expected value per prospect.
-// not-contacted 5%, soft-touch 10%, pitched 25%, soft-circle 40%, committed 60%, closed 100%, declined 0%.
-const STAGE_MULTIPLIERS = {
-  'not-contacted': 0.05,
-  'soft-touch':    0.10,
-  'pitched':       0.25,
-  'soft-circle':   0.40,
-  'committed':     0.60,
-  'closed':        1.00,
-  'declined':      0.00
+const EP = {
+  sendEmail:    'https://victoryvision.app.n8n.cloud/webhook/emails/send',
+  saveDraft:    'https://victoryvision.app.n8n.cloud/webhook/emails/draft',
+  loadEmails:   'https://victoryvision.app.n8n.cloud/webhook/emails/get',
+  aiAssist:     'https://victoryvision.app.n8n.cloud/webhook/emails/ai-assist',
+  scheduleEmail:'https://victoryvision.app.n8n.cloud/webhook/emails/schedule',
+  deleteEmail:  'https://victoryvision.app.n8n.cloud/webhook/emails/delete',
+  markRead:     'https://victoryvision.app.n8n.cloud/webhook/emails/mark-read',
+  chatMessage:  'https://victoryvision.app.n8n.cloud/webhook/chat/message',
+  loadContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+  loadMedia:    'https://victoryvision.app.n8n.cloud/webhook/media/get',
+  getUser:      'https://victoryvision.app.n8n.cloud/webhook/user/get',
+  saveSignature:'https://victoryvision.app.n8n.cloud/webhook/user/signature',
+  aireply:      'https://victoryvision.app.n8n.cloud/webhook/emails/aireply'
 };
 
-// Parse client_ann_est which is stored as text on contacts; strip $, commas, whitespace.
-function parseAnnEst(val) {
-  if (val == null || val === '') return 0;
-  const cleaned = String(val).replace(/[^0-9.\-]/g, '');
-  const n = parseFloat(cleaned);
-  return isFinite(n) ? n : 0;
+let authToken = null, CUSTOMER_ID = null;
+let allEmails = [], currentEmail = null;
+let mediaFiles = [], selectedMedia = [], attachedFiles = [];
+let contacts = [];
+let userSignature = '';
+let currentDraftId = null;
+let currentFolder = 'inbox';
+let currentStatusPill = 'all';
+let activeMediaType = 'all';
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
-function getStageMultiplier(stage) {
-  return STAGE_MULTIPLIERS[stage] ?? 0.05;
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function formatDate(ds) {
+  if (!ds) return '—';
+  const d = new Date(ds), now = new Date();
+  const diff = (now - d) / 86400000;
+  if (diff < 1)   return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  if (diff < 2)   return 'Yesterday';
+  if (diff < 7)   return d.toLocaleDateString([], {weekday:'short'});
+  return d.toLocaleDateString([], {month:'short', day:'numeric'});
 }
 
-// ============================================================
-// Utility: derive deal slug from deal name (must match SQL view)
-// "Provenance Consumer - $10M" -> "provenance-consumer"
-// ============================================================
-function dealSlug(dealName) {
-  const beforeDash = dealName.split(' - ')[0];
-  return beforeDash.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function avatarColor(str) {
+  const colors = ['#0a3161','#bb133e','#2e7d32','#c62828','#6a1b9a','#00695c','#e65100','#1565c0'];
+  let h = 0;
+  for (let c of (str||'?')) h = ((h<<5)-h)+c.charCodeAt(0);
+  return colors[Math.abs(h) % colors.length];
 }
 
-// ============================================================
-// Status banner
-// ============================================================
-function showStatus(message, type = 'info') {
-  const banner = document.getElementById('statusBanner');
-  banner.className = type;
-  banner.textContent = message;
-  banner.style.display = 'block';
-  setTimeout(() => { banner.style.display = 'none'; }, 4000);
+function initials(str) {
+  if (!str) return '?';
+  const parts = str.split(/[\s@]/);
+  return (parts[0][0]||'?').toUpperCase();
 }
 
-// ============================================================
-// Auth (same pattern as contacts page)
-// ============================================================
-async function checkAuthentication() {
-  try {
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    if (error || !session || !session.user) return false;
-    CUSTOMER_ID = session.user.email;
-    authToken = session.access_token;
-    document.getElementById('userEmail').textContent = CUSTOMER_ID;
-    return true;
-  } catch (e) {
-    console.error('Auth check error:', e);
-    return false;
-  }
+function getFileIcon(type) {
+  if (!type) return '📄';
+  if (type === 'image' || (typeof type === 'string' && type.startsWith('image/'))) return '🖼️';
+  if (type === 'video' || (typeof type === 'string' && type.startsWith('video/'))) return '🎬';
+  if (type === 'presentation' || type.includes('presentation') || type.includes('powerpoint')) return '📊';
+  if (type.includes('pdf')) return '📕';
+  return '📄';
 }
 
-function redirectToLogin() {
-  localStorage.removeItem('vv_session');
-  window.location.href = 'login.html';
+function detectMediaCategory(file) {
+  const t = (file.type || file.media_type || '').toLowerCase();
+  const n = (file.name || '').toLowerCase();
+  if (t.startsWith('image') || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(n)) return 'image';
+  if (t.startsWith('video') || /\.(mp4|mov|avi|webm)$/.test(n)) return 'video';
+  if (t.includes('presentation') || t.includes('powerpoint') || /\.(pptx?|key)$/.test(n)) return 'presentation';
+  return 'other';
 }
 
-// ============================================================
-// Load deals from the SQL view
-// ============================================================
-async function loadDeals() {
-  const { data, error } = await supabaseClient
-    .from('deals_dashboard')
-    .select('*')
-    .eq('cus_id', CUSTOMER_ID)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Load deals error:', error);
-    showStatus('Failed to load deals: ' + error.message, 'error');
-    return;
-  }
-
-  allDeals = data || [];
-  renderDealsList();
-}
-
-function renderDealsList() {
-  const container = document.getElementById('dealsList');
-  document.getElementById('dealCount').textContent = allDeals.length;
-
-  if (allDeals.length === 0) {
-    container.innerHTML = '<div class="empty-state"><h3>No deals yet</h3><p>Click "+ New Deal" to create your first placement mandate.</p></div>';
-    return;
-  }
-
-  container.innerHTML = allDeals.map(d => {
-    const statusClass = 'status-' + (d.status || 'pre-launch').replace(/_/g, '-');
-    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo mandate';
-    const daysLine = d.target_close_date
-      ? `Day ${d.days_active}/${daysBetween(d.created_at, d.target_close_date)}`
-      : `Day ${d.days_active}`;
-
-    // Deal-level pricing (from campaigns.meta — exposed by deals_dashboard view)
-    const grossValue = Number(d.gross_value_usd || 0);
-    const pwv = Number(d.pwv_usd || 0);
-    const takeRate = Number(d.take_rate_pct || 0);
-    const closeProb = Number(d.base_close_prob_pct || 0);
-
-    return `
-      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" onclick="selectDeal('${d.deal_id}')">
-        <div class="deal-card-header">
-          <div class="deal-card-name">${esc(d.deal_name)}</div>
-          <div class="deal-card-target">${esc(d.campaign_target || '—')}</div>
-        </div>
-        <div class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</div>
-        <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
-        ${grossValue > 0 ? `
-        <div style="display:flex; gap:6px; margin:8px 0; padding:8px; background:#f3f6fa; border-radius:6px;">
-          <div style="flex:1;">
-            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">Gross</div>
-            <div style="font-size:1.1rem; font-weight:600; color:#1a3a6e;">$${formatMoney(grossValue)}</div>
-            <div style="font-size:0.65rem; color:#888;">${takeRate}% × deal size</div>
-          </div>
-          <div style="flex:1; border-left:1px solid #d0d7e2; padding-left:8px;">
-            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">PWV</div>
-            <div style="font-size:1.1rem; font-weight:600; color:#0d6b4d;">$${formatMoney(pwv)}</div>
-            <div style="font-size:0.65rem; color:#888;">@ ${closeProb}% close</div>
-          </div>
-        </div>` : ''}
-        <div class="deal-card-stats">
-          <div class="deal-card-stat-label">Prospects</div>
-          <div class="deal-card-stat-value">${d.total_prospects}</div>
-          <div class="deal-card-stat-label">Soft Touch</div>
-          <div class="deal-card-stat-value">${d.soft_touch_count || 0}</div>
-          <div class="deal-card-stat-label">Pitched</div>
-          <div class="deal-card-stat-value">${d.pitched_count}</div>
-          <div class="deal-card-stat-label">Soft Circle</div>
-          <div class="deal-card-stat-value">${d.soft_circle_count || 0}</div>
-          <div class="deal-card-stat-label">Committed</div>
-          <div class="deal-card-stat-value">${d.committed_count}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Refresh the 3-tile pipeline summary header whenever deals list re-renders
-  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
-}
-
-function daysBetween(start, end) {
-  if (!end) return '—';
-  const diff = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
-  return Math.round(diff);
-}
-
-function formatMoney(n) {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
-  return String(n);
-}
-
-// ============================================================
-// Pipeline value summary - sums across all deals
-// Total Pipeline = sum of deal gross_value_usd across active deals (status != closed/declined)
-// Stage-Weighted PWV = sum of deal pwv_usd (already deal-level prob-weighted) — represents what we expect to book
-// Closed YTD = sum of deal gross_value_usd where status = 'closed'
-// ============================================================
-function updatePipelineSummary() {
-  if (!Array.isArray(allDeals)) return;
-  let totalPipeline = 0;
-  let weightedPwv = 0;
-  let closedYtd = 0;
-
-  allDeals.forEach(d => {
-    const status = (d.status || '').toLowerCase();
-    const gross = Number(d.gross_value_usd || 0);
-    const pwv = Number(d.pwv_usd || 0);
-    const closedVal = Number(d.closed_value_usd || 0);
-
-    if (status === 'closed') {
-      closedYtd += gross;
-    } else if (status !== 'declined' && status !== 'archived') {
-      totalPipeline += gross;
-      weightedPwv += pwv;
-    }
-    // Also add per-prospect closed value (in case some deals have signed clients without the deal itself being marked closed)
-    closedYtd += closedVal;
-  });
-
-  const elTotal = document.getElementById('kpiTotalPipeline');
-  const elPwv = document.getElementById('kpiWeightedPwv');
-  const elClosed = document.getElementById('kpiClosedYtd');
-  if (elTotal) elTotal.textContent = '$' + formatMoney(totalPipeline);
-  if (elPwv) elPwv.textContent = '$' + formatMoney(weightedPwv);
-  if (elClosed) elClosed.textContent = '$' + formatMoney(closedYtd);
-}
-
-function esc(s) {
-  if (s == null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-// ============================================================
-// Select a deal
-// ============================================================
-async function selectDeal(dealId) {
-  selectedDealId = dealId;
-  selectedDeal = allDeals.find(d => d.deal_id === dealId);
-  renderDealsList();
-  if (!selectedDeal) return;
-
-  document.getElementById('dealDetail').style.display = 'block';
-  document.getElementById('selectedDealName').textContent = selectedDeal.deal_name;
-  document.getElementById('selectedDealMeta').textContent =
-    `${selectedDeal.campaign_target || ''} · ${selectedDeal.status || ''} · ${selectedDeal.co_advisor ? 'Co-advisor: ' + selectedDeal.co_advisor : 'Solo mandate'} · Day ${selectedDeal.days_active}${selectedDeal.target_close_date ? '/' + daysBetween(selectedDeal.created_at, selectedDeal.target_close_date) : ''}`;
-
-  // Load all targets for this deal
-  await loadDealTargets();
-  // Render whichever tab is active
-  renderDashboard();
-  renderPipeline();
-  renderTargets();
-  renderActivity();
-
-  // Scroll into view
-  document.getElementById('dealDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function loadDealTargets() {
-  const slug = dealSlug(selectedDeal.deal_name);
-  const { data, error } = await supabaseClient
-    .from('contacts')
-    .select('id, name, first_name, title, company, industry, location, tags, scores, linkedin, email, phone_number, personal_summary, company_summary, last_emailed_date, last_opened_date, last_clicked_date, last_responded, last_called, meeting_date, number_emails_sent, num_emails_opened, num_links_clicked, number_call_attempts, customer_journey')
-    .eq('cus_id', CUSTOMER_ID)
-    .ilike('tags', `%deal:${slug}%`);
-
-  if (error) {
-    console.error('Load targets error:', error);
-    showStatus('Failed to load targets: ' + error.message, 'error');
-    dealTargets = [];
-    return;
-  }
-  // Filter out contacts marked as no-fit for this deal — they should not reappear.
-  // (Match: tag is exactly `deal:<slug>:no-fit` somewhere in tags string.)
-  const noFitRe = new RegExp(`\\bdeal:${slug}:no-fit\\b`);
-  const filtered = (data || []).filter(c => !noFitRe.test(c.tags || ''));
-
-  // Annotate each target with its deal-specific stage (from tags)
-  dealTargets = filtered.map(c => {
-    const tagsStr = c.tags || '';
-    // Extract a non-no-fit stage if any
-    const stageMatch = tagsStr.match(new RegExp(`deal:${slug}:([a-z-]+)`));
-    const stage = stageMatch ? stageMatch[1] : 'not-contacted';
-    const score = c.scores && c.scores[slug] != null ? c.scores[slug] : null;
-    return { ...c, _stage: stage, _score: score };
-  });
-}
-
-// ============================================================
-// Tabs
-// ============================================================
-document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('tab')) {
-    const tabKey = e.target.dataset.tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    e.target.classList.add('active');
-    document.getElementById('tab-' + tabKey).classList.add('active');
-  }
-});
-
-// ============================================================
-// DASHBOARD TAB
-// ============================================================
-function renderDashboard() {
-  if (!selectedDeal) return;
-
-  const kpis = [
-    { label: 'Total Prospects', value: selectedDeal.total_prospects || 0 },
-    { label: 'Soft Touch', value: selectedDeal.soft_touch_count || 0 },
-    { label: 'Pitched', value: selectedDeal.pitched_count || 0 },
-    { label: 'Soft-Circle', value: selectedDeal.soft_circle_count || 0,
-      secondary: '$' + formatMoney(selectedDeal.soft_circle_amount_usd || 0) },
-    { label: 'Committed', value: selectedDeal.committed_count || 0 },
-    { label: 'Closed', value: selectedDeal.closed_count || 0 },
-    { label: 'Declined', value: selectedDeal.declined_count || 0 },
-  ];
-
-  // Add days/timeline KPI
-  if (selectedDeal.target_close_date) {
-    const daysRemaining = daysBetween(new Date().toISOString(), selectedDeal.target_close_date);
-    kpis.unshift({
-      label: 'Days to Close',
-      value: daysRemaining,
-      secondary: `target ${selectedDeal.target_close_date}`
-    });
-  }
-
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
-    <div class="kpi-tile">
-      <div class="kpi-label">${esc(k.label)}</div>
-      <div class="kpi-value">${esc(k.value)}</div>
-      ${k.secondary ? `<div class="kpi-secondary">${esc(k.secondary)}</div>` : ''}
-    </div>
-  `).join('');
-
-  // Narrative block
-  const slug = dealSlug(selectedDeal.deal_name);
-  const top3 = [...dealTargets]
-    .filter(t => t._score != null)
-    .sort((a, b) => (b._score || 0) - (a._score || 0))
-    .slice(0, 3);
-
-  const warmCounts = countWarmAngles(dealTargets);
-  document.getElementById('dealNarrative').innerHTML = `
-    <h3 style="color:#0A3161;">Pipeline Composition</h3>
-    <p><strong>Warm-angle coverage:</strong>
-      West Point: ${warmCounts.wp} ·
-      Columbia: ${warmCounts.cb} ·
-      Harvard: ${warmCounts.hv} ·
-      Friend/Personal: ${warmCounts.fr} ·
-      Former Coworker: ${warmCounts.fc} ·
-      Veteran: ${warmCounts.vt}
-    </p>
-    ${top3.length > 0 ? `
-      <h3 style="color:#0A3161;">Top 3 Targets</h3>
-      <ol style="line-height: 1.8;">
-        ${top3.map(t => `<li><strong>${esc(t.name)}</strong> (${esc(t.company || '—')}) — score ${t._score}</li>`).join('')}
-      </ol>` : ''
-    }
-    ${selectedDeal.goal_description ? `
-      <h3 style="color:#0A3161;">Mandate</h3>
-      <p style="white-space: pre-wrap;">${esc(selectedDeal.goal_description)}</p>
-    ` : ''}
-  `;
-}
-
-function countWarmAngles(targets) {
-  const c = { wp: 0, cb: 0, hv: 0, fr: 0, fc: 0, vt: 0 };
-  for (const t of targets) {
-    const tags = (t.tags || '').toLowerCase();
-    if (tags.includes('west-point')) c.wp++;
-    if (tags.includes('columbia')) c.cb++;
-    if (tags.includes('harvard')) c.hv++;
-    if (tags.includes('friend')) c.fr++;
-    if (tags.includes('former-coworker')) c.fc++;
-    if (tags.includes('veteran')) c.vt++;
-  }
-  return c;
-}
-
-// ============================================================
-// PIPELINE TAB (kanban with drag-drop)
-// ============================================================
-function renderPipeline() {
-  if (!selectedDeal) return;
-  const slug = dealSlug(selectedDeal.deal_name);
-  const board = document.getElementById('pipelineBoard');
-
-  const grouped = {};
-  STAGES.forEach(s => { grouped[s.key] = []; });
-  dealTargets.forEach(t => {
-    const stage = t._stage || 'not-contacted';
-    if (!grouped[stage]) grouped[stage] = [];
-    grouped[stage].push(t);
-  });
-
-  board.innerHTML = STAGES.map(stage => {
-    const cards = grouped[stage.key] || [];
-    return `
-      <div class="pipeline-column" data-stage="${stage.key}"
-           ondragover="handleDragOver(event)"
-           ondragleave="handleDragLeave(event)"
-           ondrop="handleDrop(event, '${stage.key}')">
-        <div class="pipeline-column-header">
-          <span>${stage.label}</span>
-          <span class="pipeline-column-count">${cards.length}</span>
-        </div>
-        ${cards.map(c => renderPipelineCard(c)).join('')}
-      </div>
-    `;
-  }).join('');
-}
-
-function renderPipelineCard(c) {
-  const scoreClass = c._score == null ? 'low' : (c._score >= 70 ? 'high' : (c._score >= 50 ? 'mid' : 'low'));
-  const tags = (c.tags || '').toLowerCase();
-  const warmBadges = [];
-  if (tags.includes('west-point')) warmBadges.push('<span class="warm-badge warm-wp">WP</span>');
-  if (tags.includes('columbia')) warmBadges.push('<span class="warm-badge warm-cb">CB</span>');
-  if (tags.includes('harvard')) warmBadges.push('<span class="warm-badge warm-hv">HV</span>');
-  if (tags.includes('friend')) warmBadges.push('<span class="warm-badge warm-fr">FR</span>');
-  if (tags.includes('former-coworker')) warmBadges.push('<span class="warm-badge warm-fc">FC</span>');
-  if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
-  if (tags.includes('cpg') || tags.includes('consumer')) warmBadges.push('<span class="warm-badge warm-cpg">CPG</span>');
-
-  // Expected value per prospect: client_ann_est × stage multiplier
-  const annEst = parseAnnEst(c.client_ann_est);
-  const stage = c._stage || 'not-contacted';
-  const mult = getStageMultiplier(stage);
-  const expectedVal = annEst * mult;
-  const valueDisplay = annEst > 0
-    ? `<div style="margin-top:6px; padding:5px 7px; background:#f0f4f9; border-left:3px solid ${expectedVal >= 50000 ? '#0d6b4d' : '#1a3a6e'}; border-radius:3px; font-size:0.72rem;">
-         <span style="color:#666;">EV:</span> <span style="font-weight:700; color:#0d6b4d;">$${formatMoney(expectedVal)}</span>
-         <span style="color:#999; margin-left:4px;">($${formatMoney(annEst)} × ${Math.round(mult*100)}%)</span>
-       </div>`
-    : '';
-
-  return `
-    <div class="pipeline-card" draggable="true" data-contact-id="${c.id}"
-         ondragstart="handleDragStart(event, '${c.id}')"
-         onmousedown="handleCardMouseDown(event)"
-         onclick="handleCardClick(event, '${c.id}')">
-      <div class="pipeline-card-name">${esc(c.name)}</div>
-      <div class="pipeline-card-company">${esc(c.company || '')}</div>
-      <div class="pipeline-card-meta">
-        <div class="pipeline-card-warm">${warmBadges.join('')}</div>
-        ${c._score != null ? `<div class="pipeline-card-score ${scoreClass}">${c._score}</div>` : ''}
-      </div>
-      ${valueDisplay}
-    </div>
-  `;
-}
-
-let cardMouseDownPos = null;
-function handleCardMouseDown(e) {
-  cardMouseDownPos = { x: e.clientX, y: e.clientY };
-}
-function handleCardClick(e, contactId) {
-  // Distinguish click from drag: if the mouse moved more than a few px between mousedown
-  // and click, treat as drag and skip opening the modal.
-  if (cardMouseDownPos) {
-    const dx = Math.abs(e.clientX - cardMouseDownPos.x);
-    const dy = Math.abs(e.clientY - cardMouseDownPos.y);
-    cardMouseDownPos = null;
-    if (dx > 5 || dy > 5) return; // was a drag
-  }
-  openContactModal(contactId);
-}
-
-let dragSource = null;
-function handleDragStart(e, contactId) {
-  dragSource = contactId;
-  e.target.classList.add('dragging');
-}
-function handleDragOver(e) {
-  e.preventDefault();
-  e.currentTarget.classList.add('drag-over');
-}
-function handleDragLeave(e) {
-  e.currentTarget.classList.remove('drag-over');
-}
-async function handleDrop(e, newStage) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  if (!dragSource) return;
-
-  await moveContactToStage(dragSource, newStage);
-  dragSource = null;
-}
-
-async function moveContactToStage(contactId, newStage) {
-  const slug = dealSlug(selectedDeal.deal_name);
-  const contact = dealTargets.find(t => t.id === contactId);
-  if (!contact) return;
-
-  // Build new tags: remove any existing "deal:<slug>:<oldstage>" and add new
-  const currentTags = (contact.tags || '').split(/,\s*/).filter(Boolean);
-  const baseTagPattern = new RegExp(`^deal:${slug}(:.+)?$`);
-  let baseTag = `deal:${slug}`; // preserve the base tag for the deal
-  const filteredTags = currentTags.filter(t => !baseTagPattern.test(t));
-  filteredTags.push(baseTag);
-  if (newStage !== 'not-contacted') {
-    filteredTags.push(`deal:${slug}:${newStage}`);
-  }
-  const newTagsStr = filteredTags.join(', ');
-
-  // Append journey event
-  const journeyEntry = {
-    ts: new Date().toISOString(),
-    event: 'deal_stage_changed',
-    deal: slug,
-    from: contact._stage,
-    to: newStage
-  };
-  const existingJourney = contact.customer_journey || [];
-  const newJourney = [...existingJourney, journeyEntry];
-
-  const { error } = await supabaseClient
-    .from('contacts')
-    .update({ tags: newTagsStr, customer_journey: newJourney })
-    .eq('id', contactId);
-
-  if (error) {
-    showStatus('Failed to move card: ' + error.message, 'error');
-    console.error(error);
-    return;
-  }
-
-  // Update local state and re-render
-  contact._stage = newStage;
-  contact.tags = newTagsStr;
-  contact.customer_journey = newJourney;
-  renderPipeline();
-  showStatus(`Moved ${contact.name} to ${newStage}`, 'success');
-
-  // Refresh aggregates (dashboard counts)
-  await loadDeals();
-  // selectedDeal updated by loadDeals -> renderDealsList
-  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-  renderDashboard();
-}
-
-// ============================================================
-// TARGETS TAB (sortable table)
-// ============================================================
-function renderTargets() {
-  if (!selectedDeal) return;
-  const sorted = [...dealTargets].sort((a, b) => {
-    let av, bv;
-    switch (targetsSortField) {
-      case 'name': av = a.name || ''; bv = b.name || ''; break;
-      case 'company': av = a.company || ''; bv = b.company || ''; break;
-      case 'title': av = a.title || ''; bv = b.title || ''; break;
-      case 'location': av = a.location || ''; bv = b.location || ''; break;
-      case 'score': av = a._score == null ? -1 : a._score; bv = b._score == null ? -1 : b._score; break;
-      case 'stage': av = a._stage || ''; bv = b._stage || ''; break;
-      case 'last_touch': av = a.last_emailed_date || ''; bv = b.last_emailed_date || ''; break;
-      default: av = a.name || ''; bv = b.name || '';
-    }
-    if (typeof av === 'number') return targetsSortDir === 'asc' ? av - bv : bv - av;
-    return targetsSortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
-  });
-
-  document.getElementById('targetsTableBody').innerHTML = sorted.map(t => {
-    const tags = (t.tags || '').toLowerCase();
-    const warmBadges = [];
-    if (tags.includes('west-point')) warmBadges.push('<span class="warm-badge warm-wp">WP</span>');
-    if (tags.includes('columbia')) warmBadges.push('<span class="warm-badge warm-cb">CB</span>');
-    if (tags.includes('harvard')) warmBadges.push('<span class="warm-badge warm-hv">HV</span>');
-    if (tags.includes('friend')) warmBadges.push('<span class="warm-badge warm-fr">FR</span>');
-    if (tags.includes('former-coworker')) warmBadges.push('<span class="warm-badge warm-fc">FC</span>');
-    if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
-
-    return `
-      <tr onclick="openContactModal('${t.id}')" style="cursor: pointer;">
-        <td><strong>${esc(t.name || '')}</strong></td>
-        <td>${esc(t.company || '')}</td>
-        <td>${esc(t.title || '')}</td>
-        <td>${esc(t.location || '')}</td>
-        <td class="score-cell">${t._score != null ? t._score : '—'}</td>
-        <td>${warmBadges.join(' ')}</td>
-        <td>${esc(t._stage || 'not-contacted')}</td>
-        <td>${esc(t.last_emailed_date || '—')}</td>
-        <td onclick="event.stopPropagation()">
-          ${t.linkedin ? `<a href="${esc(t.linkedin)}" target="_blank" class="btn btn-sm" onclick="event.stopPropagation()">LI</a>` : ''}
-          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); advanceStage('${t.id}')">→</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function sortTargets(field) {
-  if (targetsSortField === field) {
-    targetsSortDir = targetsSortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    targetsSortField = field;
-    targetsSortDir = field === 'score' ? 'desc' : 'asc';
-  }
-  renderTargets();
-}
-
-async function advanceStage(contactId) {
-  const contact = dealTargets.find(t => t.id === contactId);
-  if (!contact) return;
-  const currentIdx = STAGES.findIndex(s => s.key === (contact._stage || 'not-contacted'));
-  if (currentIdx < 0 || currentIdx >= STAGES.length - 1) return;
-  await moveContactToStage(contactId, STAGES[currentIdx + 1].key);
-  renderTargets();
-}
-
-function downloadTargetsCSV() {
-  if (!dealTargets.length) {
-    showStatus('No targets to export', 'info');
-    return;
-  }
-  const headers = ['Name','Company','Title','Location','Score','Stage','LinkedIn','Email','Tags'];
-  const rows = dealTargets.map(t => [
-    t.name, t.company, t.title, t.location, t._score, t._stage, t.linkedin, t.email, t.tags
-  ]);
-  const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${(v || '').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${dealSlug(selectedDeal.deal_name)}-targets.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ============================================================
-// ACTIVITY TAB
-// ============================================================
-function renderActivity() {
-  if (!selectedDeal) return;
-  // Collect all journey events from all targets, sort by ts desc
-  const events = [];
-  dealTargets.forEach(t => {
-    (t.customer_journey || []).forEach(ev => {
-      events.push({ ...ev, contact_name: t.name });
-    });
-  });
-  events.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-
-  if (events.length === 0) {
-    document.getElementById('activityFeed').innerHTML = '<p style="color: #888;">No activity yet for this deal.</p>';
-    return;
-  }
-
-  document.getElementById('activityFeed').innerHTML = events.slice(0, 100).map(ev => {
-    const tsDate = ev.ts ? new Date(ev.ts).toLocaleString() : '—';
-    return `
-      <div style="border-left: 3px solid #0A3161; padding: 8px 12px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px;">
-        <div style="font-size: 0.8rem; color: #666;">${tsDate}</div>
-        <div><strong>${esc(ev.contact_name)}</strong> — <span style="color: #0A3161;">${esc(ev.event || 'event')}</span></div>
-        ${ev.note ? `<div style="font-size: 0.85rem; color: #555; margin-top: 4px;">${esc(ev.note)}</div>` : ''}
-        ${ev.from && ev.to ? `<div style="font-size: 0.85rem; color: #555;">${esc(ev.from)} → ${esc(ev.to)}</div>` : ''}
-      </div>
-    `;
-  }).join('');
-}
-
-// ============================================================
-// NEW DEAL modal
-// ============================================================
-function openNewDealModal() {
-  document.getElementById('newDealName').value = '';
-  document.getElementById('newDealTarget').value = '';
-  document.getElementById('newDealStatus').value = 'pre-launch';
-  document.getElementById('newDealGoal').value = '';
-  document.getElementById('newDealICP').value = '';
-  document.getElementById('newDealCoAdvisor').value = '';
-  document.getElementById('newDealCloseDate').value = '';
-  document.getElementById('newDealModal').classList.add('active');
-}
-
-function closeNewDealModal() {
-  document.getElementById('newDealModal').classList.remove('active');
-}
-
-async function createNewDeal() {
-  const name = document.getElementById('newDealName').value.trim();
-  if (!name) {
-    showStatus('Deal Name is required', 'error');
-    return;
-  }
-  const meta = {};
-  const coAdv = document.getElementById('newDealCoAdvisor').value.trim();
-  if (coAdv) meta.co_advisor = coAdv;
-  const closeDate = document.getElementById('newDealCloseDate').value;
-  if (closeDate) meta.target_close_date = closeDate;
-  meta.soft_circle_amount_usd = 0;
-  meta.broker_dealer = 'GT Securities';
-
-  const payload = {
-    name: name,
-    type: 'deal',
-    customer_id: CUSTOMER_ID,
-    campaign_target: document.getElementById('newDealTarget').value.trim() || null,
-    status: document.getElementById('newDealStatus').value,
-    goal_description: document.getElementById('newDealGoal').value.trim() || null,
-    icp: document.getElementById('newDealICP').value.trim() || null,
-    meta: meta
-  };
-
-  const { data, error } = await supabaseClient.from('campaigns').insert(payload).select();
-  if (error) {
-    showStatus('Failed to create deal: ' + error.message, 'error');
-    console.error(error);
-    return;
-  }
-  closeNewDealModal();
-  showStatus('Deal created', 'success');
-  await loadDeals();
-}
-
-// ============================================================
-// EDIT DEAL modal
-// ============================================================
-function editDealMeta() {
-  if (!selectedDeal) return;
-  document.getElementById('editDealStatus').value = selectedDeal.status || 'pre-launch';
-  document.getElementById('editDealTarget').value = selectedDeal.campaign_target || '';
-  document.getElementById('editDealCoAdvisor').value = selectedDeal.co_advisor || '';
-  document.getElementById('editDealCloseDate').value = selectedDeal.target_close_date || '';
-  document.getElementById('editDealSoftCircle').value = selectedDeal.soft_circle_amount_usd || 0;
-  document.getElementById('editDealModal').classList.add('active');
-}
-
-function closeEditDealModal() {
-  document.getElementById('editDealModal').classList.remove('active');
-}
-
-async function saveDealMeta() {
-  if (!selectedDeal) return;
-  const updatedMeta = { ...(selectedDeal.meta || {}) };
-  updatedMeta.co_advisor = document.getElementById('editDealCoAdvisor').value.trim() || null;
-  updatedMeta.target_close_date = document.getElementById('editDealCloseDate').value || null;
-  updatedMeta.soft_circle_amount_usd = parseInt(document.getElementById('editDealSoftCircle').value, 10) || 0;
-
-  const { error } = await supabaseClient
-    .from('campaigns')
-    .update({
-      status: document.getElementById('editDealStatus').value,
-      campaign_target: document.getElementById('editDealTarget').value.trim() || null,
-      meta: updatedMeta,
-      last_updated: new Date().toISOString()
-    })
-    .eq('id', selectedDeal.deal_id);
-
-  if (error) {
-    showStatus('Failed to save: ' + error.message, 'error');
-    return;
-  }
-  closeEditDealModal();
-  showStatus('Deal updated', 'success');
-  await loadDeals();
-  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-  renderDashboard();
-}
-
-// ============================================================
-// INIT
-// ============================================================
-async function init() {
-  try {
-    const isAuthenticated = await checkAuthentication();
-    if (!isAuthenticated) {
-      redirectToLogin();
-      return;
-    }
-    await loadDeals();
-  } catch (e) {
-    console.error('Init error:', e);
-    showStatus('Failed to initialize. Please refresh.', 'error');
-  }
-}
-
-// Session validation every 5 min (same as contacts page)
-setInterval(async () => {
+/* ══════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════ */
+async function checkAuth() {
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) redirectToLogin();
-    else authToken = session.access_token;
-  } catch (e) { console.error(e); }
+    if (session?.user) {
+      authToken = session.access_token;
+      CUSTOMER_ID = session.user.email;
+      document.getElementById('userEmail').textContent = CUSTOMER_ID;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+/* ══════════════════════════════════════════════
+   USER DATA
+══════════════════════════════════════════════ */
+async function loadUserData() {
+  try {
+    const r = await fetch(`${EP.getUser}?customer_id=${CUSTOMER_ID}`);
+    const data = await r.json();
+    if (data?.length) {
+      const u = data[0];
+      if (u.signature) {
+        userSignature = u.signature;
+        updateSignaturePreview();
+      }
+      if (u.vv_email) window.userVVEmail = u.vv_email;
+      // Re-entry guard for any send operation (prevents double/triple-click duplicate sends)
+      window.isSending = false;
+      if (u.subscription_plan) updateMedallion(u.subscription_plan);
+      if (u.aireply !== undefined) {
+        document.getElementById('autoReplyToggle').checked = !!u.aireply;
+      }
+    }
+  } catch(e) {}
+}
+
+function updateMedallion(plan) {
+  const m = document.getElementById('subscriptionMedallion');
+  m.className = 'subscription-medallion ' + (plan||'bronze').toLowerCase();
+  m.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
+/* ══════════════════════════════════════════════
+   LOAD DATA
+══════════════════════════════════════════════ */
+async function loadContacts() {
+  try {
+    const r = await fetch(EP.loadContacts, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    contacts = Array.isArray(data) ? data : (data.contacts || []);
+    const dl = document.getElementById('contactsList');
+    dl.innerHTML = contacts.map(c => {
+      const e = c.email||'', n = c.name||c.first_name||'';
+      return `<option value="${e}">${n ? n+' <'+e+'>' : e}</option>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadMediaFiles() {
+  try {
+    const r = await fetch(EP.loadMedia, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    mediaFiles = Array.isArray(data) ? data : (data.media || []);
+    mediaFiles.forEach(f => { f._category = detectMediaCategory(f); });
+  } catch(e) {}
+}
+
+async function loadEmails() {
+  try {
+    const r = await fetch(EP.loadEmails, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(8000)
+    });
+    if (!r.ok) { allEmails = []; renderList(); return; }
+    const text = await r.text();
+    if (!text || !text.trim()) { allEmails = []; renderList(); return; }
+    const data = JSON.parse(text);
+    console.log('[loadEmails] raw response:', JSON.stringify(data).slice(0, 500));
+    const arr = Array.isArray(data) ? data : (data.emails || []);
+    console.log('[loadEmails] arr length:', arr.length, 'first item:', arr[0] ? JSON.stringify(arr[0]).slice(0,200) : 'none');
+    // Filter warm-up + decorate with derived UI flags.
+    // The email table has no 'draft' column — we derive it from campaign/outcome='draft'.
+    // This keeps the Drafts folder filter (which checks e.draft) working without backend changes.
+    allEmails = arr.filter(e => {
+      const s = (e.subject||'').toLowerCase();
+      const tags = (e.tags||[]).map(t=>t.toLowerCase());
+      return !s.includes('warm-up') && !s.includes('warmup') && !tags.includes('warm-up') && !tags.includes('warmup') && !tags.includes('test');
+    }).map(e => ({
+      ...e,
+      draft: e.draft === true || e.campaign === 'draft' || e.outcome === 'draft',
+      replied: e.replied === true || !!e.replied_at,
+      opened: e.opened === true || !!e.opened_at
+    }));
+    console.log('[loadEmails] allEmails after filter:', allEmails.length);
+    updateUnreadCount();
+    renderList();
+  } catch(e) {
+    console.error('[loadEmails] error:', e);
+    allEmails = [];
+    renderList();
+  }
+}
+
+function updateUnreadCount() {
+  const count = allEmails.filter(e => e.inbound && !e.read && !e.opened_at).length;
+  const badge = document.getElementById('unreadCount');
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+  badge.textContent = count;
+}
+
+/* ══════════════════════════════════════════════
+   FOLDER & FILTER LOGIC
+══════════════════════════════════════════════ */
+function switchFolder(folder) {
+  currentFolder = folder;
+  document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+folder).classList.add('active');
+  renderList();
+}
+
+function togglePill(el, status) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  currentStatusPill = status;
+  renderList();
+}
+
+function applyFilters() { renderList(); }
+
+function getFilteredEmails() {
+  const search = document.getElementById('emailSearch').value.toLowerCase();
+  return allEmails.filter(e => {
+    // Folder filter
+    if (currentFolder === 'inbox')  { if (!e.inbound || e.draft) return false; }
+    if (currentFolder === 'sent')   { if (e.inbound || e.draft) return false; }
+    if (currentFolder === 'drafts') { if (!e.draft) return false; }
+    // Status pill
+    if (currentStatusPill === 'unread')  { if ((e.read || e.opened_at) || !e.inbound) return false; }
+    if (currentStatusPill === 'opened')  { if (!e.read && !e.opened_at) return false; }
+    if (currentStatusPill === 'replied') { if (!e.replied) return false; }
+    // Search
+    if (search) {
+      const hay = [(e.subject||''),(e.from||''),(e.to||''),(e.body||'')].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b) => new Date(b.created_at||b.sent_at) - new Date(a.created_at||a.sent_at));
+}
+
+/* ══════════════════════════════════════════════
+   RENDER EMAIL LIST
+══════════════════════════════════════════════ */
+function renderList() {
+  const list = document.getElementById('emailList');
+  const emails = getFilteredEmails();
+
+  if (!emails.length) {
+    list.innerHTML = `<div class="email-list-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/></svg>
+      ${allEmails.length ? 'No emails match your filters' : 'No emails yet — click New Email to start!'}
+    </div>`;
+    return;
+  }
+
+  // Build rows without innerHTML injection of event attrs
+  list.innerHTML = '';
+  emails.forEach(email => {
+    const isSelected = currentEmail?.id === email.id;
+    const isUnread = email.inbound && !email.read && !email.opened_at;
+    const sender = email.inbound ? (email.from||'Unknown') : (email.to||'Unknown');
+
+    const row = document.createElement('div');
+    row.className = `email-row${isSelected?' selected':''}${isUnread?' unread':''}`;
+    row.dataset.id = email.id;
+
+    // Avatar
+    const avatar = document.createElement('div');
+    avatar.className = 'email-row-avatar';
+    avatar.style.background = avatarColor(sender);
+    avatar.textContent = initials(sender);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'email-row-body';
+    body.innerHTML = `
+      <div class="email-row-from">${sender}${isUnread ? '<span class="status-dot"></span>' : ''}</div>
+      <div class="email-row-subject">${email.subject || '(No subject)'}</div>
+      <div class="email-row-preview">${((email.body_html||email.body||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()).slice(0,80)}</div>
+    `;
+
+    // Meta
+    const meta = document.createElement('div');
+    meta.className = 'email-row-meta';
+    const badges = [];
+    if (email.draft)                         badges.push('<span class="mini-badge draft">Draft</span>');
+    if (email.inbound && !email.draft)       badges.push('<span class="mini-badge received">Received</span>');
+    if (!email.inbound && !email.draft)      badges.push('<span class="mini-badge sent">Sent</span>');
+    if (email.replied)                       badges.push('<span class="mini-badge replied">Replied</span>');
+    if ((email.read || email.opened_at) && email.inbound)  badges.push('<span class="mini-badge opened">Opened</span>');
+    if (email.scheduled)                     badges.push('<span class="mini-badge scheduled">Scheduled</span>');
+    meta.innerHTML = `<div class="email-row-date">${formatDate(email.created_at||email.sent_at)}</div>
+                      <div class="email-row-flags">${badges.join('')}</div>`;
+
+    row.append(avatar, body, meta);
+    row.addEventListener('click', () => selectEmail(email.id));
+    list.appendChild(row);
+  });
+}
+
+/* ══════════════════════════════════════════════
+   SELECT / VIEW EMAIL
+══════════════════════════════════════════════ */
+function selectEmail(id) {
+  const found = allEmails.find(e => e.id === id);
+  if (!found) return;
+
+  // Drafts open directly into the compose form so user can edit and send.
+  // currentDraftId is set inside editDraft() so sendEmail() cleans up after send.
+  if (found.draft) {
+    editDraft(id);
+    return;
+  }
+
+  currentEmail = found;
+
+  // Show email view
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('composeForm').classList.remove('active');
+  document.getElementById('composeForm').style.display = 'none';
+  document.getElementById('emailView').classList.add('active');
+  document.getElementById('emailView').style.display = 'block';
+  document.getElementById('evActions').style.display = 'flex';
+
+  // Inject draft-specific action buttons (idempotent — remove old ones, add if viewing a draft)
+  const evActions = document.getElementById('evActions');
+  const oldDraftBtns = evActions.querySelectorAll('.ev-btn-draft-action');
+  oldDraftBtns.forEach(b => b.remove());
+  if (currentEmail.draft) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ev-btn primary ev-btn-draft-action';
+    editBtn.textContent = '✏️ Edit Draft';
+    editBtn.onclick = () => editDraft(currentEmail.id);
+    evActions.insertBefore(editBtn, evActions.firstChild);
+
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'ev-btn ev-btn-draft-action';
+    sendBtn.textContent = '📤 Send As-Is';
+    sendBtn.onclick = () => sendDraftAsIs(currentEmail.id);
+    evActions.insertBefore(sendBtn, evActions.children[1]);
+  }
+
+  // Populate
+  document.getElementById('evSubject').textContent = currentEmail.subject || '(No subject)';
+  document.getElementById('evFrom').textContent = currentEmail.from || '—';
+  document.getElementById('evTo').textContent = currentEmail.to || '—';
+  document.getElementById('evDate').textContent = currentEmail.created_at ? new Date(currentEmail.created_at).toLocaleString() : '—';
+
+  const statuses = [];
+  if (currentEmail.draft)   statuses.push('Draft');
+  if (currentEmail.inbound) statuses.push('Received');
+  if (currentEmail.read || currentEmail.opened_at)  statuses.push('Opened');
+  if (currentEmail.replied) statuses.push('Replied');
+  if (!currentEmail.inbound && !currentEmail.draft) statuses.push('Sent');
+  document.getElementById('evStatus').textContent = statuses.join(', ') || '—';
+
+  // Campaign
+  const campaignRow = document.getElementById('evCampaignRow');
+  if (currentEmail.campaign) {
+    document.getElementById('evCampaign').textContent = currentEmail.campaign;
+    campaignRow.style.display = '';
+  } else { campaignRow.style.display = 'none'; }
+
+  // Opens
+  const opensRow = document.getElementById('evOpensRow');
+  if (currentEmail.opens > 0) {
+    document.getElementById('evOpens').textContent = currentEmail.opens;
+    opensRow.style.display = '';
+  } else { opensRow.style.display = 'none'; }
+
+  // Opened At
+  const openedAtRow = document.getElementById('evOpenedAtRow');
+  if (currentEmail.opened_at) {
+    document.getElementById('evOpenedAt').textContent =
+      new Date(currentEmail.opened_at).toLocaleString();
+    openedAtRow.style.display = '';
+  } else { openedAtRow.style.display = 'none'; }
+
+  // Clicks
+  const clicksRow = document.getElementById('evClicksRow');
+  if (currentEmail.clicks > 0) {
+    document.getElementById('evClicks').textContent = currentEmail.clicks;
+    clicksRow.style.display = '';
+  } else { clicksRow.style.display = 'none'; }
+
+  // Clicked At
+  const clickedAtRow = document.getElementById('evClickedAtRow');
+  if (currentEmail.clicked_at) {
+    document.getElementById('evClickedAt').textContent =
+      new Date(currentEmail.clicked_at).toLocaleString();
+    clickedAtRow.style.display = '';
+  } else { clickedAtRow.style.display = 'none'; }
+
+  // Replied At
+  const repliedAtRow = document.getElementById('evRepliedAtRow');
+  if (currentEmail.replied_at) {
+    document.getElementById('evRepliedAt').textContent =
+      new Date(currentEmail.replied_at).toLocaleString();
+    repliedAtRow.style.display = '';
+  } else { repliedAtRow.style.display = 'none'; }
+
+  if (currentEmail.cc) {
+    document.getElementById('evCcLabel').style.display = '';
+    document.getElementById('evCc').style.display = '';
+    document.getElementById('evCc').textContent = currentEmail.cc;
+  }
+
+const evBody = document.getElementById('evBody');
+if (currentEmail.body_html) {
+  evBody.classList.remove('plain');
+  evBody.innerHTML = currentEmail.body_html;
+} else if (currentEmail.body) {
+  // Render plain-text body with line breaks preserved.
+  // Escape HTML first (safety), then convert newlines to <br>.
+  evBody.classList.remove('plain');
+  const escaped = String(currentEmail.body)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '<br>');
+  evBody.innerHTML = escaped;
+} else {
+  evBody.classList.add('plain');
+  evBody.textContent = '(No content)';
+}
+  // Attachments
+  const attSec = document.getElementById('evAttachments');
+  const attList = document.getElementById('evAttList');
+  if (currentEmail.attachments?.length) {
+    attList.innerHTML = currentEmail.attachments.map(a =>
+      `<span class="att-chip" onclick="downloadAtt('${a.url}','${a.name||a.filename||'file'}')">
+        ${getFileIcon(a.type)} ${a.name||a.filename||'Attachment'}
+      </span>`
+    ).join('');
+    attSec.style.display = 'block';
+  } else {
+    attSec.style.display = 'none';
+  }
+
+  // Enable toolbar buttons
+  setEmailBtnsEnabled(true);
+  renderList(); // re-render to show selection
+  if (currentEmail.inbound && !currentEmail.read) markAsRead();
+}
+
+function setEmailBtnsEnabled(on) {
+  ['replyBtn','replyAllBtn','fwdBtn','markReadBtn','deleteBtn','detailsBtn'].forEach(id => {
+    document.getElementById(id).disabled = !on;
+  });
+}
+
+/* ══════════════════════════════════════════════
+   COMPOSE
+══════════════════════════════════════════════ */
+function showComposeForm(replyTo=null, forwardFrom=null, replyAll=false) {
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('evActions').style.display = 'none';
+
+  const form = document.getElementById('composeForm');
+  form.style.display = 'block';
+  form.classList.add('active');
+
+  // Reset
+  ['composeTo','composeCC','composeBCC','composeSubject','composeBody'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('composeFrom').value = window.userVVEmail || CUSTOMER_ID;
+  attachedFiles = [];
+  updateAttachmentChips();
+  currentDraftId = null;
+  document.getElementById('ccBccFields').style.display = 'none';
+
+  if (replyTo) {
+    document.getElementById('composeTo').value = replyTo.from || '';
+    document.getElementById('composeSubject').value = 'Re: ' + (replyTo.subject||'').replace(/^re:\s*/i,'');
+    document.getElementById('composeBody').value = `\n\n\n--- Original Message ---\nFrom: ${replyTo.from}\nDate: ${new Date(replyTo.created_at).toLocaleString()}\nSubject: ${replyTo.subject}\n\n${replyTo.body}`;
+    document.getElementById('composeTitle').textContent = '↩️ Reply';
+    if (replyAll && replyTo.cc) {
+      document.getElementById('composeCC').value = replyTo.cc;
+      document.getElementById('ccBccFields').style.display = 'block';
+    }
+  } else if (forwardFrom) {
+    document.getElementById('composeSubject').value = 'Fwd: ' + (forwardFrom.subject||'').replace(/^fwd:\s*/i,'');
+    document.getElementById('composeBody').value = `\n\n--- Forwarded Message ---\nFrom: ${forwardFrom.from}\nDate: ${new Date(forwardFrom.created_at).toLocaleString()}\nSubject: ${forwardFrom.subject}\n\n${forwardFrom.body}`;
+    document.getElementById('composeTitle').textContent = '→ Forward';
+    if (forwardFrom.attachments?.length) {
+      attachedFiles = [...forwardFrom.attachments];
+      updateAttachmentChips();
+    }
+  } else {
+    document.getElementById('composeTitle').textContent = '✉️ New Email';
+  }
+
+  applySignatureToBody();
+}
+
+function applySignatureToBody() {
+  if (!userSignature) return;
+  const ta = document.getElementById('composeBody');
+  if (!ta.value.includes(userSignature)) {
+    ta.value += '\n\n' + userSignature;
+  }
+  const preview = document.getElementById('signaturePreview');
+  preview.textContent = userSignature;
+  preview.style.display = 'block';
+}
+
+function updateSignaturePreview() {
+  const preview = document.getElementById('signaturePreview');
+  preview.textContent = userSignature || '';
+  preview.style.display = userSignature ? 'block' : 'none';
+}
+
+function cancelCompose() {
+  const form = document.getElementById('composeForm');
+  form.classList.remove('active');
+  form.style.display = 'none';
+  // Hide the Delete Draft button when compose form closes
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'none';
+  if (currentEmail) {
+    document.getElementById('emailView').style.display = 'block';
+    document.getElementById('emailView').classList.add('active');
+    document.getElementById('evActions').style.display = 'flex';
+  } else {
+    document.getElementById('readingEmpty').style.display = 'flex';
+  }
+}
+
+function toggleCCBCC() {
+  const f = document.getElementById('ccBccFields');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function replyToEmail()    { if (currentEmail) showComposeForm(currentEmail, null, false); }
+function replyAllToEmail() { if (currentEmail) showComposeForm(currentEmail, null, true); }
+function forwardEmail()    { if (currentEmail) showComposeForm(null, currentEmail); }
+
+/* ══════════════════════════════════════════════
+   SEND / DRAFT / SCHEDULE / DELETE
+══════════════════════════════════════════════ */
+async function sendEmail() {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks while the fetch is in flight
+  if (window.isSending) { console.log('[sendEmail] blocked: already in flight'); return; }
+  window.isSending = true;
+  const sendBtn = document.querySelector('.cf-btn.send');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; sendBtn.textContent = '⏳ Sending...'; }
+
+  const to = document.getElementById('composeTo').value.trim();
+  const subject = document.getElementById('composeSubject').value.trim();
+  if (!to) {
+    showToast('Please enter a recipient', true);
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
+    return;
+  }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: document.getElementById('composeFrom').value,
+    to, subject,
+    cc:  document.getElementById('composeCC').value || null,
+    bcc: mergedBcc,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    draft: false
+  };
+
+  try {
+    const r = await fetch(EP.sendEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast('✅ Email sent!');
+      if (currentDraftId) { await deleteEmailById(currentDraftId); currentDraftId = null; }
+      cancelCompose();
+      await loadEmails();
+    } else { showToast('Failed to send email', true); }
+  } catch(e) { showToast('Error sending email', true); }
+  finally {
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
+  }
+}
+
+/* ══════════════════════════════════════════════
+   EDIT DRAFT — open the existing compose form pre-populated with draft data.
+   Mirrors showComposeForm() exactly so the layout is identical to New Email.
+══════════════════════════════════════════════ */
+function editDraft(emailId) {
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) { showToast('Draft not found', true); return; }
+
+  // Same setup as showComposeForm — hide the read panes, show the compose form
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('evActions').style.display = 'none';
+
+  const form = document.getElementById('composeForm');
+  form.style.display = 'block';
+  form.classList.add('active');
+
+  // Reset everything first (so leftover state from a prior compose doesn't bleed in)
+  ['composeTo','composeCC','composeBCC','composeSubject','composeBody'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  attachedFiles = [];
+  document.getElementById('ccBccFields').style.display = 'none';
+
+  // Now populate fields from the draft row
+  document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
+  document.getElementById('composeTo').value      = draft.to || '';
+  document.getElementById('composeSubject').value = draft.subject || '';
+  document.getElementById('composeCC').value      = draft.cc || '';
+  document.getElementById('composeBCC').value     = draft.bcc || '';
+  if (draft.cc || draft.bcc) {
+    document.getElementById('ccBccFields').style.display = 'block';
+  }
+
+  // Body — prefer plain body; if only body_html exists, convert <br>/<p> back to newlines
+  let bodyForTextarea = draft.body || '';
+  if (!bodyForTextarea && draft.body_html) {
+    bodyForTextarea = String(draft.body_html)
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+      .replace(/<\/?p[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"');
+  }
+  document.getElementById('composeBody').value = bodyForTextarea;
+
+  // Restore attachments — campaign_file objects with id+name+URL preserve click tracking
+  let atts = [];
+  if (Array.isArray(draft.attachments)) {
+    atts = draft.attachments;
+  } else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+  attachedFiles = atts.map(a => ({
+    id: a.id,
+    name: a.name || a.filename || 'Attachment',
+    URL: a.URL || a.url,
+    file_type: a.file_type || a.type,
+    _category: a._category || (typeof detectMediaCategory === 'function' ? detectMediaCategory(a) : 'file')
+  }));
+  updateAttachmentChips();
+
+  // Critical: tells sendEmail() / saveDraft() / scheduleEmail() that this is an existing draft
+  // — saveDraft will update this row (not create a duplicate)
+  // — sendEmail will delete this row after a successful send
+  currentDraftId = emailId;
+  currentEmail = null;
+
+  document.getElementById('composeTitle').textContent = '✏️ Edit Draft: ' + (draft.subject || '(no subject)');
+
+  // Show the Delete Draft button — only visible when editing an existing draft
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'inline-block';
+
+  // Show signature preview underneath (decorative — the actual signature gets appended at send time
+  // by the existing Render Initial Email node in the Send Now workflow, so we don't double-append here)
+  if (typeof updateSignaturePreview === 'function') updateSignaturePreview();
+}
+
+/* ══════════════════════════════════════════════
+   SEND DRAFT AS-IS — one-click send for Claude-generated drafts
+   that need no edit. Uses the existing sendEmail webhook + cleanup.
+══════════════════════════════════════════════ */
+async function sendDraftAsIs(emailId) {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks
+  if (window.isSending) { console.log('[sendDraftAsIs] blocked: already in flight'); return; }
+
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) return;
+  if (!confirm('Send draft to ' + draft.to + ' as-is?\n\nSubject: ' + (draft.subject || '(no subject)'))) return;
+
+  window.isSending = true;
+  // Disable any visible "Send As-Is" buttons during the send
+  const sendAsIsBtns = document.querySelectorAll('[onclick*="sendDraftAsIs"]');
+  sendAsIsBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+
+  let atts = [];
+  if (Array.isArray(draft.attachments)) atts = draft.attachments;
+  else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+
+  // Ensure body_html is populated — the Send Now workflow renders body_html for the HTML email part.
+  // If the draft only has plain body, build the html version here.
+  let bodyHtml = draft.body_html || '';
+  if (!bodyHtml && draft.body) {
+    bodyHtml = String(draft.body)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n/g, '<br>');
+  }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const draftBcc = draft.bcc || null;
+  const mergedBcc = draftBcc && userBcc && !String(draftBcc).toLowerCase().includes(userBcc.toLowerCase())
+    ? (draftBcc + ', ' + userBcc)
+    : (draftBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: draft.from || window.userVVEmail || CUSTOMER_ID,
+    to:   draft.to,
+    cc:   draft.cc || null,
+    bcc:  mergedBcc,
+    subject: draft.subject || '',
+    body: draft.body || '',
+    body_html: bodyHtml,
+    attachments: atts,
+    draft: false
+  };
+
+  try {
+    const r = await fetch(EP.sendEmail, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast('✅ Sent — draft removed');
+      await deleteEmailById(emailId);
+      await loadEmails();
+    } else { showToast('Failed to send', true); }
+  } catch(e) { showToast('Error sending', true); }
+  finally {
+    window.isSending = false;
+    sendAsIsBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+  }
+}
+
+async function saveDraft() {
+  const draftData = {
+    customer_id: CUSTOMER_ID,
+    id: currentDraftId,
+    from: document.getElementById('composeFrom').value,
+    to:   document.getElementById('composeTo').value,
+    cc:   document.getElementById('composeCC').value || null,
+    bcc:  document.getElementById('composeBCC').value || null,
+    subject: document.getElementById('composeSubject').value,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    draft: true
+  };
+  try {
+    const r = await fetch(EP.saveDraft, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(draftData)
+    });
+    if (r.ok) {
+      const result = await r.json();
+      currentDraftId = result.draft_id || result.id;
+      showToast('💾 Draft saved');
+      await loadEmails();
+    } else { showToast('Failed to save draft', true); }
+  } catch(e) { showToast('Error saving draft', true); }
+}
+
+function openScheduleModal() {
+  // Pre-fill date/time to tomorrow
+  const tomorrow = new Date(Date.now() + 86400000);
+  document.getElementById('schedDate').value = tomorrow.toISOString().split('T')[0];
+  document.getElementById('schedTime').value = '09:00';
+  openModal('scheduleModal');
+}
+
+async function scheduleEmail() {
+  // RE-ENTRY GUARD — prevents duplicate scheduled-email creation from rapid clicks
+  if (window.isSending) { console.log('[scheduleEmail] blocked: already in flight'); return; }
+
+  const date = document.getElementById('schedDate').value;
+  const time = document.getElementById('schedTime').value;
+  if (!date || !time) { showToast('Please select date and time', true); return; }
+  const scheduledTime = `${date}T${time}:00`;
+
+  window.isSending = true;
+  const scheduleBtn = document.querySelector('[onclick*="scheduleEmail"]');
+  if (scheduleBtn) { scheduleBtn.disabled = true; scheduleBtn.style.opacity = '0.5'; }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: document.getElementById('composeFrom').value,
+    to:   document.getElementById('composeTo').value,
+    cc:   document.getElementById('composeCC').value || null,
+    bcc:  mergedBcc,
+    subject: document.getElementById('composeSubject').value,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    scheduled_time: scheduledTime
+  };
+
+  try {
+    const r = await fetch(EP.scheduleEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast(`⏰ Email scheduled for ${new Date(scheduledTime).toLocaleString()}`);
+      closeModal('scheduleModal');
+      cancelCompose();
+      await loadEmails();
+    } else { showToast('Failed to schedule email', true); }
+  } catch(e) { showToast('Error scheduling email', true); }
+  finally {
+    window.isSending = false;
+    if (scheduleBtn) { scheduleBtn.disabled = false; scheduleBtn.style.opacity = '1'; }
+  }
+}
+
+async function deleteEmail() {
+  // Two paths:
+  // 1. Reading an email — currentEmail is set, delete that
+  // 2. Editing a draft — currentDraftId is set (compose form is open), delete that
+  if (currentDraftId) {
+    return deleteCurrentDraft();
+  }
+  if (!currentEmail) {
+    showToast('Nothing selected to delete', true);
+    return;
+  }
+  if (!confirm('Delete this email permanently?')) return;
+  await deleteEmailById(currentEmail.id);
+  currentEmail = null;
+  setEmailBtnsEnabled(false);
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('evActions').style.display = 'none';
+  document.getElementById('readingEmpty').style.display = 'flex';
+  await loadEmails();
+}
+
+// Delete the draft currently being edited in the compose form
+async function deleteCurrentDraft() {
+  if (!currentDraftId) {
+    showToast('No draft to delete', true);
+    return;
+  }
+  if (!confirm('Delete this draft permanently?')) return;
+  await deleteEmailById(currentDraftId);
+  currentDraftId = null;
+  cancelCompose();
+  await loadEmails();
+}
+
+async function deleteEmailById(emailId) {
+  try {
+    await fetch(EP.deleteEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, email_id: emailId})
+    });
+    // Remove from local array immediately
+    allEmails = allEmails.filter(e => e.id !== emailId);
+    showToast('🗑️ Email deleted');
+  } catch(e) { showToast('Delete failed', true); }
+}
+
+async function markAsRead() {
+  if (!currentEmail) return;
+  try {
+    await fetch(EP.markRead, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, email_id: currentEmail.id})
+    });
+    currentEmail.read = true;
+    // Update local array too
+    const idx = allEmails.findIndex(e => e.id === currentEmail.id);
+    if (idx !== -1) allEmails[idx].read = true;
+    const emailId = currentEmail.id;
+    const localEmail = allEmails.find(e => e.id === emailId);
+    if (localEmail && !localEmail.opened_at) {
+      localEmail.opened_at = new Date().toISOString();
+      localEmail.opens = (localEmail.opens || 0) + 1;
+      // Re-populate the reading pane fields
+      const openedAtRow = document.getElementById('evOpenedAtRow');
+      if (openedAtRow) {
+        document.getElementById('evOpenedAt').textContent =
+          new Date(localEmail.opened_at).toLocaleString();
+        openedAtRow.style.display = '';
+        const opensRow = document.getElementById('evOpensRow');
+        document.getElementById('evOpens').textContent = localEmail.opens;
+        opensRow.style.display = '';
+      }
+    }
+    updateUnreadCount();
+    renderList();
+  } catch(e) {}
+}
+
+async function refreshEmails() {
+  showToast('🔄 Refreshing…');
+  await loadEmails();
+  showToast('✅ Refreshed');
+}
+
+/* ══════════════════════════════════════════════
+   AI ASSIST
+══════════════════════════════════════════════ */
+async function aiAssist(action) {
+  const tone = document.getElementById('aiTone').value;
+  if (!tone) { showToast('Please select an AI tone first', true); return; }
+  showToast('🤖 AI working…');
+  try {
+    const r = await fetch(EP.aiAssist, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({
+        action, tone,
+        subject: document.getElementById('composeSubject').value,
+        body: document.getElementById('composeBody').value,
+        recipient: document.getElementById('composeTo').value,
+        customer_id: CUSTOMER_ID
+      })
+    });
+    if (r.ok) {
+      const result = await r.json();
+      const body = result.email_body_plain || result.body || result.content || '';
+      const subj = result.email_subject || result.subject || '';
+      document.getElementById('composeBody').value = body;
+      if (subj) document.getElementById('composeSubject').value = subj;
+      showToast('✨ AI applied!');
+    } else { showToast('AI assist failed', true); }
+  } catch(e) { showToast('AI assist error', true); }
+}
+
+/* ══════════════════════════════════════════════
+   AUTO REPLY
+══════════════════════════════════════════════ */
+async function toggleAutoReply(enabled) {
+  try {
+    const r = await fetch(EP.aireply, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, aireply: enabled})
+    });
+    if (r.ok) {
+      showToast(enabled ? '✅ Auto-Reply ON' : '⏸ Auto-Reply OFF');
+    } else {
+      showToast('Failed to update', true);
+      document.getElementById('autoReplyToggle').checked = !enabled;
+    }
+  } catch(e) { document.getElementById('autoReplyToggle').checked = !enabled; }
+}
+
+/* ══════════════════════════════════════════════
+   SIGNATURE
+══════════════════════════════════════════════ */
+function openSignatureModal() {
+  document.getElementById('signatureText').value = userSignature;
+  openModal('signatureModal');
+}
+
+async function saveSignature() {
+  const sig = document.getElementById('signatureText').value;
+  userSignature = sig;
+  updateSignaturePreview();
+  closeModal('signatureModal');
+  showToast('💾 Saving signature…');
+  try {
+    // Save to webhook (persists to user.signature in Supabase)
+    await fetch(EP.saveSignature, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, signature: sig})
+    });
+    showToast('✅ Signature saved');
+  } catch(e) { showToast('Signature saved locally only', false); }
+}
+
+/* ══════════════════════════════════════════════
+   MEDIA SELECTOR
+══════════════════════════════════════════════ */
+function openMediaSelector() {
+  selectedMedia = [];
+  activeMediaType = 'all';
+  document.getElementById('mediaSearch').value = '';
+  document.querySelectorAll('.type-filter-btn').forEach((b,i) => {
+    b.classList.toggle('active', i===0);
+  });
+  renderMediaGrid();
+  openModal('mediaSelectorModal');
+}
+
+function closeMediaSelector() {
+  closeModal('mediaSelectorModal');
+  selectedMedia = [];
+}
+
+function setMediaType(type, btn) {
+  activeMediaType = type;
+  document.querySelectorAll('.type-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMediaGrid();
+}
+
+function filterMedia() { renderMediaGrid(); }
+
+function renderMediaGrid() {
+  const grid = document.getElementById('mediaGrid');
+  const search = document.getElementById('mediaSearch').value.toLowerCase();
+
+  const filtered = mediaFiles.filter(f => {
+    const cat = f._category;
+    const matchType = activeMediaType === 'all' || cat === activeMediaType;
+    const matchSearch = !search || (f.name||'').toLowerCase().includes(search);
+    return matchType && matchSearch;
+  });
+
+  document.getElementById('mediaCountLabel').textContent =
+    filtered.length + ' file' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#aaa;padding:40px;">No media found</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  filtered.forEach(file => {
+    const isSelected = selectedMedia.includes(file.id);
+    const cat = file._category;
+
+    const card = document.createElement('div');
+    card.className = 'media-card' + (isSelected ? ' selected' : '');
+    card.dataset.id = file.id;
+
+    let thumbHtml = '';
+    if (cat === 'image' && file.url) {
+      thumbHtml = `<img class="media-thumb" src="${file.url}" alt="${file.name}" onerror="this.parentNode.innerHTML='<div class=\\'media-thumb-placeholder\\'>🖼️</div>'">`;
+    } else if (cat === 'video') {
+      thumbHtml = `<div class="media-thumb-placeholder">🎬</div>`;
+    } else if (cat === 'presentation') {
+      thumbHtml = `<div class="media-thumb-placeholder">📊</div>`;
+    } else {
+      thumbHtml = `<div class="media-thumb-placeholder">${getFileIcon(cat)}</div>`;
+    }
+
+    card.innerHTML = `
+      ${thumbHtml}
+      <div class="media-card-type">${cat}</div>
+      <div class="check-overlay"><div class="check-circle">✓</div></div>
+      <div class="media-card-info" title="${file.name||''}">${file.name||'Untitled'}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      const idx = selectedMedia.indexOf(file.id);
+      if (idx > -1) { selectedMedia.splice(idx,1); card.classList.remove('selected'); }
+      else { selectedMedia.push(file.id); card.classList.add('selected'); }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function attachSelectedMedia() {
+  let added = 0;
+  selectedMedia.forEach(id => {
+    const file = mediaFiles.find(f => f.id === id);
+    if (file && !attachedFiles.find(f => f.id === id)) {
+      attachedFiles.push(file);
+      added++;
+    }
+  });
+  updateAttachmentChips();
+  closeMediaSelector();
+  showToast(`📎 ${added} file(s) attached`);
+}
+
+function updateAttachmentChips() {
+  const chips = document.getElementById('attachmentChips');
+  if (!attachedFiles.length) { chips.innerHTML = ''; return; }
+  chips.innerHTML = attachedFiles.map(f =>
+    `<span class="att-remove">
+      ${getFileIcon(f._category||f.type)} ${f.name||'file'}
+      <button onclick="removeAttachment('${f.id}')">×</button>
+    </span>`
+  ).join('');
+}
+
+function removeAttachment(id) {
+  attachedFiles = attachedFiles.filter(f => f.id !== id);
+  updateAttachmentChips();
+}
+
+function downloadAtt(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ══════════════════════════════════════════════
+   DETAILS MODAL
+══════════════════════════════════════════════ */
+function openDetailsModal() {
+  if (!currentEmail) return;
+  const e = currentEmail;
+  const rows = [
+    ['Subject', e.subject||'—'],
+    ['From', e.from||'—'],
+    ['To', e.to||'—'],
+    ['CC', e.cc||'—'],
+    ['BCC', e.bcc||'—'],
+    ['Date', e.created_at ? new Date(e.created_at).toLocaleString() : '—'],
+    ['Sent At', e.sent_at ? new Date(e.sent_at).toLocaleString() : '—'],
+    ['Opened At', e.opened_at ? new Date(e.opened_at).toLocaleString() : 'Not opened'],
+    ['Replied At', e.replied_at ? new Date(e.replied_at).toLocaleString() : 'Not replied'],
+    ['Type', e.inbound ? 'Inbound' : e.draft ? 'Draft' : 'Outbound'],
+    ['Attachments', e.attachments?.length ? e.attachments.map(a=>a.name||a.filename).join(', ') : 'None']
+  ];
+  document.getElementById('detailsBody').innerHTML =
+    rows.map(([l,v]) => `<div class="field-row"><span class="fl">${l}</span><span class="fv">${v}</span></div>`).join('');
+  openModal('detailsModal');
+}
+
+/* ══════════════════════════════════════════════
+   TOUR
+══════════════════════════════════════════════ */
+function startTour() {
+  const intro = introJs();
+  intro.setOptions({ showProgress:true, showBullets:false, doneLabel:'Finish', nextLabel:'Next →', prevLabel:'← Back' });
+  intro.oncomplete(() => localStorage.setItem(`tour_msg_${CUSTOMER_ID}`,'1'));
+  intro.onexit(()    => localStorage.setItem(`tour_msg_${CUSTOMER_ID}`,'1'));
+  intro.start();
+}
+
+/* ══════════════════════════════════════════════
+   CHAT WIDGET
+══════════════════════════════════════════════ */
+class VictoryVisionChat {
+  constructor() {
+    this.isOpen = false; this.isTyping = false;
+    this.conversationId = 'conv_' + Date.now();
+    this.messageCount = 0;
+  }
+  init() {
+    document.getElementById('vvChatToggle').onclick = () => this.toggle();
+    document.getElementById('vvChatMinimize').onclick = () => this.close();
+    document.getElementById('vvChatSend').onclick = () => this.send();
+    const inp = document.getElementById('vvChatInput');
+    inp.addEventListener('keypress', e => { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.send();} });
+    inp.addEventListener('input', () => { document.getElementById('vvChatSend').disabled = !inp.value.trim(); });
+  }
+  toggle() { this.isOpen ? this.close() : this.open(); }
+  open()   { this.isOpen=true; document.getElementById('vvChatContainer').classList.add('open'); document.getElementById('vvToggleIcon').textContent='✕'; document.getElementById('vvNotificationBadge').style.display='none'; }
+  close()  { this.isOpen=false; document.getElementById('vvChatContainer').classList.remove('open'); document.getElementById('vvToggleIcon').textContent='💬'; }
+  async send() {
+    const inp = document.getElementById('vvChatInput');
+    const msg = inp.value.trim(); if (!msg||this.isTyping) return;
+    this.addMsg(msg,'user'); inp.value=''; document.getElementById('vvChatSend').disabled=true;
+    document.getElementById('vvChatTyping').classList.add('show');
+    try {
+      const r = await fetch(EP.chatMessage, {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+        body: JSON.stringify({message:msg,customer_id:CUSTOMER_ID,conversation_id:this.conversationId})
+      });
+      document.getElementById('vvChatTyping').classList.remove('show');
+      if (r.ok) { const d=await r.json(); this.addMsg(d.reply||'…','bot'); }
+      else { this.addMsg("Having trouble connecting. Try again shortly.",'bot'); }
+    } catch(e) { document.getElementById('vvChatTyping').classList.remove('show'); this.addMsg("Connection error.",'bot'); }
+  }
+  addMsg(text,sender) {
+    const m = document.getElementById('vvChatMessages');
+    const d = document.createElement('div');
+    d.className='vv-chat-message '+sender;
+    const tmp=document.createElement('div'); tmp.textContent=text;
+    d.innerHTML=tmp.innerHTML.replace(/\n/g,'<br>');
+    m.appendChild(d); m.scrollTop=m.scrollHeight; this.messageCount++;
+  }
+  sendQuickMessage(msg) { document.getElementById('vvChatInput').value=msg; this.send(); }
+}
+const VVChat = new VictoryVisionChat();
+window.VVChat = VVChat;
+
+/* ══════════════════════════════════════════════
+   MODAL CLOSE ON OVERLAY CLICK
+══════════════════════════════════════════════ */
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target===ov) ov.classList.remove('open'); });
+});
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+async function init() {
+  const ok = await checkAuth();
+  if (!ok) { window.location.href='https://www.victoryvision.app'; return; }
+
+  // Check for preloaded contact from contacts page
+  const contactData = sessionStorage.getItem('messageContact');
+  if (contactData) {
+    const pc = JSON.parse(contactData);
+    sessionStorage.removeItem('messageContact');
+    setTimeout(() => {
+      showComposeForm();
+      if (pc.email) document.getElementById('composeTo').value = pc.email;
+      if (pc.company||pc.name) document.getElementById('composeSubject').value = `Re: ${pc.company||pc.name}`;
+    }, 600);
+  }
+
+  VVChat.init();
+
+  await Promise.all([loadUserData(), loadContacts(), loadMediaFiles(), loadEmails()]);
+
+  if (!localStorage.getItem(`tour_msg_${CUSTOMER_ID}`)) {
+    setTimeout(startTour, 800);
+  }
+
+  // Auto-trigger tour from email link (?tour=)
+  if (new URLSearchParams(window.location.search).get('tour')) setTimeout(startTour, 1200);
+
+  // Pre-populate compose form from email link (?contact=EMAIL)
+  const _cp = new URLSearchParams(window.location.search).get('contact');
+  if (_cp) setTimeout(() => {
+    showComposeForm();
+    setTimeout(() => { const el = document.getElementById('composeTo'); if (el) el.value = _cp; }, 300);
+  }, 1500);
+}
+
+// Session refresh every 5 min
+setInterval(async() => {
+  try {
+    const { data:{session} } = await supabaseClient.auth.getSession();
+    if (!session?.user) { window.location.href='https://www.victoryvision.app'; }
+    else { authToken=session.access_token; }
+  } catch(e) {}
 }, 300000);
 
-document.addEventListener('visibilitychange', async () => {
+// Re-check on tab focus
+document.addEventListener('visibilitychange', async() => {
   if (!document.hidden) {
-    try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) redirectToLogin();
-      else authToken = session.access_token;
-    } catch (e) { console.error(e); }
+    const { data:{session} } = await supabaseClient.auth.getSession().catch(()=>({data:{}}));
+    if (!session?.user) { window.location.href='https://www.victoryvision.app'; }
+    else { authToken=session.access_token; }
   }
 });
 
-// ============================================================
-// CONTACT DETAIL MODAL — open, populate, edit stage/score/note
-// ============================================================
-let currentContact = null;  // contact row currently open in the modal
-
-// Existing n8n webhooks we'll reuse (same as contacts.html)
-const N8N_ENDPOINTS = {
-  enrichContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich',
-  enrollWarmOutreach: 'https://victoryvision.app.n8n.cloud/webhook/outreach/friends'
-};
-
-async function openContactModal(contactId) {
-  currentContact = dealTargets.find(t => t.id === contactId);
-  if (!currentContact) {
-    showStatus('Contact not found in current deal', 'error');
-    return;
-  }
-  const c = currentContact;
-  const tags = c.tags || '';
-
-  // Header
-  document.getElementById('cmName').textContent = c.name || '—';
-  document.getElementById('cmTitleCompany').textContent =
-    [c.title, c.company].filter(Boolean).join(' · ') || '—';
-
-  // Contact links (clickable when populated)
-  const liEl = document.getElementById('cmLinkedIn');
-  if (c.linkedin && c.linkedin.trim()) {
-    liEl.innerHTML = `<a href="${esc(c.linkedin)}" target="_blank">${esc(c.linkedin.replace(/^https?:\/\//, ''))}</a>`;
-  } else { liEl.textContent = '—'; }
-
-  const emEl = document.getElementById('cmEmail');
-  if (c.email && c.email !== 'N/A' && c.email.trim()) {
-    emEl.innerHTML = `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`;
-  } else { emEl.textContent = '—'; }
-
-  const phEl = document.getElementById('cmPhone');
-  // contacts table has phone_number (used in contacts page) — but our query selects 'phone' alias is none; we use c.phone_number
-  const phone = c.phone_number || c.phone || '';
-  if (phone && phone !== 'N/A' && phone.trim()) {
-    phEl.innerHTML = `<a href="tel:${esc(phone)}">${esc(phone)}</a>`;
-  } else { phEl.textContent = '—'; }
-
-  document.getElementById('cmLocation').textContent = c.location || '—';
-  document.getElementById('cmIndustry').textContent = c.industry || '—';
-
-  // Deal context
-  document.getElementById('cmStage').value = c._stage || 'not-contacted';
-  document.getElementById('cmScore').value = c._score != null ? c._score : '';
-  document.getElementById('cmTags').textContent = tags || '—';
-
-  // All scores across deals
-  const scoresContainer = document.getElementById('cmAllScores');
-  if (c.scores && Object.keys(c.scores).length > 0) {
-    scoresContainer.innerHTML = Object.entries(c.scores)
-      .sort((a, b) => b[1] - a[1])
-      .map(([deal, score]) => {
-        const cls = score >= 70 ? 'high' : (score >= 50 ? 'mid' : 'low');
-        return `<span class="score-pill ${cls}">${esc(deal)}: ${esc(score)}</span>`;
-      }).join(' ');
-  } else {
-    scoresContainer.textContent = '—';
-  }
-
-  // Engagement metrics
-  document.getElementById('cmEmailsSent').textContent = c.number_emails_sent || 0;
-  document.getElementById('cmOpens').textContent = c.num_emails_opened || 0;
-  document.getElementById('cmClicks').textContent = c.num_links_clicked || 0;
-  document.getElementById('cmLastEmailed').textContent = c.last_emailed_date || '—';
-  document.getElementById('cmLastOpened').textContent = c.last_opened_date || '—';
-  document.getElementById('cmLastResponded').textContent = c.last_responded ? new Date(c.last_responded).toLocaleString() : '—';
-  document.getElementById('cmCallAttempts').textContent = c.number_call_attempts || 0;
-  document.getElementById('cmLastCalled').textContent = c.last_called || '—';
-
-  // Profile summary
-  document.getElementById('cmSummary').textContent = c.personal_summary || '—';
-
-  // Customer journey (reverse chrono)
-  const journey = (c.customer_journey || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-  if (journey.length === 0) {
-    document.getElementById('cmJourney').innerHTML = '<p style="color: #888; margin: 0; font-size: 0.85rem;">No activity logged yet.</p>';
-  } else {
-    document.getElementById('cmJourney').innerHTML = journey.slice(0, 50).map(ev => {
-      const ts = ev.ts ? new Date(ev.ts).toLocaleString() : '—';
-      const details = [];
-      if (ev.rationale) details.push(esc(ev.rationale));
-      if (ev.note) details.push(esc(ev.note));
-      if (ev.from && ev.to) details.push(`${esc(ev.from)} → ${esc(ev.to)}`);
-      if (ev.score != null) details.push(`score: ${esc(ev.score)}`);
-      if (ev.old != null && ev.new != null) details.push(`${esc(ev.old)} → ${esc(ev.new)}`);
-      return `
-        <div class="journey-entry">
-          <div class="journey-ts">${ts}</div>
-          <div><span class="journey-event">${esc(ev.event || 'event')}</span></div>
-          ${details.length ? `<div style="color: #555; margin-top: 2px;">${details.join(' · ')}</div>` : ''}
-        </div>`;
-    }).join('');
-  }
-
-  // Clear note input
-  document.getElementById('cmNoteInput').value = '';
-
-  document.getElementById('contactModal').classList.add('active');
-}
-
-function closeContactModal() {
-  document.getElementById('contactModal').classList.remove('active');
-  currentContact = null;
-}
-
-// Stage change from the modal dropdown — reuses the existing moveContactToStage
-async function changeContactStage() {
-  if (!currentContact) return;
-  const newStage = document.getElementById('cmStage').value;
-  if (newStage === currentContact._stage) return;
-  await moveContactToStage(currentContact.id, newStage);
-  // Refresh modal state from the now-mutated currentContact
-  const updated = dealTargets.find(t => t.id === currentContact.id);
-  if (updated) {
-    currentContact = updated;
-    document.getElementById('cmStage').value = updated._stage;
-  }
-}
-
-// Save score change
-async function saveContactScore() {
-  if (!currentContact) return;
-  const slug = dealSlug(selectedDeal.deal_name);
-  const newScore = parseInt(document.getElementById('cmScore').value, 10);
-  if (isNaN(newScore) || newScore < 0 || newScore > 100) {
-    showStatus('Score must be 0-100', 'error');
-    return;
-  }
-  const oldScore = currentContact._score;
-  if (newScore === oldScore) return;
-
-  const newScores = Object.assign({}, currentContact.scores || {}, { [slug]: newScore });
-  const journeyEntry = {
-    ts: new Date().toISOString(),
-    event: 'score_changed_in_deals_page',
-    deal: slug,
-    old: oldScore,
-    new: newScore,
-    rationale: 'Manual edit from Deals page contact modal'
-  };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
-
-  const { error } = await supabaseClient.from('contacts')
-    .update({ scores: newScores, customer_journey: newJourney })
-    .eq('id', currentContact.id);
-
-  if (error) { showStatus('Failed to save score: ' + error.message, 'error'); return; }
-
-  currentContact.scores = newScores;
-  currentContact._score = newScore;
-  currentContact.customer_journey = newJourney;
-  showStatus(`Score updated: ${oldScore ?? '—'} → ${newScore}`, 'success');
-  renderPipeline();
-  renderTargets();
-  // Refresh modal in place
-  openContactModal(currentContact.id);
-}
-
-// Add a note (appends to customer_journey)
-async function saveContactNote() {
-  if (!currentContact) return;
-  const noteText = document.getElementById('cmNoteInput').value.trim();
-  if (!noteText) return;
-
-  const slug = dealSlug(selectedDeal.deal_name);
-  const journeyEntry = {
-    ts: new Date().toISOString(),
-    event: 'note_added',
-    deal: slug,
-    note: noteText
-  };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
-
-  const { error } = await supabaseClient.from('contacts')
-    .update({ customer_journey: newJourney })
-    .eq('id', currentContact.id);
-
-  if (error) { showStatus('Failed to save note: ' + error.message, 'error'); return; }
-
-  currentContact.customer_journey = newJourney;
-  showStatus('Note added', 'success');
-  document.getElementById('cmNoteInput').value = '';
-  openContactModal(currentContact.id);  // refresh in place
-}
-
-// Remove from deal — marks as "no-fit" so contact won't come back to pipeline
-// Strategy: tag with deal:<slug>:declined + permanent deal:<slug>:no-fit flag
-async function removeFromDeal() {
-  if (!currentContact) return;
-  if (!confirm(`Mark ${currentContact.name} as a no-fit for "${selectedDeal.deal_name}" and remove from pipeline?\n\nContact stays in CRM but won't appear in this deal again.`)) return;
-
-  const slug = dealSlug(selectedDeal.deal_name);
-  // Strip any existing deal:<slug> and deal:<slug>:<stage> tags, then add deal:<slug>:no-fit
-  const currentTags = (currentContact.tags || '').split(/,\s*/).filter(Boolean);
-  const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
-  const filtered = currentTags.filter(t => !baseRe.test(t));
-  filtered.push(`deal:${slug}:no-fit`);
-  const newTagsStr = filtered.join(', ');
-
-  const journeyEntry = {
-    ts: new Date().toISOString(),
-    event: 'removed_from_deal_no_fit',
-    deal: slug,
-    from: currentContact._stage || 'not-contacted',
-    rationale: 'Marked no-fit from Deals page — will not return to pipeline.'
-  };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
-
-  const { error } = await supabaseClient.from('contacts')
-    .update({ tags: newTagsStr, customer_journey: newJourney })
-    .eq('id', currentContact.id);
-
-  if (error) { showStatus('Failed to remove: ' + error.message, 'error'); return; }
-
-  showStatus(`Removed ${currentContact.name} as no-fit`, 'success');
-  closeContactModal();
-  // Refresh the deal's target list (which filters by deal:<slug> base tag — no-fit doesn't match)
-  await loadDealTargets();
-  renderPipeline();
-  renderTargets();
-  renderDashboard();
-  await loadDeals();
-  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-}
-
-// Reuse existing n8n webhooks: enrich + warm outreach
-async function enrichContact() {
-  if (!currentContact) return;
-  showStatus('Enriching contact via Apollo/Hunter...', 'info');
-  try {
-    const res = await fetch(N8N_ENDPOINTS.enrichContact, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID })
-    });
-    if (!res.ok) throw new Error('Enrichment webhook returned ' + res.status);
-    showStatus('Enrichment kicked off. Refresh in 30s to see results.', 'success');
-  } catch (e) {
-    showStatus('Enrichment failed: ' + e.message, 'error');
-  }
-}
-
-async function enrollWarmOutreach() {
-  if (!currentContact) return;
-  if (!confirm(`Enroll ${currentContact.name} in the warm-outreach email sequence?`)) return;
-  try {
-    const res = await fetch(N8N_ENDPOINTS.enrollWarmOutreach, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID, deal_slug: dealSlug(selectedDeal.deal_name) })
-    });
-    if (!res.ok) throw new Error('Outreach webhook returned ' + res.status);
-    showStatus('Enrolled in warm outreach', 'success');
-  } catch (e) {
-    showStatus('Enrollment failed: ' + e.message, 'error');
-  }
-}
-
-function openInContacts() {
-  // Open the contacts page; the user can search by name/linkedin once there
-  window.open('contacts', '_blank');
-}
-
-// ============================================================
-// ADD CONTACT TO DEAL — autocomplete search of existing CRM
-// ============================================================
-let allCrmContacts = [];   // cached list of all contacts for the tenant
-let acSelectedContact = null;
-
-async function openAddContactModal() {
-  if (!selectedDeal) return;
-  document.getElementById('acDealName').textContent = selectedDeal.deal_name;
-  document.getElementById('acSearch').value = '';
-  document.getElementById('acStage').value = 'not-contacted';
-  document.getElementById('acScore').value = '';
-  document.getElementById('acRationale').value = '';
-  document.getElementById('acResults').style.display = 'none';
-  document.getElementById('acAddBtn').disabled = true;
-  acSelectedContact = null;
-
-  // Lazy-load CRM contacts (cache for the session)
-  if (allCrmContacts.length === 0) {
-    showStatus('Loading CRM contacts...', 'info');
-    const { data, error } = await supabaseClient.from('contacts')
-      .select('id, name, first_name, title, company, location, tags, scores, linkedin')
-      .eq('cus_id', CUSTOMER_ID)
-      .order('name', { ascending: true });
-    if (error) {
-      showStatus('Failed to load CRM contacts: ' + error.message, 'error');
-      return;
-    }
-    allCrmContacts = data || [];
-  }
-  document.getElementById('addContactModal').classList.add('active');
-  setTimeout(() => document.getElementById('acSearch').focus(), 100);
-}
-
-function closeAddContactModal() {
-  document.getElementById('addContactModal').classList.remove('active');
-  acSelectedContact = null;
-}
-
-function onAddContactSearch() {
-  const q = document.getElementById('acSearch').value.trim().toLowerCase();
-  const resultsEl = document.getElementById('acResults');
-  if (q.length < 2) {
-    resultsEl.style.display = 'none';
-    return;
-  }
-  const slug = dealSlug(selectedDeal.deal_name);
-  const dealTagBase = `deal:${slug}`;
-  // Existing-in-deal set (so we can dim them)
-  const inDealIds = new Set(dealTargets.map(t => t.id));
-
-  // Match name or company, case-insensitive
-  const matches = allCrmContacts.filter(c => {
-    const nm = (c.name || '').toLowerCase();
-    const co = (c.company || '').toLowerCase();
-    return nm.includes(q) || co.includes(q);
-  }).slice(0, 20);
-
-  if (matches.length === 0) {
-    resultsEl.innerHTML = '<div class="autocomplete-item" style="color: #888;">No matches. To add new contacts not in CRM, upload via the <a href="contacts">Contacts page</a> first.</div>';
-    resultsEl.style.display = 'block';
-    return;
-  }
-
-  resultsEl.innerHTML = matches.map(c => {
-    const inDeal = inDealIds.has(c.id);
-    return `
-      <div class="autocomplete-item ${inDeal ? 'already-in-deal' : ''}"
-           ${inDeal ? '' : `onclick="pickAddContact('${c.id}')"`}>
-        <div class="autocomplete-item-name">${esc(c.name || '—')}</div>
-        <div class="autocomplete-item-meta">${esc([c.title, c.company, c.location].filter(Boolean).join(' · ') || '')}</div>
-      </div>`;
-  }).join('');
-  resultsEl.style.display = 'block';
-}
-
-function pickAddContact(contactId) {
-  const c = allCrmContacts.find(x => x.id === contactId);
-  if (!c) return;
-  acSelectedContact = c;
-  document.getElementById('acSearch').value = `${c.name} (${c.company || ''})`;
-  document.getElementById('acResults').style.display = 'none';
-  document.getElementById('acAddBtn').disabled = false;
-}
-
-async function addContactToDeal() {
-  if (!acSelectedContact || !selectedDeal) return;
-  const slug = dealSlug(selectedDeal.deal_name);
-  const stage = document.getElementById('acStage').value;
-  const scoreInput = document.getElementById('acScore').value.trim();
-  const score = scoreInput === '' ? null : parseInt(scoreInput, 10);
-  const rationale = document.getElementById('acRationale').value.trim() || 'Manually added from Deals page';
-
-  // Refetch the canonical row to be safe (autocomplete cache may be stale)
-  const { data: fetched, error: fetchErr } = await supabaseClient.from('contacts')
-    .select('id, tags, scores, customer_journey')
-    .eq('id', acSelectedContact.id)
-    .single();
-  if (fetchErr) { showStatus('Failed to load contact: ' + fetchErr.message, 'error'); return; }
-
-  // Build new tags
-  const currentTags = (fetched.tags || '').split(/,\s*/).filter(Boolean);
-  const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
-  const filtered = currentTags.filter(t => !baseRe.test(t));
-  filtered.push(`deal:${slug}`);
-  if (stage !== 'not-contacted') {
-    filtered.push(`deal:${slug}:${stage}`);
-  }
-  const newTagsStr = filtered.join(', ');
-
-  // Build new scores (merge)
-  const newScores = Object.assign({}, fetched.scores || {});
-  if (score != null && !isNaN(score)) newScores[slug] = score;
-
-  // Append journey entry
-  const journeyEntry = {
-    ts: new Date().toISOString(),
-    event: 'added_to_deal',
-    deal: slug,
-    stage: stage,
-    score: score,
-    rationale: rationale
-  };
-  const newJourney = [...(fetched.customer_journey || []), journeyEntry];
-
-  const { error: updErr } = await supabaseClient.from('contacts')
-    .update({ tags: newTagsStr, scores: newScores, customer_journey: newJourney })
-    .eq('id', acSelectedContact.id);
-  if (updErr) { showStatus('Failed to add: ' + updErr.message, 'error'); return; }
-
-  showStatus(`Added ${acSelectedContact.name} to ${selectedDeal.deal_name}`, 'success');
-  closeAddContactModal();
-  await loadDealTargets();
-  renderPipeline();
-  renderTargets();
-  renderDashboard();
-  await loadDeals();
-  selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-}
-
-// Globals exposed for inline handlers
-window.selectDeal = selectDeal;
-window.openNewDealModal = openNewDealModal;
-window.closeNewDealModal = closeNewDealModal;
-window.createNewDeal = createNewDeal;
-window.editDealMeta = editDealMeta;
-window.closeEditDealModal = closeEditDealModal;
-window.saveDealMeta = saveDealMeta;
-window.sortTargets = sortTargets;
-window.advanceStage = advanceStage;
-window.downloadTargetsCSV = downloadTargetsCSV;
-window.handleDragStart = handleDragStart;
-window.handleDragOver = handleDragOver;
-window.handleDragLeave = handleDragLeave;
-window.handleDrop = handleDrop;
-window.renderPipeline = renderPipeline;
-window.openContactModal = openContactModal;
-window.closeContactModal = closeContactModal;
-window.changeContactStage = changeContactStage;
-window.saveContactScore = saveContactScore;
-window.saveContactNote = saveContactNote;
-window.removeFromDeal = removeFromDeal;
-window.enrichContact = enrichContact;
-window.enrollWarmOutreach = enrollWarmOutreach;
-window.openInContacts = openInContacts;
-window.openAddContactModal = openAddContactModal;
-window.closeAddContactModal = closeAddContactModal;
-window.onAddContactSearch = onAddContactSearch;
-window.pickAddContact = pickAddContact;
-window.addContactToDeal = addContactToDeal;
-window.handleCardMouseDown = handleCardMouseDown;
-window.handleCardClick = handleCardClick;
+// Show chat notification after 12s
+setTimeout(() => {
+  if (!VVChat.isOpen) document.getElementById('vvNotificationBadge').style.display='flex';
+}, 12000);
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
-
 </body>
 </html>
