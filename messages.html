@@ -1664,7 +1664,7 @@ async function scheduleEmail() {
   const date = document.getElementById('schedDate').value;
   const time = document.getElementById('schedTime').value;
   if (!date || !time) { showToast('Please select date and time', true); return; }
-  const scheduledTime = `${date}T${time}:00`;
+ const scheduledTime = new Date(`${date}T${time}:00`).toISOString();
 
   window.isSending = true;
   const scheduleBtn = document.querySelector('[onclick*="scheduleEmail"]');
