@@ -577,7 +577,7 @@
 // ============================================================
 const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const AI_CHAT_WEBHOOK = 'https://victoryvision.app.n8n.cloud/webhook/ai-chat/v1';
+const AI_CHAT_WEBHOOK = 'https://nyyvsdkumxvuwimmucdb.functions.supabase.co/ai-chat';
 const EMAIL_SEND_WEBHOOK = 'https://victoryvision.app.n8n.cloud/webhook/emails/send';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1144,7 +1144,13 @@ window.sendMessage = async function () {
   try {
     const resp = await fetch(AI_CHAT_WEBHOOK, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Supabase Edge Functions require either anon key or user JWT in Authorization header.
+        // We use the user's access token from auth so the function can also use auth.uid() if needed.
+        'Authorization': 'Bearer ' + (authToken || SUPABASE_ANON_KEY),
+        'apikey': SUPABASE_ANON_KEY
+      },
       body: JSON.stringify({
         customer_id: CUSTOMER_ID,
         conversation_id: getConversationId(),
