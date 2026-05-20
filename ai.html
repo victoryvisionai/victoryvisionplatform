@@ -208,6 +208,44 @@
     .send-btn:hover { background: #1e40af; }
     .send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
+    /* Icon buttons for attach + mic */
+    .icon-btn {
+      width: 40px; height: 40px;
+      background: #f3f4f6; color: #4b5563;
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: #e5e7eb; color: #1f2937; }
+    .icon-btn.recording {
+      background: #fee2e2; color: #b91c1c;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.4); }
+      50%      { box-shadow: 0 0 0 8px rgba(185,28,28,0); }
+    }
+    .attachment-strip {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 0 12px 8px 12px;
+      background: #fff;
+    }
+    .attachment-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #eef2ff; color: #3730a3;
+      padding: 4px 8px 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .attachment-pill .remove {
+      cursor: pointer; font-weight: 700;
+      padding: 0 4px; opacity: 0.6;
+    }
+    .attachment-pill .remove:hover { opacity: 1; }
+    .attachment-pill.uploading { background: #fef3c7; color: #92400e; }
+    .attachment-pill.error { background: #fee2e2; color: #b91c1c; }
+
     /* ----- Panes column ----- */
     .panes-column {
       display: grid;
@@ -552,7 +590,15 @@
       <span class="suggestion-chip" onclick="sendSuggestion('What KPIs am I tracking?')">📈 KPIs</span>
     </div>
 
+    <div class="attachment-strip" id="attachmentStrip" style="display:none;"></div>
+
     <div class="input-row">
+      <input type="file" id="fileInput" style="display:none;" multiple
+             accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" onchange="handleFilesPicked(event)">
+      <button class="icon-btn" title="Attach file (PDF or image)"
+              onclick="document.getElementById('fileInput').click()">📎</button>
+      <button class="icon-btn" id="micBtn" title="Dictate (Web Speech)"
+              onclick="toggleDictation()">🎤</button>
       <textarea
         id="chatInput"
         class="chat-input"
@@ -1129,12 +1175,160 @@ window.sendSuggestion = function (text) {
   sendMessage();
 };
 
+// ============================================================
+// FILE UPLOAD via Cloudinary unsigned preset
+// ============================================================
+const CLOUDINARY_CLOUD = 'dv94te4zt';            // your existing cloud
+const CLOUDINARY_PRESET = 'vv_ai_uploads';        // unsigned preset — create in Cloudinary dashboard
+let pendingAttachments = [];                      // [{name, url, mime_type, size, tempId, status}]
+
+function renderAttachmentStrip() {
+  const strip = document.getElementById('attachmentStrip');
+  if (pendingAttachments.length === 0) { strip.style.display = 'none'; return; }
+  strip.style.display = 'flex';
+  strip.innerHTML = pendingAttachments.map(function (a) {
+    const cls = a.status === 'uploading' ? ' uploading' : (a.status === 'error' ? ' error' : '');
+    const label = a.status === 'uploading' ? '⏳ ' + escapeHTML(a.name)
+                : a.status === 'error'     ? '✗ ' + escapeHTML(a.name)
+                                            : '📄 ' + escapeHTML(a.name);
+    return '<span class="attachment-pill' + cls + '" data-id="' + a.tempId + '">' +
+           label +
+           '<span class="remove" onclick="removeAttachment(\'' + a.tempId + '\')">×</span>' +
+           '</span>';
+  }).join('');
+}
+
+window.removeAttachment = function (tempId) {
+  pendingAttachments = pendingAttachments.filter(function (a) { return a.tempId !== tempId; });
+  renderAttachmentStrip();
+};
+
+async function uploadFileToCloudinary(file) {
+  // PDF goes to /image/upload per the project's Cloudinary config (PDF delivery enabled).
+  const resourceType = file.type.startsWith('image/') || file.type === 'application/pdf'
+    ? 'image' : 'raw';
+  const url = 'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/' + resourceType + '/upload';
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_PRESET);
+  // XMLHttpRequest to avoid CORS preflight quirks
+  return new Promise(function (resolve, reject) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch (e) { reject(e); }
+      } else { reject(new Error('Cloudinary ' + xhr.status + ': ' + xhr.responseText.slice(0, 200))); }
+    };
+    xhr.onerror = function () { reject(new Error('Network error')); };
+    xhr.send(form);
+  });
+}
+
+window.handleFilesPicked = async function (event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = ''; // reset so picking the same file twice works
+  for (const file of files) {
+    if (file.size > 20 * 1024 * 1024) {
+      appendMsg('assistant', '[skip] ' + file.name + ' is over 20MB.');
+      continue;
+    }
+    const tempId = 'att_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const entry = { tempId: tempId, name: file.name, mime_type: file.type, size: file.size, status: 'uploading', url: null };
+    pendingAttachments.push(entry);
+    renderAttachmentStrip();
+    try {
+      const result = await uploadFileToCloudinary(file);
+      entry.url = result.secure_url;
+      entry.status = 'ready';
+    } catch (e) {
+      console.warn('Upload failed:', e);
+      entry.status = 'error';
+    }
+    renderAttachmentStrip();
+  }
+};
+
+// ============================================================
+// VOICE DICTATION via Web Speech API
+// ============================================================
+let dictation = { recognition: null, active: false };
+
+function initDictation() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { return null; }
+  const r = new SR();
+  r.continuous = true;
+  r.interimResults = true;
+  r.lang = 'en-US';
+  return r;
+}
+
+window.toggleDictation = function () {
+  const micBtn = document.getElementById('micBtn');
+  const input = document.getElementById('chatInput');
+
+  if (dictation.active) {
+    if (dictation.recognition) dictation.recognition.stop();
+    dictation.active = false;
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Dictate (Web Speech)';
+    return;
+  }
+  if (!dictation.recognition) {
+    dictation.recognition = initDictation();
+    if (!dictation.recognition) {
+      appendMsg('assistant', 'Dictation needs Chrome/Edge — your browser does not support the Web Speech API.');
+      return;
+    }
+    let baseText = '';
+    dictation.recognition.onstart = function () {
+      baseText = input.value ? input.value + ' ' : '';
+    };
+    dictation.recognition.onresult = function (event) {
+      let interim = '', final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += transcript;
+        else interim += transcript;
+      }
+      if (final) { baseText = baseText + final; }
+      input.value = baseText + interim;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    };
+    dictation.recognition.onerror = function (e) {
+      console.warn('Dictation error', e);
+      dictation.active = false;
+      micBtn.classList.remove('recording');
+    };
+    dictation.recognition.onend = function () {
+      dictation.active = false;
+      micBtn.classList.remove('recording');
+    };
+  }
+  try {
+    dictation.recognition.start();
+    dictation.active = true;
+    micBtn.classList.add('recording');
+    micBtn.title = 'Click to stop dictation';
+  } catch (e) {
+    console.warn('Could not start dictation', e);
+  }
+};
+
 window.sendMessage = async function () {
   if (isSending) return;
   const input = document.getElementById('chatInput');
   const btn = document.getElementById('sendBtn');
   const message = input.value.trim();
-  if (!message) return;
+  const readyAttachments = pendingAttachments.filter(function (a) { return a.status === 'ready' && a.url; });
+  if (!message && readyAttachments.length === 0) return;
+  if (pendingAttachments.some(function (a) { return a.status === 'uploading'; })) {
+    appendMsg('assistant', 'Wait for uploads to finish.');
+    return;
+  }
   if (!CUSTOMER_ID) {
     appendMsg('assistant', 'Need to sign in first.');
     return;
@@ -1143,7 +1337,10 @@ window.sendMessage = async function () {
   isSending = true;
   btn.disabled = true;
   btn.textContent = '…';
-  appendMsg('user', message);
+  const displayMsg = message + (readyAttachments.length
+    ? '\n[+' + readyAttachments.length + ' attachment(s): ' + readyAttachments.map(function(a){return a.name;}).join(', ') + ']'
+    : '');
+  appendMsg('user', displayMsg);
   input.value = '';
   input.style.height = 'auto';
   showTyping();
@@ -1152,20 +1349,26 @@ window.sendMessage = async function () {
   const chips = document.getElementById('suggestionChips');
   if (chips) chips.style.display = 'none';
 
+  // Snapshot attachments then clear
+  const attachmentsPayload = readyAttachments.map(function (a) {
+    return { name: a.name, url: a.url, mime_type: a.mime_type, size: a.size };
+  });
+  pendingAttachments = [];
+  renderAttachmentStrip();
+
   try {
     const resp = await fetch(AI_CHAT_WEBHOOK, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Supabase Edge Functions require either anon key or user JWT in Authorization header.
-        // We use the user's access token from auth so the function can also use auth.uid() if needed.
         'Authorization': 'Bearer ' + (authToken || SUPABASE_ANON_KEY),
         'apikey': SUPABASE_ANON_KEY
       },
       body: JSON.stringify({
         customer_id: CUSTOMER_ID,
         conversation_id: getConversationId(),
-        message: message
+        message: message,
+        attachments: attachmentsPayload
       })
     });
     hideTyping();
