@@ -889,6 +889,325 @@
       font-size: 12px;
       margin: 0 12px 12px;
     }
+
+    /* ===== Pane renderer components ===== */
+    .pane-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+    }
+    .pane-kpi-tile {
+      padding: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .pane-kpi-label {
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .pane-kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0F2E5C;
+    }
+    .pane-kpi-delta {
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .pane-kpi-delta.up { color: #059669; }
+    .pane-kpi-delta.down { color: #dc2626; }
+    .pane-kpi-delta.flat { color: #9ca3af; }
+
+    .pane-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .pane-table th {
+      text-align: left;
+      padding: 6px 8px;
+      background: #f3f4f6;
+      border-bottom: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+    .pane-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #111827;
+    }
+    .pane-table tr:hover td { background: #f9fafb; }
+
+    .pane-contact-card {
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .pane-contact-card-name {
+      font-weight: 600;
+      color: #0F2E5C;
+      font-size: 13px;
+    }
+    .pane-contact-card-meta {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .pane-contact-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .pane-contact-card-tag {
+      font-size: 10px;
+      background: #eef2ff;
+      color: #4338ca;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .pane-contact-card-score {
+      float: right;
+      font-size: 11px;
+      font-weight: 600;
+      color: #059669;
+    }
+
+    .pane-deal-card {
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .pane-deal-name { font-size: 14px; font-weight: 700; color: #0F2E5C; }
+    .pane-deal-tagline { font-size: 11px; color: #6b7280; margin: 4px 0 8px; }
+    .pane-deal-numbers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .pane-deal-num-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; }
+    .pane-deal-num-value { font-size: 16px; font-weight: 700; color: #0F2E5C; }
+
+    .pane-checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12px;
+    }
+    .pane-checklist-item:last-child { border-bottom: none; }
+    .pane-checklist-status {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .pane-checklist-status.pending { background: #e5e7eb; border: 2px solid #9ca3af; box-sizing: border-box; }
+    .pane-checklist-status.completed { background: #10b981; }
+    .pane-checklist-status.skipped { background: #f87171; }
+    .pane-checklist-text { flex: 1; }
+    .pane-checklist-score {
+      font-size: 10px;
+      color: #6b7280;
+      font-family: 'Consolas', monospace;
+    }
+
+    .pane-pipeline-bar {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 12px;
+    }
+    .pane-pipeline-label { color: #111827; font-weight: 600; }
+    .pane-pipeline-track {
+      height: 18px;
+      background: #f3f4f6;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .pane-pipeline-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0F2E5C 0%, #1d4ed8 100%);
+      transition: width 0.5s ease;
+    }
+    .pane-pipeline-pwv {
+      height: 100%;
+      background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+      opacity: 0.7;
+    }
+    .pane-pipeline-value {
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .pane-funnel-stage {
+      display: flex;
+      align-items: center;
+      padding: 6px 0;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .pane-funnel-bar {
+      height: 22px;
+      background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
+      border-radius: 4px;
+      color: #fff;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .pane-funnel-label {
+      width: 100px;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .pane-markdown {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #111827;
+    }
+    .pane-markdown p { margin: 0 0 8px; }
+    .pane-markdown strong { font-weight: 700; }
+    .pane-markdown code {
+      background: #f3f4f6;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+    }
+
+    .pane-timeline-item {
+      padding: 6px 0 6px 16px;
+      border-left: 2px solid #1d4ed8;
+      margin-left: 4px;
+      font-size: 12px;
+      position: relative;
+    }
+    .pane-timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1d4ed8;
+    }
+    .pane-timeline-time {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pane-chart-svg { width: 100%; height: 100%; min-height: 160px; }
+
+    /* ===== Confirmation modal ===== */
+    .ai-confirm-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .ai-confirm-modal {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+    .ai-confirm-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #0F2E5C 0%, #1d4ed8 100%);
+      color: #fff;
+    }
+    .ai-confirm-title { font-size: 15px; font-weight: 700; }
+    .ai-confirm-subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+    .ai-confirm-body {
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .ai-confirm-detail-row {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    .ai-confirm-detail-label { color: #6b7280; }
+    .ai-confirm-detail-value { color: #111827; font-weight: 500; word-break: break-word; }
+    .ai-confirm-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px 16px;
+      justify-content: flex-end;
+    }
+    .ai-confirm-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .ai-confirm-btn-skip {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .ai-confirm-btn-ok {
+      background: #059669;
+      color: #fff;
+    }
+    .ai-confirm-btn-ok:hover { background: #047857; }
+
+    /* ===== Pane action affordance ===== */
+    .ai-pane-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .ai-pane:hover .ai-pane-actions { opacity: 1; }
+    .ai-pane-action-btn {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #6b7280;
+      cursor: pointer;
+    }
+    .ai-pane-action-btn:hover { background: #f9fafb; color: #111827; }
   </style>
 
   <div class="ai-workspace">
@@ -901,12 +1220,8 @@
       </div>
       <div class="ai-chat-messages" id="aiChatMessages">
         <div class="ai-chat-msg system-hint">
-          Ask anything about your plan, contacts, deals, or pipeline.
-          v1 reads everything from your Supabase but can't write yet.
+          Ask anything about your plan, contacts, deals, or pipeline. I can update records, create drafts, and render charts on the right.
         </div>
-      </div>
-      <div class="ai-chat-hint" id="aiChatHint" style="display:none;">
-        Tools (write/send/call) arrive in v2-v4. v1 is read-only.
       </div>
       <div class="ai-chat-input-row">
         <textarea
@@ -2000,29 +2315,36 @@ setInterval(async function() {
 
 </script>
 <!-- ============================================================ -->
-<!-- AI Chat + Panes JavaScript (NEW v1)                          -->
+<!-- AI Chat + Panes JavaScript (FINAL)                           -->
 <!-- ============================================================ -->
 <script>
 (function () {
   'use strict';
 
-  // Config
+  // ============================================================
+  // CONFIG
+  // ============================================================
   const AI_CHAT_WEBHOOK = 'https://victoryvision.app.n8n.cloud/webhook/ai-chat/v1';
-  const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+  const SUPABASE_URL    = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+  const SUPABASE_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+  const N8N_EMAIL_SEND  = 'https://victoryvision.app.n8n.cloud/webhook/emails/send';
 
-  // State
+  // ============================================================
+  // STATE
+  // ============================================================
   let currentConversationId = null;
   let currentCustomerId = null;
   let isSending = false;
+  let pendingConfirmsQueue = []; // FIFO of confirmations awaiting user action
 
-  // ---- Utilities ----
-  function generateUUID() {
+  // ============================================================
+  // UTILITIES
+  // ============================================================
+  function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     });
   }
 
@@ -2033,18 +2355,41 @@ setInterval(async function() {
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  // ---- Auth bootstrap ----
-  // The existing ai.html auth flow sets a userEmail somewhere on the page; we read it
-  // either from the existing #userEmail span or from a cookie/storage fallback.
+  function formatMoney(n) {
+    n = Number(n) || 0;
+    if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+    if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+    if (Math.abs(n) >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+    return '$' + n.toLocaleString();
+  }
+
+  function formatNumber(n) {
+    n = Number(n);
+    if (!isFinite(n)) return String(n);
+    return n.toLocaleString();
+  }
+
+  // Tiny markdown subset: bold (**x**), italic (*x*), inline code (`x`), paragraphs
+  function renderMarkdown(md) {
+    if (!md) return '';
+    let html = escapeHTML(md);
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.split(/\n\n+/).map(p => '<p>' + p.replace(/\n/g, '<br>') + '</p>').join('');
+    return html;
+  }
+
+  // ============================================================
+  // AUTH
+  // ============================================================
   function getCustomerId() {
     if (currentCustomerId) return currentCustomerId;
-    // 1. Try the existing header element populated by the original auth flow
     const headerEmail = document.getElementById('userEmail');
     if (headerEmail && headerEmail.textContent.trim()) {
       currentCustomerId = headerEmail.textContent.trim();
       return currentCustomerId;
     }
-    // 2. Try sessionStorage (in case original auth stashed it there)
     const stored = sessionStorage.getItem('customerId') || sessionStorage.getItem('userEmail');
     if (stored) {
       currentCustomerId = stored;
@@ -2055,76 +2400,455 @@ setInterval(async function() {
 
   function getConversationId() {
     if (!currentConversationId) {
-      currentConversationId = generateUUID();
+      currentConversationId = uuid();
       const meta = document.getElementById('aiChatConvId');
       if (meta) meta.textContent = currentConversationId.slice(0, 8) + '…';
     }
     return currentConversationId;
   }
 
-  // ---- Pane loading ----
+  // ============================================================
+  // PANE LOADING + RENDERING
+  // ============================================================
   async function loadPanes() {
-    const grid = document.getElementById('aiPanesGrid');
-    if (!grid) return;
     const customerId = getCustomerId();
     if (!customerId) {
-      grid.innerHTML = '<div class="ai-empty-state">Sign in to load your panes.</div>';
+      renderPanesEmpty('Sign in to load your panes.');
       return;
     }
     try {
       const resp = await fetch(
         SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(customerId) + '&select=ai_panes&limit=1',
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+        { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }
       );
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const rows = await resp.json();
       const paneState = rows[0] && rows[0].ai_panes;
-      renderPanes(paneState);
+      renderAllPanes(paneState);
     } catch (e) {
       console.warn('[ai-chat] Could not load panes:', e);
-      grid.innerHTML = '<div class="ai-empty-state">Could not load panes. Try refreshing.</div>';
+      renderPanesEmpty('Could not load panes. Try refreshing.');
     }
   }
 
-  function renderPanes(paneState) {
+  function renderPanesEmpty(msg) {
+    const grid = document.getElementById('aiPanesGrid');
+    if (grid) grid.innerHTML = '<div class="ai-empty-state">' + escapeHTML(msg) + '</div>';
+  }
+
+  function renderAllPanes(paneState) {
     const grid = document.getElementById('aiPanesGrid');
     if (!grid) return;
     grid.innerHTML = '';
     const slots = (paneState && paneState.slots) || [];
     if (slots.length === 0) {
-      grid.innerHTML = '<div class="ai-empty-state">No panes configured yet. Ask the AI to render one.</div>';
+      renderPanesEmpty('No panes yet. Ask me to show you something.');
       return;
     }
-    // Sort by slot number
     slots.sort(function (a, b) { return (a.slot || 0) - (b.slot || 0); });
-    slots.forEach(function (slot) {
-      const pane = document.createElement('div');
-      pane.className = 'ai-pane';
-      pane.dataset.slot = slot.slot;
-      pane.dataset.component = slot.component;
-      pane.innerHTML =
-        '<div class="ai-pane-header">' +
-          '<div class="ai-pane-title">' + escapeHTML(slot.title || 'Pane ' + slot.slot) + '</div>' +
-          '<div class="ai-pane-component-label">' + escapeHTML(slot.component || 'unknown') + '</div>' +
-        '</div>' +
-        '<div class="ai-pane-body" id="paneBody_' + slot.slot + '">' +
-          renderPaneBodyPlaceholder(slot) +
-        '</div>';
-      grid.appendChild(pane);
-    });
+    slots.forEach(function (slot) { grid.appendChild(buildPaneElement(slot)); });
   }
 
-  // v1: placeholders that describe what WILL render here once tools exist.
-  // The pane body is informational only — the actual chart/table renderers
-  // ship in v2 alongside the AI's render_pane tool.
-  function renderPaneBodyPlaceholder(slot) {
-    const description = (slot.data && slot.data.description) || '';
-    return '<div class="ai-pane-placeholder">' +
-      escapeHTML(description || 'This pane will render once tools are enabled in v2.') +
+  function buildPaneElement(slot) {
+    const pane = document.createElement('div');
+    pane.className = 'ai-pane';
+    pane.dataset.slot = slot.slot;
+    pane.dataset.component = slot.component;
+
+    const header = document.createElement('div');
+    header.className = 'ai-pane-header';
+    header.innerHTML =
+      '<div>' +
+        '<div class="ai-pane-title">' + escapeHTML(slot.title || 'Pane ' + slot.slot) + '</div>' +
+        '<div class="ai-pane-component-label">slot ' + slot.slot + ' · ' + escapeHTML(slot.component || 'unknown') + '</div>' +
+      '</div>' +
+      '<div class="ai-pane-actions">' +
+        '<button class="ai-pane-action-btn" onclick="window.clearPaneFromUI(' + slot.slot + ')">×</button>' +
       '</div>';
+    pane.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'ai-pane-body';
+    body.innerHTML = renderPaneBody(slot);
+    pane.appendChild(body);
+
+    return pane;
   }
 
-  // ---- Chat I/O ----
+  // Pane renderer dispatch — picks the right renderer based on component type.
+  // Falls back to JSON preview for unknown components.
+  function renderPaneBody(slot) {
+    const component = slot.component || '';
+    const data = slot.data || {};
+    try {
+      switch (component) {
+        case 'kpi_grid':                  return renderKpiGrid(data);
+        case 'bar_chart':                 return renderBarChart(data);
+        case 'line_chart':                return renderLineChart(data);
+        case 'pie_chart':                 return renderPieChart(data);
+        case 'funnel':                    return renderFunnel(data);
+        case 'plan_action_checklist':     return renderPlanActionChecklist(data, slot);
+        case 'pipeline_stage_breakdown':  return renderPipelineStageBreakdown(data);
+        case 'contact_card_grid':         return renderContactCardGrid(data);
+        case 'deal_card':                 return renderDealCard(data);
+        case 'table_simple':              return renderTableSimple(data);
+        case 'markdown_text':              return '<div class="pane-markdown">' + renderMarkdown(data.markdown || '') + '</div>';
+        case 'timeline':                  return renderTimeline(data);
+        default:
+          // Unknown component — show description + raw data preview
+          return '<div class="ai-pane-placeholder">' +
+            escapeHTML(data.description || 'Component "' + component + '" not yet rendered.') +
+            '</div>';
+      }
+    } catch (e) {
+      console.error('[ai-chat] Pane render error:', e, slot);
+      return '<div class="ai-pane-placeholder">Render error: ' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  // ----- Pane renderers -----
+
+  function renderKpiGrid(data) {
+    const tiles = data.tiles || [];
+    return '<div class="pane-kpi-grid">' + tiles.map(function (t) {
+      let deltaClass = 'flat';
+      if (typeof t.delta === 'number') deltaClass = t.delta > 0 ? 'up' : (t.delta < 0 ? 'down' : 'flat');
+      return '<div class="pane-kpi-tile">' +
+        '<div class="pane-kpi-label">' + escapeHTML(t.label || '') + '</div>' +
+        '<div class="pane-kpi-value">' + escapeHTML(String(t.value || 0)) + '</div>' +
+        (t.delta != null ? '<div class="pane-kpi-delta ' + deltaClass + '">' + (t.delta > 0 ? '↑' : (t.delta < 0 ? '↓' : '–')) + ' ' + escapeHTML(String(Math.abs(t.delta))) + '</div>' : '') +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  // SVG bar chart — labels on left, bars right, value labels at end
+  function renderBarChart(data) {
+    const labels = data.labels || [];
+    const values = data.values || [];
+    if (labels.length === 0) return '<div class="ai-pane-placeholder">No data.</div>';
+    const max = Math.max.apply(null, values.concat([1]));
+    const h = Math.max(160, labels.length * 32);
+    const labelWidth = 90;
+    const valueWidth = 60;
+    const barAreaStart = labelWidth + 10;
+    let svg = '<svg class="pane-chart-svg" viewBox="0 0 400 ' + h + '" preserveAspectRatio="xMinYMin meet">';
+    labels.forEach(function (label, i) {
+      const v = values[i] || 0;
+      const barLen = max > 0 ? ((400 - barAreaStart - valueWidth - 4) * v / max) : 0;
+      const y = i * 32 + 8;
+      svg += '<text x="' + (labelWidth - 4) + '" y="' + (y + 14) + '" text-anchor="end" font-size="11" fill="#374151">' + escapeHTML(label) + '</text>';
+      svg += '<rect x="' + barAreaStart + '" y="' + y + '" width="' + barLen + '" height="18" rx="3" fill="#1d4ed8"/>';
+      svg += '<text x="' + (barAreaStart + barLen + 6) + '" y="' + (y + 14) + '" font-size="11" fill="#111827">' + (typeof v === 'number' ? formatMoney(v) : v) + '</text>';
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderLineChart(data) {
+    const labels = data.labels || [];
+    const values = data.values || [];
+    if (labels.length < 2) return '<div class="ai-pane-placeholder">Need at least 2 data points.</div>';
+    const w = 380;
+    const h = 180;
+    const margin = { top: 20, right: 10, bottom: 30, left: 40 };
+    const innerW = w - margin.left - margin.right;
+    const innerH = h - margin.top - margin.bottom;
+    const max = Math.max.apply(null, values.concat([1]));
+    const min = Math.min.apply(null, values.concat([0]));
+    const range = (max - min) || 1;
+    const xStep = innerW / (values.length - 1);
+    const points = values.map(function (v, i) {
+      const x = margin.left + i * xStep;
+      const y = margin.top + innerH - ((v - min) / range) * innerH;
+      return x + ',' + y;
+    }).join(' ');
+    let svg = '<svg class="pane-chart-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet">';
+    // Y-axis
+    svg += '<line x1="' + margin.left + '" y1="' + margin.top + '" x2="' + margin.left + '" y2="' + (margin.top + innerH) + '" stroke="#e5e7eb"/>';
+    svg += '<line x1="' + margin.left + '" y1="' + (margin.top + innerH) + '" x2="' + (margin.left + innerW) + '" y2="' + (margin.top + innerH) + '" stroke="#e5e7eb"/>';
+    svg += '<polyline points="' + points + '" fill="none" stroke="#1d4ed8" stroke-width="2"/>';
+    values.forEach(function (v, i) {
+      const x = margin.left + i * xStep;
+      const y = margin.top + innerH - ((v - min) / range) * innerH;
+      svg += '<circle cx="' + x + '" cy="' + y + '" r="3" fill="#1d4ed8"/>';
+    });
+    // X labels (first, mid, last)
+    [0, Math.floor(labels.length / 2), labels.length - 1].forEach(function (i) {
+      const x = margin.left + i * xStep;
+      svg += '<text x="' + x + '" y="' + (h - 8) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + escapeHTML(labels[i]) + '</text>';
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderPieChart(data) {
+    const labels = data.labels || [];
+    const values = data.values || [];
+    if (labels.length === 0) return '<div class="ai-pane-placeholder">No data.</div>';
+    const total = values.reduce(function (s, v) { return s + (Number(v) || 0); }, 0);
+    if (total === 0) return '<div class="ai-pane-placeholder">All zero.</div>';
+    const colors = ['#1d4ed8', '#0F2E5C', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d'];
+    const cx = 90, cy = 90, r = 70;
+    let startAngle = -Math.PI / 2;
+    let svg = '<svg class="pane-chart-svg" viewBox="0 0 380 180" preserveAspectRatio="xMidYMid meet">';
+    let legendY = 12;
+    values.forEach(function (v, i) {
+      const angle = (v / total) * 2 * Math.PI;
+      const endAngle = startAngle + angle;
+      const x1 = cx + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      const largeArc = angle > Math.PI ? 1 : 0;
+      const color = colors[i % colors.length];
+      svg += '<path d="M ' + cx + ',' + cy + ' L ' + x1 + ',' + y1 + ' A ' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '" opacity="0.85"/>';
+      // Legend entry
+      svg += '<rect x="200" y="' + legendY + '" width="10" height="10" fill="' + color + '"/>';
+      svg += '<text x="216" y="' + (legendY + 9) + '" font-size="11" fill="#111827">' + escapeHTML(labels[i]) + ' (' + Math.round(v / total * 100) + '%)</text>';
+      legendY += 18;
+      startAngle = endAngle;
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderFunnel(data) {
+    const stages = data.stages || [];
+    if (stages.length === 0) return '<div class="ai-pane-placeholder">No stages.</div>';
+    const max = Math.max.apply(null, stages.map(function (s) { return s.count || 0; }).concat([1]));
+    return stages.map(function (s) {
+      const pct = max > 0 ? (s.count / max) * 100 : 0;
+      return '<div class="pane-funnel-stage">' +
+        '<div class="pane-funnel-label">' + escapeHTML(s.label || '') + '</div>' +
+        '<div class="pane-funnel-bar" style="width: ' + pct + '%;">' + escapeHTML(String(s.count || 0)) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderPlanActionChecklist(data, slot) {
+    // If data already has actions array, use it directly
+    if (data.actions && Array.isArray(data.actions)) {
+      return renderChecklistInner(data.actions);
+    }
+    // If data references a plan_id, fetch on the fly
+    if (data.plan_id) {
+      const bodyId = 'planChecklist_' + slot.slot;
+      // Trigger async fetch + replacement
+      setTimeout(function () { fetchAndRenderPlan(data.plan_id, bodyId); }, 0);
+      return '<div id="' + bodyId + '"><div class="ai-pane-placeholder">Loading plan ' + data.plan_id + '…</div></div>';
+    }
+    return '<div class="ai-pane-placeholder">No actions to show.</div>';
+  }
+
+  function renderChecklistInner(actions) {
+    return actions.slice(0, 15).map(function (a) {
+      const status = a.status || 'pending';
+      return '<div class="pane-checklist-item">' +
+        '<span class="pane-checklist-status ' + status + '"></span>' +
+        '<div class="pane-checklist-text">' + escapeHTML(a.action || a.action_id || 'unnamed') + '</div>' +
+        '<div class="pane-checklist-score">' + (a.score != null ? a.score : '') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function fetchAndRenderPlan(planId, bodyId) {
+    try {
+      const resp = await fetch(
+        SUPABASE_URL + '/rest/v1/plans?id=eq.' + planId + '&select=plan',
+        { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }
+      );
+      const rows = await resp.json();
+      const actions = (rows[0] && rows[0].plan) || [];
+      const target = document.getElementById(bodyId);
+      if (target) target.innerHTML = renderChecklistInner(actions);
+    } catch (e) {
+      const target = document.getElementById(bodyId);
+      if (target) target.innerHTML = '<div class="ai-pane-placeholder">Could not load plan.</div>';
+    }
+  }
+
+  function renderPipelineStageBreakdown(data) {
+    const deals = data.deals || [];
+    if (deals.length === 0) return '<div class="ai-pane-placeholder">No deals.</div>';
+    const max = Math.max.apply(null, deals.map(function (d) { return d.gross || 0; }).concat([1]));
+    return deals.map(function (d) {
+      const grossPct = max > 0 ? (d.gross / max) * 100 : 0;
+      const pwvPct = max > 0 ? (d.pwv / max) * 100 : 0;
+      return '<div class="pane-pipeline-bar">' +
+        '<div class="pane-pipeline-label">' + escapeHTML(d.name || '') + '</div>' +
+        '<div class="pane-pipeline-track">' +
+          '<div class="pane-pipeline-fill" style="width: ' + grossPct + '%;"></div>' +
+          '<div class="pane-pipeline-pwv" style="position: absolute; top: 0; left: 0; width: ' + pwvPct + '%;"></div>' +
+        '</div>' +
+        '<div class="pane-pipeline-value">' + formatMoney(d.gross) + ' / ' + formatMoney(d.pwv) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderContactCardGrid(data) {
+    const contacts = data.contacts || [];
+    if (contacts.length === 0) return '<div class="ai-pane-placeholder">No contacts.</div>';
+    return contacts.slice(0, 10).map(function (c) {
+      const tags = (c.tags || '').split(',').slice(0, 4).map(function (t) { return t.trim(); }).filter(Boolean);
+      return '<div class="pane-contact-card">' +
+        (c.score != null ? '<div class="pane-contact-card-score">' + escapeHTML(String(c.score)) + '</div>' : '') +
+        '<div class="pane-contact-card-name">' + escapeHTML(c.name || '(unnamed)') + '</div>' +
+        '<div class="pane-contact-card-meta">' + escapeHTML([c.title, c.company].filter(Boolean).join(' · ')) + '</div>' +
+        (tags.length ? '<div class="pane-contact-card-tags">' + tags.map(function (t) {
+          return '<span class="pane-contact-card-tag">' + escapeHTML(t) + '</span>';
+        }).join('') + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function renderDealCard(data) {
+    return '<div class="pane-deal-card">' +
+      '<div class="pane-deal-name">' + escapeHTML(data.name || '') + '</div>' +
+      (data.tagline ? '<div class="pane-deal-tagline">' + escapeHTML(data.tagline) + '</div>' : '') +
+      '<div class="pane-deal-numbers">' +
+        '<div><div class="pane-deal-num-label">Gross</div><div class="pane-deal-num-value">' + formatMoney(data.gross_value_usd) + '</div></div>' +
+        '<div><div class="pane-deal-num-label">PWV</div><div class="pane-deal-num-value">' + formatMoney(data.pwv_usd) + '</div></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderTableSimple(data) {
+    const cols = data.columns || [];
+    const rows = data.rows || [];
+    if (cols.length === 0 || rows.length === 0) return '<div class="ai-pane-placeholder">No data.</div>';
+    let html = '<table class="pane-table"><thead><tr>';
+    cols.forEach(function (c) { html += '<th>' + escapeHTML(c) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    rows.slice(0, 30).forEach(function (row) {
+      html += '<tr>';
+      row.forEach(function (cell) { html += '<td>' + escapeHTML(String(cell == null ? '' : cell)) + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function renderTimeline(data) {
+    const events = data.events || [];
+    if (events.length === 0) return '<div class="ai-pane-placeholder">No events.</div>';
+    return events.slice(0, 10).map(function (e) {
+      return '<div class="pane-timeline-item">' +
+        (e.time ? '<div class="pane-timeline-time">' + escapeHTML(e.time) + '</div>' : '') +
+        '<div>' + escapeHTML(e.text || e.label || '') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ============================================================
+  // CONFIRMATION MODAL (for propose_send_email and similar)
+  // ============================================================
+  function showConfirmationModal(confirm) {
+    // Remove any existing modal
+    const existing = document.getElementById('aiConfirmOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-confirm-overlay';
+    overlay.id = 'aiConfirmOverlay';
+    overlay.innerHTML =
+      '<div class="ai-confirm-modal">' +
+        '<div class="ai-confirm-header">' +
+          '<div class="ai-confirm-title">Confirm: ' + escapeHTML(confirm.action || 'action') + '</div>' +
+          '<div class="ai-confirm-subtitle">' + escapeHTML(confirm.summary || '') + '</div>' +
+        '</div>' +
+        '<div class="ai-confirm-body">' +
+          (confirm.to ? '<div class="ai-confirm-detail-row"><div class="ai-confirm-detail-label">To</div><div class="ai-confirm-detail-value">' + escapeHTML(confirm.to) + '</div></div>' : '') +
+          (confirm.subject ? '<div class="ai-confirm-detail-row"><div class="ai-confirm-detail-label">Subject</div><div class="ai-confirm-detail-value">' + escapeHTML(confirm.subject) + '</div></div>' : '') +
+          (confirm.draft_id ? '<div class="ai-confirm-detail-row"><div class="ai-confirm-detail-label">Draft</div><div class="ai-confirm-detail-value">#' + confirm.draft_id + '</div></div>' : '') +
+        '</div>' +
+        '<div class="ai-confirm-actions">' +
+          '<button class="ai-confirm-btn ai-confirm-btn-skip" id="aiConfirmSkipBtn">Skip</button>' +
+          '<button class="ai-confirm-btn ai-confirm-btn-ok" id="aiConfirmOkBtn">Send now</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById('aiConfirmSkipBtn').onclick = function () {
+      overlay.remove();
+      appendMessage('assistant', 'Skipped: ' + (confirm.summary || 'no summary'));
+      processNextConfirm();
+    };
+    document.getElementById('aiConfirmOkBtn').onclick = async function () {
+      overlay.remove();
+      await executeConfirmedAction(confirm);
+      processNextConfirm();
+    };
+  }
+
+  async function executeConfirmedAction(confirm) {
+    if (confirm.action === 'send_email' && confirm.draft_id) {
+      try {
+        const resp = await fetch(N8N_EMAIL_SEND, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email_id: confirm.draft_id,
+            customer_id: getCustomerId()
+          })
+        });
+        if (resp.ok) {
+          appendMessage('assistant', '✓ Sent draft #' + confirm.draft_id + ' (' + (confirm.to || 'unknown recipient') + ').');
+        } else {
+          const errText = await resp.text();
+          appendMessage('assistant', '✗ Send failed [' + resp.status + ']: ' + errText.slice(0, 200));
+        }
+      } catch (e) {
+        appendMessage('assistant', '✗ Network error sending: ' + e.message);
+      }
+    } else {
+      appendMessage('assistant', 'Action type "' + confirm.action + '" not yet wired up.');
+    }
+  }
+
+  function processNextConfirm() {
+    if (pendingConfirmsQueue.length > 0) {
+      const next = pendingConfirmsQueue.shift();
+      showConfirmationModal(next);
+    }
+  }
+
+  // ============================================================
+  // PANE ACTIONS (clear from UI)
+  // ============================================================
+  window.clearPaneFromUI = async function (slot) {
+    const customerId = getCustomerId();
+    if (!customerId) return;
+    try {
+      // Re-fetch current state, remove the slot, write back
+      const resp = await fetch(
+        SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(customerId) + '&select=ai_panes',
+        { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }
+      );
+      const rows = await resp.json();
+      const current = (rows[0] && rows[0].ai_panes) || { slots: [] };
+      current.slots = (current.slots || []).filter(function (s) { return s.slot !== slot; });
+      await fetch(
+        SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(customerId),
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ ai_panes: current })
+        }
+      );
+      renderAllPanes(current);
+    } catch (e) {
+      console.warn('[ai-chat] clearPaneFromUI failed:', e);
+    }
+  };
+
+  // ============================================================
+  // CHAT I/O
+  // ============================================================
   function appendMessage(role, text) {
     const messages = document.getElementById('aiChatMessages');
     if (!messages) return;
@@ -2137,14 +2861,13 @@ setInterval(async function() {
 
   function showTyping() {
     const messages = document.getElementById('aiChatMessages');
-    if (!messages) return null;
+    if (!messages) return;
     const typing = document.createElement('div');
     typing.className = 'ai-chat-typing';
     typing.id = 'aiChatTypingIndicator';
     typing.textContent = 'Claude is thinking…';
     messages.appendChild(typing);
     messages.scrollTop = messages.scrollHeight;
-    return typing;
   }
 
   function hideTyping() {
@@ -2162,19 +2885,16 @@ setInterval(async function() {
 
     const customerId = getCustomerId();
     if (!customerId) {
-      appendMessage('assistant', 'Need to sign in first — the page hasn\'t loaded your user yet.');
+      appendMessage('assistant', 'Need to sign in first.');
       return;
     }
 
-    // Lock UI
     isSending = true;
     sendBtn.disabled = true;
     sendBtn.textContent = '…';
-
-    // Optimistic render of user message + clear input
     appendMessage('user', message);
     input.value = '';
-    const typing = showTyping();
+    showTyping();
 
     try {
       const resp = await fetch(AI_CHAT_WEBHOOK, {
@@ -2187,22 +2907,33 @@ setInterval(async function() {
         })
       });
       hideTyping();
-
       if (!resp.ok) {
         const txt = await resp.text();
-        appendMessage('assistant', '[error ' + resp.status + '] ' + (txt || 'Request failed'));
-      } else {
-        const data = await resp.json();
-        appendMessage('assistant', data.message || '(empty response)');
-        // If response carries an updated conversation_id, adopt it
-        if (data.conversation_id && data.conversation_id !== currentConversationId) {
-          currentConversationId = data.conversation_id;
-        }
+        appendMessage('assistant', '[error ' + resp.status + '] ' + (txt || 'Request failed').slice(0, 300));
+        return;
+      }
+      const data = await resp.json();
+      appendMessage('assistant', data.message || '(empty response)');
+
+      // If the AI rendered or cleared panes, reload from Supabase
+      if (data.panes_update && data.panes_update.length > 0) {
+        loadPanes();
+      }
+
+      // If pending confirmations came back, queue + show first
+      if (data.pending_confirms && data.pending_confirms.length > 0) {
+        pendingConfirmsQueue.push.apply(pendingConfirmsQueue, data.pending_confirms);
+        processNextConfirm();
+      }
+
+      // Adopt new conversation_id if changed
+      if (data.conversation_id && data.conversation_id !== currentConversationId) {
+        currentConversationId = data.conversation_id;
       }
     } catch (e) {
       hideTyping();
       console.error('[ai-chat] Network error:', e);
-      appendMessage('assistant', 'Network error — could not reach Claude. ' + e.message);
+      appendMessage('assistant', 'Network error: ' + e.message);
     } finally {
       isSending = false;
       sendBtn.disabled = false;
@@ -2211,13 +2942,26 @@ setInterval(async function() {
     }
   };
 
-  // ---- Init ----
-  // Wait for the existing auth flow to populate #userEmail (it runs on DOMContentLoaded).
-  // Poll for up to 5 seconds, then proceed regardless.
+  // ============================================================
+  // AUTO-RESIZE TEXTAREA
+  // ============================================================
+  function autoResizeInput() {
+    const input = document.getElementById('aiChatInput');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
   function waitForAuth(retries) {
     retries = retries == null ? 50 : retries;
     if (getCustomerId() || retries <= 0) {
       loadPanes();
+      autoResizeInput();
       return;
     }
     setTimeout(function () { waitForAuth(retries - 1); }, 100);
@@ -2232,4 +2976,5 @@ setInterval(async function() {
 </script>
 
 </body>
+
 </html>
