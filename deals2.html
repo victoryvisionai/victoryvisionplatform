@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Track deals, engagement letters, and pipeline."/>
+  <meta name="author" content="Victory Vision"/>
+  <title>Victory Vision AI - Deals</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .navbar { background-color: #0A3161; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .navbar nav ul { display: flex; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+    .navbar nav ul li { margin: 0 10px; }
+    .navbar nav ul li a { color: white; text-decoration: none; }
+    .navbar nav ul li a.active { font-weight: bold; border-bottom: 2px solid #FFD700; padding-bottom: 4px; }
+    .navbar .user-info { display: flex; align-items: center; gap: 10px; }
+    .logo img { height: 60px; width: auto; max-height: 100px; }
+    .content { padding: 20px 16px; max-width: 1600px; margin: 0 auto; }
+    .page-header { margin-bottom: 24px; }
+    .page-title { font-size: 2.5rem; font-weight: bold; color: #0A3161; margin: 0 0 0.25rem 0; }
+    .page-subtitle { font-size: 1.05rem; color: #666; margin: 0; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi-card { background: white; border-radius: 8px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #0A3161; }
+    .kpi-card.success { border-left-color: #28a745; }
+    .kpi-card.warn { border-left-color: #ffc107; }
+    .kpi-card.danger { border-left-color: #dc3545; }
+    .kpi-card.info { border-left-color: #17a2b8; }
+    .kpi-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.9rem; font-weight: bold; color: #0A3161; line-height: 1.1; }
+    .kpi-sub { font-size: 0.82rem; color: #888; margin-top: 4px; }
+    .filter-bar { background: white; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .filter-bar input[type="text"], .filter-bar select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .filter-bar input[type="text"] { min-width: 220px; }
+    .btn { background: #0A3161; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: #083050; }
+    .btn-success { background: #28a745; }
+    .btn-secondary { background: #6c757d; }
+    .btn-danger { background: #dc3545; }
+    .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+    .deal-card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; border-top: 4px solid #0A3161; }
+    .deal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .deal-card.priority-1 { border-top-color: #dc3545; }
+    .deal-card.priority-2 { border-top-color: #ffc107; }
+    .deal-card.priority-3 { border-top-color: #17a2b8; }
+    .deal-card.priority-4, .deal-card.priority-5 { border-top-color: #6c757d; }
+    .deal-name { font-size: 1.05rem; font-weight: bold; color: #0A3161; margin-bottom: 6px; line-height: 1.3; }
+    .deal-counterparty { font-size: 0.88rem; color: #555; margin-bottom: 10px; }
+    .deal-counterparty strong { color: #0A3161; }
+    .stage-badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; background: #e2e3e5; color: #383d41; }
+    .stage-engaged, .stage-engagement_letter_sent, .stage-engagement_letter_sent_awaiting_countersign, .stage-engagement_letter_at_gt_awaiting_countersign, .stage-engagement_terms_sent { background: #d1ecf1; color: #0c5460; }
+    .stage-pitch_sent, .stage-one_pager_review_pending, .stage-mediaco_proposal_in_hand_packaging_for_ballys { background: #fff3cd; color: #856404; }
+    .stage-active_internal_inquiry, .stage-meeting_reschedule_pending { background: #cce5ff; color: #004085; }
+    .stage-dormant_til_july, .stage-dormant_pitch { background: #f8d7da; color: #721c24; }
+    .stage-closed_won { background: #d4edda; color: #155724; }
+    .stage-closed_lost { background: #f8d7da; color: #721c24; }
+    .deal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; color: #666; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+    .deal-meta div span { color: #0A3161; font-weight: bold; }
+    .deal-action { background: #f8f9fa; border-left: 3px solid #0A3161; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 0.85rem; color: #333; }
+    .deal-action strong { color: #0A3161; display: block; margin-bottom: 3px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .deal-due { font-size: 0.8rem; margin-top: 6px; }
+    .deal-due.overdue { color: #dc3545; font-weight: bold; }
+    .deal-due.soon { color: #ffc107; font-weight: bold; }
+    .deal-due.future { color: #28a745; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-start; justify-content: center; padding: 30px 20px; overflow-y: auto; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; border-radius: 8px; max-width: 720px; width: 100%; padding: 26px; max-height: calc(100vh - 60px); overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .modal-header h2 { margin: 0; color: #0A3161; font-size: 1.5rem; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0 6px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 0.82rem; font-weight: bold; color: #555; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
+    .form-group textarea { min-height: 70px; resize: vertical; }
+    .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+    .loading { text-align: center; padding: 40px; color: #888; }
+    @media (max-width: 768px) {
+      .content { padding: 14px 8px; }
+      .page-title { font-size: 1.7rem; }
+      .deals-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"] { min-width: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="logo.jpg" alt="Victory Vision Logo"
+         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="companyprofile">Profile</a></li>
+      <li><a href="campaigns">Campaigns</a></li>
+      <li><a href="media">Media</a></li>
+      <li><a href="pages">Pages</a></li>
+      <li><a href="social">Social</a></li>
+      <li><a href="contacts">Contacts</a></li>
+      <li><a href="deals" class="active">Deals</a></li>
+      <li><a href="ads">Ads</a></li>
+      <li><a href="messages">Messages</a></li>
+      <li><a href="meetings">Meetings</a></li>
+      <li><a href="ai">Analytics</a></li>
+      <li><a href="settings">Settings</a></li>
+    </ul>
+  </nav>
+  <div class="user-info">
+    <span id="userEmail"></span>
+  </div>
+</header>
+
+<main class="content">
+  <div class="page-header">
+    <h1 class="page-title">Deals</h1>
+    <p class="page-subtitle">Live pipeline — engagement letters, retainers, brokerage, and introductions.</p>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card info"><div class="kpi-label">Total Deals</div><div class="kpi-value" id="kpiTotal">—</div></div>
+    <div class="kpi-card success"><div class="kpi-label">Engagement Letters Out</div><div class="kpi-value" id="kpiEngagement">—</div><div class="kpi-sub">Awaiting countersign / feedback</div></div>
+    <div class="kpi-card warn"><div class="kpi-label">Awaiting Your Action</div><div class="kpi-value" id="kpiActionDue">—</div><div class="kpi-sub">Due in next 7 days</div></div>
+    <div class="kpi-card danger"><div class="kpi-label">Overdue</div><div class="kpi-value" id="kpiOverdue">—</div></div>
+    <div class="kpi-card"><div class="kpi-label">Pipeline Value</div><div class="kpi-value" id="kpiValue">—</div><div class="kpi-sub">Target revenue</div></div>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="Search deals, counterparty, company..."/>
+    <select id="stageFilter">
+      <option value="">All Stages</option>
+      <option value="engagement">Engagement Letters Out</option>
+      <option value="pitch_sent">Pitch Sent</option>
+      <option value="active">Active</option>
+      <option value="dormant">Dormant</option>
+    </select>
+    <select id="priorityFilter">
+      <option value="">All Priorities</option>
+      <option value="1">P1 — Highest</option>
+      <option value="2">P2 — High</option>
+      <option value="3">P3 — Medium</option>
+      <option value="4">P4 — Low</option>
+    </select>
+    <select id="sortBy">
+      <option value="priority">Sort: Priority</option>
+      <option value="due">Sort: Next Action Due</option>
+      <option value="touched">Sort: Recently Touched</option>
+      <option value="value">Sort: Pipeline Value</option>
+    </select>
+    <button class="btn btn-success" onclick="openModal()">+ Add Deal</button>
+    <button class="btn btn-secondary" onclick="loadDeals()">Refresh</button>
+  </div>
+  <div id="dealsContainer" class="loading">Loading deals...</div>
+</main>
+
+<div class="modal" id="dealModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">New Deal</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <form id="dealForm" onsubmit="event.preventDefault(); saveDeal();">
+      <input type="hidden" id="dealId"/>
+      <div class="form-grid">
+        <div class="form-group full"><label>Deal Name *</label><input type="text" id="f_name" required/></div>
+        <div class="form-group"><label>Counterparty Name</label><input type="text" id="f_counterparty_name"/></div>
+        <div class="form-group"><label>Counterparty Email</label><input type="email" id="f_counterparty_email"/></div>
+        <div class="form-group"><label>Counterparty Company</label><input type="text" id="f_counterparty_company"/></div>
+        <div class="form-group">
+          <label>Deal Type</label>
+          <select id="f_deal_type">
+            <option value="engagement">Engagement Letter</option>
+            <option value="client_acquisition">Client Acquisition</option>
+            <option value="brokerage">Brokerage</option>
+            <option value="channel_partner">Channel Partner</option>
+            <option value="introduction">Introduction</option>
+            <option value="sourcing">Sourcing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Stage</label>
+          <select id="f_stage">
+            <option value="prospect">Prospect</option>
+            <option value="pitch_sent">Pitch Sent</option>
+            <option value="engagement_letter_sent">Engagement Letter Sent</option>
+            <option value="engagement_letter_sent_awaiting_countersign">Engagement Sent — Awaiting Countersign</option>
+            <option value="engagement_letter_at_gt_awaiting_countersign">At GT — Awaiting Countersign</option>
+            <option value="engagement_terms_sent">Engagement Terms Sent</option>
+            <option value="engaged">Engaged — Live</option>
+            <option value="active_internal_inquiry">Active Internal Inquiry</option>
+            <option value="meeting_reschedule_pending">Meeting Reschedule Pending</option>
+            <option value="one_pager_review_pending">One-Pager Review Pending</option>
+            <option value="mediaco_proposal_in_hand_packaging_for_ballys">Proposal In Hand</option>
+            <option value="intro_pending_via_akbar">Intro Pending</option>
+            <option value="dormant_til_july">Dormant — Calendared</option>
+            <option value="dormant_pitch">Dormant Pitch</option>
+            <option value="closed_won">Closed Won</option>
+            <option value="closed_lost">Closed Lost</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Target Revenue ($)</label><input type="number" id="f_amount_target"/></div>
+        <div class="form-group">
+          <label>Fee Structure</label>
+          <select id="f_fee_structure">
+            <option value="">—</option>
+            <option value="retainer">Retainer</option>
+            <option value="success_fee">Success Fee</option>
+            <option value="retainer_plus_success">Retainer + Success</option>
+            <option value="brokerage">Brokerage</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Retainer / Month ($)</label><input type="number" id="f_retainer_monthly"/></div>
+        <div class="form-group"><label>Success Fee %</label><input type="number" step="0.1" id="f_success_pct"/></div>
+        <div class="form-group"><label>Brokerage (bps)</label><input type="number" id="f_brokerage_bps"/></div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="f_priority">
+            <option value="1">P1 — Highest</option>
+            <option value="2">P2 — High</option>
+            <option value="3" selected>P3 — Medium</option>
+            <option value="4">P4 — Low</option>
+            <option value="5">P5 — Lowest</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Source</label>
+          <select id="f_source">
+            <option value="warm_friend">Warm Friend</option>
+            <option value="close_friend">Close Friend</option>
+            <option value="cold_outreach">Cold Outreach</option>
+            <option value="inbound">Inbound</option>
+            <option value="referral">Referral</option>
+            <option value="prior_relationship">Prior Relationship</option>
+            <option value="existing_relationship">Existing Relationship</option>
+            <option value="internal">Internal (GT)</option>
+            <option value="stuy_friend">Stuy Friend</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Notes</label><textarea id="f_notes"></textarea></div>
+        <div class="form-group full"><label>Next Action</label><input type="text" id="f_next_action"/></div>
+        <div class="form-group"><label>Next Action Due</label><input type="date" id="f_next_action_due"/></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-danger" id="deleteBtn" onclick="deleteDeal()" style="display:none;">Delete</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn">Save Deal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let allDeals = [];
+  let userEmail = null;
+
+  async function init() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = '/login'; return; }
+    userEmail = session.user.email;
+    document.getElementById('userEmail').textContent = userEmail;
+    document.getElementById('searchInput').addEventListener('input', renderDeals);
+    document.getElementById('stageFilter').addEventListener('change', renderDeals);
+    document.getElementById('priorityFilter').addEventListener('change', renderDeals);
+    document.getElementById('sortBy').addEventListener('change', renderDeals);
+    await loadDeals();
+  }
+
+  async function loadDeals() {
+    document.getElementById('dealsContainer').innerHTML = '<div class="loading">Loading deals...</div>';
+    const { data, error } = await supabase.from('deals').select('*').eq('customer_id', userEmail).order('priority', { ascending: true }).order('next_action_due', { ascending: true, nullsFirst: false });
+    if (error) { document.getElementById('dealsContainer').innerHTML = '<div class="empty-state">Error loading deals: ' + error.message + '</div>'; return; }
+    allDeals = data || [];
+    renderKPIs();
+    renderDeals();
+  }
+
+  function renderKPIs() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+    const total = allDeals.filter(d => !['closed_won','closed_lost'].includes(d.stage)).length;
+    const engagement = allDeals.filter(d => d.stage && d.stage.includes('engagement')).length;
+    const actionDue = allDeals.filter(d => { if (!d.next_action_due) return false; const due = new Date(d.next_action_due); return due >= today && due <= in7 && !['closed_won','closed_lost'].includes(d.stage); }).length;
+    const overdue = allDeals.filter(d => { if (!d.next_action_due) return false; const due = new Date(d.next_action_due); return due < today && !['closed_won','closed_lost'].includes(d.stage); }).length;
+    const totalValue = allDeals.filter(d => !['closed_won','closed_lost'].includes(d.stage)).reduce((sum, d) => sum + (Number(d.amount_target) || 0), 0);
+    document.getElementById('kpiTotal').textContent = total;
+    document.getElementById('kpiEngagement').textContent = engagement;
+    document.getElementById('kpiActionDue').textContent = actionDue;
+    document.getElementById('kpiOverdue').textContent = overdue;
+    document.getElementById('kpiValue').textContent = totalValue ? ('$' + (totalValue/1000).toFixed(0) + 'K') : '$—';
+  }
+
+  function renderDeals() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const stageFilter = document.getElementById('stageFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const sortBy = document.getElementById('sortBy').value;
+    let filtered = allDeals.filter(d => {
+      if (search && !((d.name||'') + ' ' + (d.counterparty_name||'') + ' ' + (d.counterparty_company||'') + ' ' + (d.notes||'')).toLowerCase().includes(search)) return false;
+      if (stageFilter) {
+        if (stageFilter === 'engagement' && !(d.stage||'').includes('engagement')) return false;
+        if (stageFilter === 'pitch_sent' && d.stage !== 'pitch_sent' && (d.stage||'') !== 'one_pager_review_pending') return false;
+        if (stageFilter === 'active' && !['engaged','active_internal_inquiry','mediaco_proposal_in_hand_packaging_for_ballys','meeting_reschedule_pending'].includes(d.stage)) return false;
+        if (stageFilter === 'dormant' && !(d.stage||'').includes('dormant')) return false;
+      }
+      if (priorityFilter && String(d.priority) !== priorityFilter) return false;
+      return true;
+    });
+    if (sortBy === 'due') filtered.sort((a,b) => (a.next_action_due||'9999') > (b.next_action_due||'9999') ? 1 : -1);
+    if (sortBy === 'touched') filtered.sort((a,b) => (b.last_touched||'') > (a.last_touched||'') ? 1 : -1);
+    if (sortBy === 'value') filtered.sort((a,b) => (Number(b.amount_target)||0) - (Number(a.amount_target)||0));
+    const container = document.getElementById('dealsContainer');
+    if (!filtered.length) { container.innerHTML = '<div class="empty-state">No deals match the current filters.</div>'; return; }
+    container.className = 'deals-grid';
+    container.innerHTML = filtered.map(d => renderCard(d)).join('');
+  }
+
+  function renderCard(d) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due = d.next_action_due ? new Date(d.next_action_due) : null;
+    let dueClass = 'future', dueLabel = '';
+    if (due) {
+      const diff = Math.round((due - today) / 86400000);
+      if (diff < 0) { dueClass = 'overdue'; dueLabel = 'OVERDUE ' + Math.abs(diff) + 'd'; }
+      else if (diff <= 3) { dueClass = 'soon'; dueLabel = diff === 0 ? 'Due today' : 'Due in ' + diff + 'd'; }
+      else { dueLabel = 'Due ' + d.next_action_due; }
+    }
+    const stageLabel = (d.stage||'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+    const fee = d.fee_structure ? d.fee_structure.replace(/_/g, ' ') : '—';
+    const value = d.amount_target ? '$' + (Number(d.amount_target)/1000).toFixed(0) + 'K' : '—';
+    return '<div class="deal-card priority-' + (d.priority || 3) + '" onclick="openModal(' + d.id + ')">' +
+      '<div class="deal-name">' + escapeHtml(d.name) + '</div>' +
+      '<div class="deal-counterparty"><strong>' + escapeHtml(d.counterparty_name || '—') + '</strong>' + (d.counterparty_company ? ' · ' + escapeHtml(d.counterparty_company) : '') + '</div>' +
+      '<span class="stage-badge stage-' + d.stage + '">' + escapeHtml(stageLabel) + '</span>' +
+      '<div class="deal-meta">' +
+        '<div>Fee: <span>' + escapeHtml(fee) + '</span></div>' +
+        '<div>Target: <span>' + value + '</span></div>' +
+        '<div>Priority: <span>P' + (d.priority || 3) + '</span></div>' +
+        '<div>Source: <span>' + escapeHtml((d.source||'—').replace(/_/g,' ')) + '</span></div>' +
+      '</div>' +
+      (d.next_action ? '<div class="deal-action"><strong>Next Action</strong>' + escapeHtml(d.next_action) + '</div>' : '') +
+      (dueLabel ? '<div class="deal-due ' + dueClass + '">' + dueLabel + '</div>' : '') +
+    '</div>';
+  }
+
+  function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+  function openModal(id) {
+    const modal = document.getElementById('dealModal');
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (id) {
+      const d = allDeals.find(x => x.id === id);
+      if (!d) return;
+      document.getElementById('modalTitle').textContent = 'Edit Deal';
+      document.getElementById('dealId').value = d.id;
+      document.getElementById('f_name').value = d.name || '';
+      document.getElementById('f_counterparty_name').value = d.counterparty_name || '';
+      document.getElementById('f_counterparty_email').value = d.counterparty_email || '';
+      document.getElementById('f_counterparty_company').value = d.counterparty_company || '';
+      document.getElementById('f_deal_type').value = d.deal_type || 'engagement';
+      document.getElementById('f_stage').value = d.stage || 'prospect';
+      document.getElementById('f_amount_target').value = d.amount_target || '';
+      document.getElementById('f_fee_structure').value = d.fee_structure || '';
+      document.getElementById('f_retainer_monthly').value = d.retainer_monthly || '';
+      document.getElementById('f_success_pct').value = d.success_pct || '';
+      document.getElementById('f_brokerage_bps').value = d.brokerage_bps || '';
+      document.getElementById('f_priority').value = d.priority || 3;
+      document.getElementById('f_source').value = d.source || 'warm_friend';
+      document.getElementById('f_notes').value = d.notes || '';
+      document.getElementById('f_next_action').value = d.next_action || '';
+      document.getElementById('f_next_action_due').value = d.next_action_due || '';
+      deleteBtn.style.display = '';
+    } else {
+      document.getElementById('modalTitle').textContent = 'New Deal';
+      document.getElementById('dealForm').reset();
+      document.getElementById('dealId').value = '';
+      deleteBtn.style.display = 'none';
+    }
+    modal.classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('dealModal').classList.remove('show'); }
+
+  async function saveDeal() {
+    const id = document.getElementById('dealId').value;
+    const payload = {
+      customer_id: userEmail,
+      name: document.getElementById('f_name').value,
+      counterparty_name: document.getElementById('f_counterparty_name').value || null,
+      counterparty_email: document.getElementById('f_counterparty_email').value || null,
+      counterparty_company: document.getElementById('f_counterparty_company').value || null,
+      deal_type: document.getElementById('f_deal_type').value,
+      stage: document.getElementById('f_stage').value,
+      amount_target: parseFloat(document.getElementById('f_amount_target').value) || null,
+      fee_structure: document.getElementById('f_fee_structure').value || null,
+      retainer_monthly: parseFloat(document.getElementById('f_retainer_monthly').value) || null,
+      success_pct: parseFloat(document.getElementById('f_success_pct').value) || null,
+      brokerage_bps: parseFloat(document.getElementById('f_brokerage_bps').value) || null,
+      priority: parseInt(document.getElementById('f_priority').value),
+      source: document.getElementById('f_source').value,
+      notes: document.getElementById('f_notes').value || null,
+      next_action: document.getElementById('f_next_action').value || null,
+      next_action_due: document.getElementById('f_next_action_due').value || null,
+      last_touched: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const { error } = id
+      ? await supabase.from('deals').update(payload).eq('id', id).eq('customer_id', userEmail)
+      : await supabase.from('deals').insert(payload);
+    if (error) { alert('Error saving deal: ' + error.message); return; }
+    closeModal();
+    await loadDeals();
+  }
+
+  async function deleteDeal() {
+    const id = document.getElementById('dealId').value;
+    if (!id) return;
+    if (!confirm('Delete this deal? This cannot be undone.')) return;
+    const { error } = await supabase.from('deals').delete().eq('id', id).eq('customer_id', userEmail);
+    if (error) { alert('Error deleting: ' + error.message); return; }
+    closeModal();
+    await loadDeals();
+  }
+
+  init();
+</script>
+
+</body>
+</html>
