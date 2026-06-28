@@ -1258,9 +1258,14 @@ async function loadAllDealContacts() {
       if ((c.tags || '').toLowerCase().includes(`deal:${slug}:committed`)) {
         agg.committed++;
       }
-      // Overdue actions from journey
-      (c.customer_journey || []).forEach(ev => {
-        if (ev.due && ev.deal === slug) {
+      // Overdue actions from journey (defensive: customer_journey may be null, string, or array)
+      let journey = c.customer_journey;
+      if (typeof journey === 'string') {
+        try { journey = JSON.parse(journey); } catch (e) { journey = []; }
+      }
+      if (!Array.isArray(journey)) journey = [];
+      journey.forEach(ev => {
+        if (ev && ev.due && ev.deal === slug) {
           const due = new Date(ev.due);
           if (!isNaN(due.getTime()) && due < today) agg.overdue++;
         }
