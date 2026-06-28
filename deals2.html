@@ -970,10 +970,21 @@ function redirectToLogin() {
 // ============================================================
 // Load deals from the SQL view
 // ============================================================
+// Narrow column list — omits `meta`, `day_30`, `day_90`, `icp` jsonb blobs which can be massive
+// (the user has deals with 50KB+ meta blobs). Refetch full row on demand when editing.
+const DEALS_LIST_COLUMNS = [
+  'deal_id', 'cus_id', 'deal_name', 'campaign_target', 'status', 'goal_description',
+  'co_advisor', 'days_active', 'target_close_date', 'created_at', 'last_updated',
+  'gross_value_usd', 'pwv_usd', 'take_rate_pct', 'base_close_prob_pct', 'soft_circle_amount_usd',
+  'total_prospects', 'soft_touch_count', 'pitched_count', 'soft_circle_count',
+  'committed_count', 'closed_count', 'declined_count', 'no_fit_count', 'broker_dealer',
+  'deal_tag_prefix'
+].join(',');
+
 async function loadDeals() {
   const { data, error } = await supabaseClient
     .from('deals_dashboard')
-    .select('*')
+    .select(DEALS_LIST_COLUMNS)
     .eq('cus_id', CUSTOMER_ID)
     .order('created_at', { ascending: false });
 
@@ -1750,8 +1761,18 @@ async function createNewDeal() {
   await loadDeals();
 }
 
-function editDealMeta() {
+async function editDealMeta() {
   if (!selectedDeal) return;
+  // Fetch full meta on demand (the deals list query omits meta to avoid PostgREST timeout on 20+ deals)
+  if (!selectedDeal.meta) {
+    const { data, error } = await supabaseClient
+      .from('campaigns')
+      .select('meta')
+      .eq('id', selectedDeal.deal_id)
+      .single();
+    if (error) { showStatus('Failed to load deal meta: ' + error.message, 'error'); return; }
+    selectedDeal.meta = data ? data.meta : {};
+  }
   document.getElementById('editDealStatus').value = selectedDeal.status || 'pre-launch';
   document.getElementById('editDealTarget').value = selectedDeal.campaign_target || '';
   document.getElementById('editDealCoAdvisor').value = selectedDeal.co_advisor || '';
