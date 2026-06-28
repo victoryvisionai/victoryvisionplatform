@@ -367,6 +367,87 @@
                border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* === View toggle + Stage filter (NEW) === */
+    .view-controls { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px;
+                     margin-bottom: 12px; align-items: center; }
+    .view-toggle { display: inline-flex; background: #fff; border-radius: 8px;
+                   box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+    .view-toggle button { background: none; border: none; padding: 8px 14px;
+                          cursor: pointer; font-size: 0.85rem; color: #666;
+                          transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+    .view-toggle button.active { background: #0A3161; color: white; }
+    .view-toggle button:not(.active):hover { background: #f0f2f5; }
+    
+    .stage-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+                          flex: 1; }
+    .stage-chip { background: white; border: 1px solid #e0e0e0; border-radius: 14px;
+                  padding: 5px 12px; font-size: 0.78rem; cursor: pointer;
+                  display: inline-flex; align-items: center; gap: 5px;
+                  transition: all 0.15s; user-select: none; }
+    .stage-chip:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .stage-chip.active { color: white; border-color: transparent; font-weight: 600; }
+    .stage-chip-count { background: #f0f2f5; color: #555; border-radius: 8px;
+                        padding: 1px 6px; font-size: 0.7rem; min-width: 18px; text-align: center; }
+    .stage-chip.active .stage-chip-count { background: rgba(255,255,255,0.25); color: white; }
+    
+    /* Deal stage badge (DEAL level) */
+    .deal-stage-badge { display: inline-block; padding: 3px 9px; border-radius: 11px;
+                        font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+                        letter-spacing: 0.5px; color: white; white-space: nowrap; }
+    .ds-soft-touch  { background: #17a2b8; }
+    .ds-pitched     { background: #007bff; }
+    .ds-soft-circle { background: #ffc107; color: #333; }
+    .ds-committed   { background: #28a745; }
+    .ds-signed      { background: #155724; }
+    .ds-lost        { background: #dc3545; }
+    .ds-unknown     { background: #6c757d; }
+    
+    /* Deal score */
+    .deal-score-badge { display: inline-flex; align-items: center; gap: 4px;
+                        padding: 2px 8px; border-radius: 10px; font-weight: bold;
+                        font-size: 0.75rem; white-space: nowrap; }
+    .deal-score-badge.high { background: #d4edda; color: #155724; }
+    .deal-score-badge.mid  { background: #fff3cd; color: #856404; }
+    .deal-score-badge.low  { background: #f8d7da; color: #721c24; }
+    
+    /* Per-deal needs-attention chips on cards */
+    .deal-attention { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+    .deal-attention-chip { font-size: 0.68rem; padding: 2px 6px; border-radius: 8px;
+                           font-weight: 600; white-space: nowrap; }
+    .att-stale { background: #f8d7da; color: #721c24; }
+    .att-await { background: #d1ecf1; color: #0c5460; }
+    .att-overdue { background: #fff3cd; color: #856404; }
+    .att-committed { background: #d4edda; color: #155724; }
+    
+    /* Drag handle */
+    .drag-handle { cursor: grab; color: #aaa; font-size: 1rem; user-select: none;
+                   padding: 0 4px; }
+    .drag-handle:hover { color: #0A3161; }
+    .drag-handle:active { cursor: grabbing; }
+    .deal-card.drag-source, .deal-row.drag-source { opacity: 0.4; }
+    .deal-card.drag-over, .deal-row.drag-over { box-shadow: 0 0 0 3px #28a745; }
+    
+    /* === Deals table view === */
+    .deals-table { width: 100%; background: white; border-collapse: separate;
+                   border-spacing: 0; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
+                   border-radius: 8px; overflow: hidden; }
+    .deals-table thead th { background: #0A3161; color: white; padding: 10px 8px;
+                            text-align: left; font-weight: bold; font-size: 0.78rem;
+                            text-transform: uppercase; letter-spacing: 0.4px; }
+    .deals-table thead th.sortable { cursor: pointer; user-select: none; }
+    .deals-table thead th.sortable:hover { background: #1a4c80; }
+    .deals-table tbody td { padding: 10px 8px; border-bottom: 1px solid #eee;
+                            vertical-align: middle; }
+    .deals-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .deals-table tbody tr:hover { background: #f8f9fa; }
+    .deals-table tbody tr.selected { background: #e7f1ff; }
+    .deals-table .nowrap { white-space: nowrap; }
+    .deals-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .deals-table .deal-name-cell { font-weight: 600; color: #0A3161; max-width: 280px;
+                                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .deals-table .counterparty-cell { color: #555; max-width: 200px;
+                                      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     @media (max-width: 768px) {
       .pipeline { grid-auto-columns: minmax(170px, 90vw); }
       .deals-grid { grid-template-columns: 1fr; }
@@ -379,6 +460,11 @@
         grid-template-columns: 24px 1fr 60px 50px 26px 26px;
         gap: 4px; font-size: 0.78rem;
       }
+      .deals-table { font-size: 0.78rem; }
+      .deals-table thead th { padding: 8px 4px; font-size: 0.7rem; }
+      .deals-table tbody td { padding: 6px 4px; }
+      .view-controls { padding: 0 8px; }
+      .deals-table .deal-name-cell, .deals-table .counterparty-cell { max-width: 130px; }
     }
   </style>
 </head>
@@ -448,6 +534,15 @@
     </button>
   </div>
 
+  <!-- View toggle + stage filter (NEW) -->
+  <div class="view-controls">
+    <div class="view-toggle" id="viewToggle">
+      <button class="active" data-view="cards" onclick="setDealView('cards')">▦ Cards</button>
+      <button data-view="table" onclick="setDealView('table')">≡ Table</button>
+    </div>
+    <div class="stage-filter-chips" id="stageFilterChips"></div>
+  </div>
+
   <!-- Pipeline Value Summary - 3 tiles -->
   <div class="card" id="pipelineSummary" style="margin-bottom:16px;">
     <div class="section-header">
@@ -475,7 +570,7 @@
     </div>
   </div>
 
-  <!-- Top: list of all deals as cards -->
+  <!-- Top: list of all deals as cards or table -->
   <div class="card">
     <div class="section-header">
       <h2>Active Deals (<span id="dealCount">0</span>)</h2>
@@ -485,6 +580,28 @@
     </div>
     <div id="dealsList" class="deals-grid">
       <div class="empty-state"><div class="loading"></div> Loading deals...</div>
+    </div>
+    <div id="dealsTableContainer" style="display:none; overflow-x:auto;">
+      <table class="deals-table" id="dealsTable">
+        <thead>
+          <tr>
+            <th style="width:30px;"></th>
+            <th class="sortable" onclick="sortDealsTable('deal_name')">Deal ↕</th>
+            <th class="sortable" onclick="sortDealsTable('deal_stage')">Stage ↕</th>
+            <th class="sortable num" onclick="sortDealsTable('score')">Score ↕</th>
+            <th>Counterparty</th>
+            <th class="sortable num" onclick="sortDealsTable('pwv_usd')">PWV ↕</th>
+            <th class="sortable num" onclick="sortDealsTable('total_prospects')">Pros ↕</th>
+            <th class="num">Stale</th>
+            <th class="num">Await</th>
+            <th class="num">Comm</th>
+            <th class="sortable nowrap" onclick="sortDealsTable('days_active')">Day ↕</th>
+            <th class="nowrap">Next Action</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dealsTableBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -620,7 +737,22 @@
     <button class="modal-close" onclick="closeEditDealModal()">×</button>
     <h2>Edit Deal</h2>
     <div class="form-group">
-      <label>Status</label>
+      <label>Deal Stage</label>
+      <select id="editDealStage">
+        <option value="soft-touch">Soft Touch — initial outreach</option>
+        <option value="pitched">Pitched — formal proposal sent</option>
+        <option value="soft-circle">Soft Circle — verbal interest, negotiating</option>
+        <option value="committed">Committed — engagement letter sent</option>
+        <option value="signed">Signed — engagement letter countersigned, work underway</option>
+        <option value="lost">Lost — deal will not close</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Score (0-100)</label>
+      <input type="number" id="editDealScore" min="0" max="100" placeholder="50"/>
+    </div>
+    <div class="form-group">
+      <label>Status (operational)</label>
       <select id="editDealStatus">
         <option value="pre-launch">Pre-Launch</option>
         <option value="pre-marketing">Pre-Marketing</option>
@@ -629,6 +761,7 @@
         <option value="final-close">Final Close</option>
         <option value="closed">Closed</option>
         <option value="paused">Paused</option>
+        <option value="archived">Archived (hidden)</option>
       </select>
     </div>
     <div class="form-group">
@@ -646,6 +779,14 @@
     <div class="form-group">
       <label>Soft-Circle Amount (USD)</label>
       <input type="number" id="editDealSoftCircle" placeholder="0"/>
+    </div>
+    <div class="form-group">
+      <label>Next Action</label>
+      <input type="text" id="editDealNextAction" placeholder="e.g. Push Jay for countersign"/>
+    </div>
+    <div class="form-group">
+      <label>Next Action Due</label>
+      <input type="date" id="editDealNextActionDue"/>
     </div>
     <button class="btn btn-success" onclick="saveDealMeta()">Save</button>
     <button class="btn btn-secondary" onclick="closeEditDealModal()">Cancel</button>
@@ -811,6 +952,27 @@ let targetsSortField = 'score';
 let targetsSortDir = 'desc';
 let currentFocus = 'all';
 
+// NEW: deals list view state
+let currentDealView = 'cards';           // 'cards' or 'table'
+let currentStageFilter = 'all';          // 'all' or specific deal-stage key
+let dealsTableSortField = null;          // when set, overrides sort_order
+let dealsTableSortDir = 'desc';
+let perDealAggregates = {};              // { slug: {stale, awaiting, overdue, committed, last_activity} }
+
+// DEAL stages (different from contact-within-deal stages)
+const DEAL_STAGES = [
+  { key: 'soft-touch',   label: 'Soft Touch',   color: '#17a2b8', position: 1 },
+  { key: 'pitched',      label: 'Pitched',      color: '#007bff', position: 2 },
+  { key: 'soft-circle',  label: 'Soft Circle',  color: '#ffc107', position: 3 },
+  { key: 'committed',    label: 'Committed',    color: '#28a745', position: 4 },
+  { key: 'signed',       label: 'Signed',       color: '#155724', position: 5 },
+  { key: 'lost',         label: 'Lost',         color: '#dc3545', position: 6 },
+];
+
+function getDealStageMeta(stageKey) {
+  return DEAL_STAGES.find(s => s.key === stageKey) || { key: 'unknown', label: 'Unknown', color: '#6c757d' };
+}
+
 // ============================================================
 // STAGES — loaded from localStorage; falls back to defaults.
 // Stage KEYS stay stable (referenced by every contact's tags + every n8n workflow).
@@ -970,15 +1132,23 @@ function redirectToLogin() {
 // ============================================================
 // Load deals from the SQL view
 // ============================================================
-// Narrow column list — omits `meta`, `day_30`, `day_90`, `icp` jsonb blobs which can be massive
-// (the user has deals with 50KB+ meta blobs). Refetch full row on demand when editing.
+// Narrow column list — extract specific small meta fields as aliased extracts so we
+// don't drag the full `meta` jsonb (which can be 14KB+ per deal). Adds deal_stage, score,
+// sort_order, next_action, next_action_due, counterparty_name from meta.
 const DEALS_LIST_COLUMNS = [
   'deal_id', 'cus_id', 'deal_name', 'campaign_target', 'status', 'goal_description',
   'co_advisor', 'days_active', 'target_close_date', 'created_at', 'last_updated',
   'gross_value_usd', 'pwv_usd', 'take_rate_pct', 'base_close_prob_pct', 'soft_circle_amount_usd',
   'total_prospects', 'soft_touch_count', 'pitched_count', 'soft_circle_count',
   'committed_count', 'closed_count', 'declined_count', 'no_fit_count', 'broker_dealer',
-  'deal_tag_prefix'
+  'deal_tag_prefix',
+  'deal_stage:meta->>deal_stage',
+  'score:meta->>score',
+  'sort_order:meta->>sort_order',
+  'next_action:meta->>next_action',
+  'next_action_due:meta->>next_action_due',
+  'counterparty_name:meta->>counterparty_name',
+  'counterparty_company:meta->>counterparty_company'
 ].join(',');
 
 async function loadDeals() {
@@ -986,6 +1156,7 @@ async function loadDeals() {
     .from('deals_dashboard')
     .select(DEALS_LIST_COLUMNS)
     .eq('cus_id', CUSTOMER_ID)
+    .neq('status', 'archived')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -994,22 +1165,193 @@ async function loadDeals() {
     return;
   }
 
-  allDeals = data || [];
+  // Coerce text-extracted meta fields into proper types and ensure defaults
+  allDeals = (data || []).map(d => ({
+    ...d,
+    deal_stage: d.deal_stage || mapStatusToDealStage(d.status),
+    score: d.score != null ? parseInt(d.score, 10) : null,
+    sort_order: d.sort_order != null ? parseInt(d.sort_order, 10) : 9999,
+  }));
+
+  // Sort deals by sort_order (manual reorder), tie-break by created_at desc
+  allDeals.sort((a, b) => {
+    const ao = a.sort_order ?? 9999;
+    const bo = b.sort_order ?? 9999;
+    if (ao !== bo) return ao - bo;
+    return (b.created_at || '').localeCompare(a.created_at || '');
+  });
+
+  await loadAllDealContacts(); // for per-deal aggregates
+  renderDealsList();
+}
+
+// Map old `status` field to a sensible deal_stage when meta.deal_stage isn't set yet
+function mapStatusToDealStage(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'pre-launch': return 'soft-touch';
+    case 'pre-marketing': return 'pitched';
+    case 'launched': return 'committed';
+    case 'soft-circle': return 'soft-circle';
+    case 'final-close': return 'committed';
+    case 'closed': return 'signed';
+    case 'paused': return 'soft-touch';
+    case 'struggling': return 'pitched';
+    default: return 'soft-touch';
+  }
+}
+
+// Load all contacts with ANY deal: tag, narrow column list. Groups them by deal-slug
+// to compute per-deal needs-attention counts.
+async function loadAllDealContacts() {
+  const { data, error } = await supabaseClient
+    .from('contacts')
+    .select('id, name, tags, last_emailed_date, last_opened_date, last_responded, last_called, meeting_date, customer_journey')
+    .eq('cus_id', CUSTOMER_ID)
+    .ilike('tags', '%deal:%');
+
+  if (error) {
+    console.error('Load deal contacts aggregate error:', error);
+    perDealAggregates = {};
+    return;
+  }
+
+  // Group contacts by every deal-slug they appear in
+  const bySlug = {};
+  (data || []).forEach(c => {
+    const tagStr = (c.tags || '').toLowerCase();
+    // Find every deal:<slug> base tag (slug = lowercase letters/digits/hyphens)
+    const matches = tagStr.matchAll(/deal:([a-z0-9-]+)(?=,|\s|$|:)/g);
+    const slugsInContact = new Set();
+    for (const m of matches) {
+      // Skip stage suffixes (matched as separate deal:<slug>:<stage>) since /(?=,|\s|$|:)/ stops before :
+      slugsInContact.add(m[1]);
+    }
+    // Skip slugs where contact is marked no-fit
+    slugsInContact.forEach(slug => {
+      if (new RegExp(`\\bdeal:${slug}:no-fit\\b`).test(tagStr)) return;
+      if (!bySlug[slug]) bySlug[slug] = [];
+      bySlug[slug].push(c);
+    });
+  });
+
+  // Compute per-slug aggregates
+  perDealAggregates = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  Object.entries(bySlug).forEach(([slug, contacts]) => {
+    const agg = { stale: 0, awaiting: 0, overdue: 0, committed: 0, last_activity: null };
+    contacts.forEach(c => {
+      // Stale calculation
+      const touches = [c.last_emailed_date, c.last_opened_date, c.last_responded, c.last_called, c.meeting_date].filter(Boolean);
+      if (touches.length > 0) {
+        const latest = touches.map(t => new Date(t)).sort((a,b) => b - a)[0];
+        if (!isNaN(latest.getTime())) {
+          const days = Math.floor((Date.now() - latest.getTime()) / 86400000);
+          if (days >= 14) agg.stale++;
+          if (!agg.last_activity || latest > new Date(agg.last_activity)) agg.last_activity = latest.toISOString();
+        }
+      }
+      // Awaiting reply
+      if (c.last_emailed_date && (!c.last_responded || new Date(c.last_emailed_date) > new Date(c.last_responded))) {
+        agg.awaiting++;
+      }
+      // Committed stage
+      if ((c.tags || '').toLowerCase().includes(`deal:${slug}:committed`)) {
+        agg.committed++;
+      }
+      // Overdue actions from journey
+      (c.customer_journey || []).forEach(ev => {
+        if (ev.due && ev.deal === slug) {
+          const due = new Date(ev.due);
+          if (!isNaN(due.getTime()) && due < today) agg.overdue++;
+        }
+      });
+    });
+    perDealAggregates[slug] = agg;
+  });
+}
+
+function aggForDeal(deal) {
+  const slug = dealSlug(deal.deal_name);
+  return perDealAggregates[slug] || { stale: 0, awaiting: 0, overdue: 0, committed: 0, last_activity: null };
+}
+
+// Filter for current stage chip selection
+function dealsForCurrentFilter() {
+  if (currentStageFilter === 'all') return allDeals;
+  return allDeals.filter(d => (d.deal_stage || mapStatusToDealStage(d.status)) === currentStageFilter);
+}
+
+function renderStageFilterChips() {
+  const counts = { all: allDeals.length };
+  DEAL_STAGES.forEach(s => { counts[s.key] = 0; });
+  allDeals.forEach(d => {
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    if (counts[stage] != null) counts[stage]++;
+  });
+
+  const chips = [`<div class="stage-chip ${currentStageFilter==='all'?'active':''}" 
+                       style="${currentStageFilter==='all'?'background:#0A3161;':''}"
+                       onclick="setStageFilter('all')">
+                    All <span class="stage-chip-count">${counts.all}</span>
+                  </div>`];
+
+  DEAL_STAGES.forEach(s => {
+    const active = currentStageFilter === s.key;
+    chips.push(`<div class="stage-chip ${active?'active':''}"
+                     style="${active?`background:${s.color};`:''}"
+                     onclick="setStageFilter('${s.key}')">
+                  ${esc(s.label)} <span class="stage-chip-count">${counts[s.key] || 0}</span>
+                </div>`);
+  });
+
+  document.getElementById('stageFilterChips').innerHTML = chips.join('');
+}
+
+function setStageFilter(stage) {
+  currentStageFilter = stage;
+  renderStageFilterChips();
+  renderDealsList();
+}
+
+function setDealView(view) {
+  currentDealView = view;
+  document.querySelectorAll('#viewToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
   renderDealsList();
 }
 
 function renderDealsList() {
-  const container = document.getElementById('dealsList');
-  document.getElementById('dealCount').textContent = allDeals.length;
+  renderStageFilterChips();
+  const filtered = dealsForCurrentFilter();
+  document.getElementById('dealCount').textContent = filtered.length;
 
-  if (allDeals.length === 0) {
-    container.innerHTML = '<div class="empty-state"><h3>No deals yet</h3><p>Click "+ New Deal" to create your first placement mandate.</p></div>';
+  const gridEl = document.getElementById('dealsList');
+  const tableContainer = document.getElementById('dealsTableContainer');
+
+  if (currentDealView === 'cards') {
+    tableContainer.style.display = 'none';
+    gridEl.style.display = 'grid';
+    renderDealsCards(filtered);
+  } else {
+    gridEl.style.display = 'none';
+    tableContainer.style.display = 'block';
+    renderDealsTable(filtered);
+  }
+
+  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
+}
+
+function renderDealsCards(filtered) {
+  const container = document.getElementById('dealsList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><h3>No deals match this filter</h3><p>Try "All" or another stage.</p></div>';
     return;
   }
 
-  container.innerHTML = allDeals.map(d => {
+  container.innerHTML = filtered.map(d => {
     const statusClass = 'status-' + (d.status || 'pre-launch').replace(/_/g, '-');
-    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo mandate';
+    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo';
     const daysLine = d.target_close_date
       ? `Day ${d.days_active}/${daysBetween(d.created_at, d.target_close_date)}`
       : `Day ${d.days_active}`;
@@ -1018,15 +1360,43 @@ function renderDealsList() {
     const pwv = Number(d.pwv_usd || 0);
     const takeRate = Number(d.take_rate_pct || 0);
     const closeProb = Number(d.base_close_prob_pct || 0);
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    const stageMeta = getDealStageMeta(stage);
+    const score = d.score;
+    const scoreClass = score == null ? 'low' : (score >= 70 ? 'high' : (score >= 40 ? 'mid' : 'low'));
+
+    const agg = aggForDeal(d);
+    const attentionChips = [];
+    if (agg.overdue > 0) attentionChips.push(`<span class="deal-attention-chip att-overdue">⏰ ${agg.overdue} overdue</span>`);
+    if (agg.stale > 0) attentionChips.push(`<span class="deal-attention-chip att-stale">⚠️ ${agg.stale} stale</span>`);
+    if (agg.awaiting > 0) attentionChips.push(`<span class="deal-attention-chip att-await">📬 ${agg.awaiting} awaiting</span>`);
+    if (agg.committed > 0) attentionChips.push(`<span class="deal-attention-chip att-committed">✓ ${agg.committed} committed</span>`);
 
     return `
-      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" onclick="selectDeal('${d.deal_id}')">
+      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" 
+           data-deal-id="${esc(d.deal_id)}"
+           draggable="true"
+           ondragstart="handleDealDragStart(event, '${esc(d.deal_id)}')"
+           ondragover="handleDealDragOver(event)"
+           ondragleave="handleDealDragLeave(event)"
+           ondrop="handleDealDrop(event, '${esc(d.deal_id)}')"
+           ondragend="handleDealDragEnd(event)"
+           onclick="selectDeal('${esc(d.deal_id)}')">
         <div class="deal-card-header">
-          <div class="deal-card-name">${esc(d.deal_name)}</div>
+          <div style="display:flex; gap:6px; align-items:center; flex:1; min-width:0;">
+            <span class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">⋮⋮</span>
+            <div class="deal-card-name">${esc(d.deal_name)}</div>
+          </div>
           <div class="deal-card-target">${esc(d.campaign_target || '—')}</div>
         </div>
-        <div class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+          <span class="deal-stage-badge ds-${stage}">${esc(stageMeta.label)}</span>
+          ${score != null ? `<span class="deal-score-badge ${scoreClass}">★ ${score}</span>` : ''}
+          <span class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</span>
+        </div>
+        ${d.counterparty_name ? `<div class="deal-card-meta"><strong>${esc(d.counterparty_name)}</strong>${d.counterparty_company ? ' · '+esc(d.counterparty_company) : ''}</div>` : ''}
         <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
+        ${attentionChips.length > 0 ? `<div class="deal-attention">${attentionChips.join('')}</div>` : ''}
         ${grossValue > 0 ? `
         <div class="deal-card-pricing">
           <div>
@@ -1039,6 +1409,9 @@ function renderDealsList() {
             <div class="amount" style="color:#0d6b4d;">$${formatMoney(pwv)}</div>
             <div class="sub">@ ${closeProb}% close</div>
           </div>
+        </div>` : ''}
+        ${d.next_action ? `<div style="font-size:0.78rem; color:#0c5460; background:#f0f8ff; padding:6px 8px; border-radius:4px; margin-top:6px;">
+          <strong>Next:</strong> ${esc(d.next_action)}${d.next_action_due ? ` <span style="color:#888;">(due ${esc(d.next_action_due)})</span>` : ''}
         </div>` : ''}
         <div class="deal-card-stats">
           <div class="deal-card-stat-label">Prospects</div>
@@ -1055,8 +1428,157 @@ function renderDealsList() {
       </div>
     `;
   }).join('');
+}
 
-  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
+function renderDealsTable(filtered) {
+  const tbody = document.getElementById('dealsTableBody');
+  
+  // Apply table sort if active (overrides sort_order)
+  let display = [...filtered];
+  if (dealsTableSortField) {
+    display.sort((a, b) => {
+      let av = a[dealsTableSortField];
+      let bv = b[dealsTableSortField];
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (typeof av === 'number' || typeof bv === 'number') {
+        const an = Number(av) || 0, bn = Number(bv) || 0;
+        return dealsTableSortDir === 'asc' ? an - bn : bn - an;
+      }
+      return dealsTableSortDir === 'asc' 
+        ? String(av).localeCompare(String(bv)) 
+        : String(bv).localeCompare(String(av));
+    });
+  }
+  
+  if (display.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:30px; color:#888;">No deals match this filter</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = display.map(d => {
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    const stageMeta = getDealStageMeta(stage);
+    const score = d.score;
+    const scoreClass = score == null ? 'low' : (score >= 70 ? 'high' : (score >= 40 ? 'mid' : 'low'));
+    const agg = aggForDeal(d);
+    const pwv = Number(d.pwv_usd || 0);
+    
+    return `
+      <tr class="deal-row ${selectedDealId === d.deal_id ? 'selected' : ''}"
+          data-deal-id="${esc(d.deal_id)}"
+          draggable="true"
+          ondragstart="handleDealDragStart(event, '${esc(d.deal_id)}')"
+          ondragover="handleDealDragOver(event)"
+          ondragleave="handleDealDragLeave(event)"
+          ondrop="handleDealDrop(event, '${esc(d.deal_id)}')"
+          ondragend="handleDealDragEnd(event)"
+          onclick="selectDeal('${esc(d.deal_id)}')">
+        <td><span class="drag-handle" onclick="event.stopPropagation()" title="Drag to reorder">⋮⋮</span></td>
+        <td class="deal-name-cell" title="${esc(d.deal_name)}">${esc(d.deal_name)}</td>
+        <td><span class="deal-stage-badge ds-${stage}">${esc(stageMeta.label)}</span></td>
+        <td class="num">${score != null ? `<span class="deal-score-badge ${scoreClass}">${score}</span>` : '—'}</td>
+        <td class="counterparty-cell" title="${esc(d.counterparty_name || '')}">${esc(d.counterparty_name || '—')}</td>
+        <td class="num nowrap">$${formatMoney(pwv)}</td>
+        <td class="num">${d.total_prospects || 0}</td>
+        <td class="num">${agg.stale > 0 ? `<strong style="color:#dc3545;">${agg.stale}</strong>` : '—'}</td>
+        <td class="num">${agg.awaiting > 0 ? `<strong style="color:#0c5460;">${agg.awaiting}</strong>` : '—'}</td>
+        <td class="num">${agg.committed > 0 ? `<strong style="color:#155724;">${agg.committed}</strong>` : '—'}</td>
+        <td class="nowrap">${d.days_active}${d.target_close_date ? `/${daysBetween(d.created_at, d.target_close_date)}` : ''}</td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(d.next_action || '')}">
+          ${esc(d.next_action || '—')}
+          ${d.next_action_due ? `<div style="font-size:0.7rem; color:#888;">${esc(d.next_action_due)}</div>` : ''}
+        </td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+          <button class="btn btn-sm" onclick="event.stopPropagation(); selectDeal('${esc(d.deal_id)}'); setTimeout(editDealMeta, 100);">Edit</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function sortDealsTable(field) {
+  if (dealsTableSortField === field) {
+    dealsTableSortDir = dealsTableSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    dealsTableSortField = field;
+    dealsTableSortDir = (field === 'score' || field === 'pwv_usd' || field === 'total_prospects') ? 'desc' : 'asc';
+  }
+  renderDealsList();
+}
+
+// ============================================================
+// Drag-to-reorder deals
+// ============================================================
+let dealDragSourceId = null;
+function handleDealDragStart(e, dealId) {
+  dealDragSourceId = dealId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('drag-source');
+}
+function handleDealDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+function handleDealDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function handleDealDragEnd(e) { 
+  e.currentTarget.classList.remove('drag-source');
+  document.querySelectorAll('.deal-card.drag-over, .deal-row.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+async function handleDealDrop(e, targetDealId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dealDragSourceId || dealDragSourceId === targetDealId) return;
+  await reorderDeals(dealDragSourceId, targetDealId);
+  dealDragSourceId = null;
+}
+
+async function reorderDeals(sourceId, targetId) {
+  // Compute new sort_order by inserting source BEFORE target in the current display order
+  const displayDeals = dealsForCurrentFilter();
+  const srcIdx = displayDeals.findIndex(d => d.deal_id === sourceId);
+  const tgtIdx = displayDeals.findIndex(d => d.deal_id === targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  
+  // Build new order by removing source then inserting at target position
+  const reordered = [...displayDeals];
+  const [moved] = reordered.splice(srcIdx, 1);
+  const insertAt = srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx;
+  reordered.splice(insertAt, 0, moved);
+  
+  // Assign new sort_order based on new positions. Update each deal's meta.sort_order.
+  // We need to preserve other meta fields, so fetch full meta for each deal we're updating.
+  showStatus('Reordering...', 'info');
+  
+  const updates = [];
+  for (let i = 0; i < reordered.length; i++) {
+    const d = reordered[i];
+    const newOrder = i + 1;
+    if (d.sort_order !== newOrder) {
+      updates.push({ id: d.deal_id, sort_order: newOrder });
+      d.sort_order = newOrder;
+    }
+  }
+  
+  // Apply updates via PostgreSQL jsonb_set in batch (one query)
+  // We can't easily do this with supabase-js .update for jsonb subkeys without re-fetching meta.
+  // Simpler approach: do parallel updates.
+  const promises = updates.map(async u => {
+    // Fetch existing meta
+    const { data: existing, error: fe } = await supabaseClient
+      .from('campaigns').select('meta').eq('id', u.id).single();
+    if (fe || !existing) return;
+    const newMeta = Object.assign({}, existing.meta || {}, { sort_order: u.sort_order });
+    return supabaseClient.from('campaigns').update({ meta: newMeta }).eq('id', u.id);
+  });
+  
+  await Promise.all(promises);
+  
+  // Update local state
+  allDeals.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999));
+  renderDealsList();
+  showStatus(`Reordered ${updates.length} deals`, 'success');
 }
 
 function updatePipelineSummary() {
@@ -1773,11 +2295,16 @@ async function editDealMeta() {
     if (error) { showStatus('Failed to load deal meta: ' + error.message, 'error'); return; }
     selectedDeal.meta = data ? data.meta : {};
   }
+  const m = selectedDeal.meta || {};
+  document.getElementById('editDealStage').value = m.deal_stage || mapStatusToDealStage(selectedDeal.status);
+  document.getElementById('editDealScore').value = m.score != null ? m.score : (selectedDeal.score || '');
   document.getElementById('editDealStatus').value = selectedDeal.status || 'pre-launch';
   document.getElementById('editDealTarget').value = selectedDeal.campaign_target || '';
   document.getElementById('editDealCoAdvisor').value = selectedDeal.co_advisor || '';
   document.getElementById('editDealCloseDate').value = selectedDeal.target_close_date || '';
   document.getElementById('editDealSoftCircle').value = selectedDeal.soft_circle_amount_usd || 0;
+  document.getElementById('editDealNextAction').value = m.next_action || selectedDeal.next_action || '';
+  document.getElementById('editDealNextActionDue').value = m.next_action_due || selectedDeal.next_action_due || '';
   document.getElementById('editDealModal').classList.add('active');
 }
 function closeEditDealModal() { document.getElementById('editDealModal').classList.remove('active'); }
@@ -1788,6 +2315,15 @@ async function saveDealMeta() {
   updatedMeta.co_advisor = document.getElementById('editDealCoAdvisor').value.trim() || null;
   updatedMeta.target_close_date = document.getElementById('editDealCloseDate').value || null;
   updatedMeta.soft_circle_amount_usd = parseInt(document.getElementById('editDealSoftCircle').value, 10) || 0;
+  
+  // NEW fields
+  updatedMeta.deal_stage = document.getElementById('editDealStage').value;
+  const scoreInput = document.getElementById('editDealScore').value;
+  updatedMeta.score = scoreInput === '' ? null : Math.max(0, Math.min(100, parseInt(scoreInput, 10) || 0));
+  const nextAction = document.getElementById('editDealNextAction').value.trim();
+  if (nextAction) updatedMeta.next_action = nextAction;
+  const nextDue = document.getElementById('editDealNextActionDue').value;
+  if (nextDue) updatedMeta.next_action_due = nextDue;
 
   const { error } = await supabaseClient
     .from('campaigns')
@@ -1804,7 +2340,12 @@ async function saveDealMeta() {
   showStatus('Deal updated', 'success');
   await loadDeals();
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-  renderDashboard();
+  if (selectedDeal) {
+    renderDashboard();
+    document.getElementById('selectedDealName').textContent = selectedDeal.deal_name;
+    document.getElementById('selectedDealMeta').textContent =
+      `${selectedDeal.campaign_target || ''} · ${selectedDeal.status || ''} · ${selectedDeal.co_advisor ? 'Co-advisor: ' + selectedDeal.co_advisor : 'Solo mandate'} · Day ${selectedDeal.days_active}${selectedDeal.target_close_date ? '/' + daysBetween(selectedDeal.created_at, selectedDeal.target_close_date) : ''}`;
+  }
 }
 
 // ============================================================
@@ -2361,6 +2902,15 @@ window.updateWorkingStage = updateWorkingStage;
 window.hideStageFromConfig = hideStageFromConfig;
 window.resetStagesToDefaults = resetStagesToDefaults;
 window.saveStageConfigs = saveStageConfigs;
+// NEW: deals list view controls
+window.setDealView = setDealView;
+window.setStageFilter = setStageFilter;
+window.sortDealsTable = sortDealsTable;
+window.handleDealDragStart = handleDealDragStart;
+window.handleDealDragOver = handleDealDragOver;
+window.handleDealDragLeave = handleDealDragLeave;
+window.handleDealDragEnd = handleDealDragEnd;
+window.handleDealDrop = handleDealDrop;
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
