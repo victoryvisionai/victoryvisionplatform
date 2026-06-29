@@ -1,1437 +1,1176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Victory Vision AI</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    /* ============================================================
-       Base + navbar — matches the rest of the Victory Vision site.
-       ============================================================ */
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .auth-loading {
-      position: fixed; inset: 0;
-      background: #fff;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 99999;
-    }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 4px solid #e5e7eb; border-top-color: #1d4ed8;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .navbar {
-      background: linear-gradient(135deg, #0F2E5C 0%, #1d4ed8 100%);
-      color: #fff;
-      padding: 12px 24px;
-      display: flex; align-items: center; gap: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .logo img { height: 40px; border-radius: 6px; }
-    .navbar nav ul {
-      display: flex; gap: 18px;
-      list-style: none; margin: 0; padding: 0;
-    }
-    .navbar nav a {
-      color: rgba(255,255,255,0.85);
-      text-decoration: none;
-      font-size: 14px; font-weight: 500;
-      padding: 6px 0;
-      border-bottom: 2px solid transparent;
-    }
-    .navbar nav a.active, .navbar nav a:hover {
-      color: #fff;
-      border-bottom-color: #fff;
-    }
-    .user-info {
-      margin-left: auto;
-      display: flex; align-items: center; gap: 12px;
-      font-size: 13px;
-    }
-    .subscription-medallion {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .subscription-medallion.bronze { background: #cd7f32; }
-    .tour-btn {
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .tour-btn:hover { background: rgba(255,255,255,0.25); }
-
-    /* ============================================================
-       AI Workspace — the whole page below the navbar
-       ============================================================ */
-    .workspace {
-      display: grid;
-      grid-template-columns: minmax(340px, 32%) 1fr;
-      gap: 16px;
-      padding: 16px;
-      height: calc(100vh - 64px);
-      max-height: calc(100vh - 64px);
-    }
-    @media (max-width: 1000px) {
-      .workspace { grid-template-columns: 1fr; height: auto; max-height: none; }
-    }
-
-    /* ----- Chat column ----- */
-    .chat-column {
-      display: flex; flex-direction: column;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      overflow: hidden;
-      min-height: 0;
-    }
-    .chat-header {
-      padding: 14px 18px;
-      background: linear-gradient(135deg, #0F2E5C 0%, #1d4ed8 100%);
-      color: #fff;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .chat-header-title { font-weight: 700; font-size: 14px; }
-    .chat-header-meta {
-      font-size: 10px; opacity: 0.7;
-      font-family: 'Consolas', 'Monaco', monospace;
-    }
-    .chat-messages {
-      flex: 1; overflow-y: auto;
-      padding: 16px;
-      background: #f9fafb;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .msg {
-      max-width: 88%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .msg.user {
-      align-self: flex-end;
-      background: #1d4ed8; color: #fff;
-      border-bottom-right-radius: 4px;
-    }
-    .msg.assistant {
-      align-self: flex-start;
-      background: #fff; color: #111827;
-      border: 1px solid #e5e7eb;
-      border-bottom-left-radius: 4px;
-    }
-    .msg.hint {
-      align-self: center;
-      background: transparent;
-      color: #6b7280;
-      font-size: 12px;
-      font-style: italic;
-      max-width: 100%;
-      text-align: center;
-    }
-    .typing {
-      align-self: flex-start;
-      padding: 10px 14px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      border-bottom-left-radius: 4px;
-      color: #6b7280;
-      font-size: 13px;
-      font-style: italic;
-    }
-    .suggestions {
-      padding: 8px 12px;
-      display: flex; flex-wrap: wrap; gap: 6px;
-      border-top: 1px solid #f3f4f6;
-      background: #f9fafb;
-    }
-    .suggestion-chip {
-      padding: 6px 10px;
-      background: #fff;
-      border: 1px solid #d1d5db;
-      border-radius: 14px;
-      font-size: 11px;
-      color: #374151;
-      cursor: pointer;
-    }
-    .suggestion-chip:hover { background: #eff6ff; border-color: #1d4ed8; color: #1d4ed8; }
-    .input-row {
-      display: flex; gap: 8px;
-      padding: 12px;
-      background: #fff;
-      border-top: 1px solid #e5e7eb;
-    }
-    .chat-input {
-      flex: 1;
-      padding: 10px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
-      resize: none;
-      min-height: 40px;
-      max-height: 140px;
-    }
-    .chat-input:focus {
-      outline: none;
-      border-color: #1d4ed8;
-      box-shadow: 0 0 0 2px rgba(29,78,216,0.12);
-    }
-    .send-btn {
-      padding: 0 18px;
-      background: #1d4ed8; color: #fff;
-      border: none; border-radius: 8px;
-      font-weight: 600; font-size: 14px;
-      cursor: pointer;
-    }
-    .send-btn:hover { background: #1e40af; }
-    .send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
-
-    /* Icon buttons for attach + mic */
-    .icon-btn {
-      width: 40px; height: 40px;
-      background: #f3f4f6; color: #4b5563;
-      border: 1px solid #e5e7eb; border-radius: 8px;
-      cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s, color 0.15s;
-    }
-    .icon-btn:hover { background: #e5e7eb; color: #1f2937; }
-    .icon-btn.recording {
-      background: #fee2e2; color: #b91c1c;
-      animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.4); }
-      50%      { box-shadow: 0 0 0 8px rgba(185,28,28,0); }
-    }
-    .attachment-strip {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      padding: 0 12px 8px 12px;
-      background: #fff;
-    }
-    .attachment-pill {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #eef2ff; color: #3730a3;
-      padding: 4px 8px 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-    }
-    .attachment-pill .remove {
-      cursor: pointer; font-weight: 700;
-      padding: 0 4px; opacity: 0.6;
-    }
-    .attachment-pill .remove:hover { opacity: 1; }
-    .attachment-pill.uploading { background: #fef3c7; color: #92400e; }
-    .attachment-pill.error { background: #fee2e2; color: #b91c1c; }
-
-    /* ----- Panes column ----- */
-    .panes-column {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      grid-auto-rows: minmax(220px, auto);
-      gap: 14px;
-      overflow-y: auto;
-      align-content: start;
-      padding-right: 4px;
-    }
-    .pane {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 14px;
-      display: flex; flex-direction: column;
-      gap: 8px;
-      min-height: 220px;
-      transition: box-shadow 0.15s;
-    }
-    .pane:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .pane-header {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      gap: 8px;
-    }
-    .pane-title {
-      font-size: 13px; font-weight: 700;
-      color: #0F2E5C;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-    }
-    .pane-meta {
-      font-size: 9px;
-      color: #9ca3af;
-      font-family: 'Consolas', monospace;
-      margin-top: 2px;
-    }
-    .pane-actions {
-      display: flex; gap: 4px;
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-    .pane:hover .pane-actions { opacity: 1; }
-    .pane-action-btn {
-      background: transparent;
-      border: 1px solid #e5e7eb;
-      border-radius: 4px;
-      padding: 2px 7px;
-      font-size: 11px;
-      color: #6b7280;
-      cursor: pointer;
-    }
-    .pane-action-btn:hover { background: #f9fafb; color: #111827; }
-    .pane-body {
-      flex: 1;
-      font-size: 13px;
-      color: #111827;
-      overflow-y: auto;
-    }
-    .pane-placeholder {
-      color: #9ca3af;
-      font-style: italic;
-      font-size: 12px;
-      padding: 20px 8px;
-      text-align: center;
-    }
-    .empty-state {
-      grid-column: 1 / -1;
-      text-align: center;
-      color: #6b7280;
-      padding: 60px 20px;
-      font-style: italic;
-    }
-
-    /* ----- Pane component styles ----- */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 10px;
-    }
-    .kpi-tile {
-      padding: 10px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      text-align: center;
-    }
-    .kpi-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .kpi-value { font-size: 20px; font-weight: 700; color: #0F2E5C; }
-    .kpi-delta { font-size: 11px; margin-top: 2px; }
-    .kpi-delta.up { color: #059669; }
-    .kpi-delta.down { color: #dc2626; }
-    .kpi-delta.flat { color: #9ca3af; }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    .data-table th {
-      text-align: left;
-      padding: 6px 8px;
-      background: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      color: #6b7280;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.5px;
-    }
-    .data-table td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #f3f4f6;
-      color: #111827;
-    }
-    .data-table tr:hover td { background: #f9fafb; }
-
-    .contact-card {
-      padding: 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      background: #fff;
-      position: relative;
-    }
-    .contact-card-name { font-weight: 600; color: #0F2E5C; font-size: 13px; }
-    .contact-card-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
-    .contact-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-    .contact-card-tag {
-      font-size: 10px;
-      background: #eef2ff;
-      color: #4338ca;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .contact-card-score {
-      position: absolute;
-      top: 8px; right: 10px;
-      font-size: 11px; font-weight: 600; color: #059669;
-    }
-
-    .deal-card {
-      padding: 12px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      background: #fff;
-    }
-    .deal-name { font-size: 14px; font-weight: 700; color: #0F2E5C; }
-    .deal-tagline { font-size: 11px; color: #6b7280; margin: 4px 0 8px; }
-    .deal-numbers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-    .deal-num-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; }
-    .deal-num-value { font-size: 16px; font-weight: 700; color: #0F2E5C; }
-
-    .checklist-item {
-      display: flex; align-items: flex-start; gap: 8px;
-      padding: 8px 0;
-      border-bottom: 1px solid #f3f4f6;
-      font-size: 12px;
-    }
-    .checklist-item:last-child { border-bottom: none; }
-    .checklist-status {
-      display: inline-block;
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    .checklist-status.pending { background: #e5e7eb; border: 2px solid #9ca3af; box-sizing: border-box; }
-    .checklist-status.completed { background: #10b981; }
-    .checklist-status.skipped { background: #f87171; }
-    .checklist-text { flex: 1; }
-    .checklist-score { font-size: 10px; color: #6b7280; font-family: 'Consolas', monospace; }
-
-    .pipeline-row {
-      display: grid;
-      grid-template-columns: 90px 1fr auto;
-      gap: 8px;
-      align-items: center;
-      padding: 6px 0;
-      font-size: 12px;
-    }
-    .pipeline-label { color: #111827; font-weight: 600; }
-    .pipeline-track {
-      height: 18px;
-      background: #f3f4f6;
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
-    }
-    .pipeline-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #0F2E5C, #1d4ed8);
-    }
-    .pipeline-pwv {
-      position: absolute; top: 0; left: 0;
-      height: 100%;
-      background: linear-gradient(90deg, #059669, #10b981);
-      opacity: 0.75;
-    }
-    .pipeline-value { font-family: 'Consolas', monospace; font-size: 11px; color: #6b7280; white-space: nowrap; }
-
-    .funnel-stage {
-      display: flex; align-items: center;
-      padding: 6px 0; gap: 8px;
-      font-size: 12px;
-    }
-    .funnel-bar {
-      height: 22px;
-      background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-      border-radius: 4px;
-      color: #fff;
-      padding: 0 8px;
-      display: flex; align-items: center;
-      font-weight: 600; font-size: 11px;
-    }
-    .funnel-label { width: 110px; font-size: 11px; color: #6b7280; }
-
-    .markdown-body { font-size: 13px; line-height: 1.5; color: #111827; }
-    .markdown-body p { margin: 0 0 8px; }
-    .markdown-body strong { font-weight: 700; }
-    .markdown-body em { font-style: italic; }
-    .markdown-body code {
-      background: #f3f4f6;
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-family: 'Consolas', monospace;
-      font-size: 12px;
-    }
-
-    .timeline-item {
-      padding: 6px 0 6px 16px;
-      border-left: 2px solid #1d4ed8;
-      margin-left: 4px;
-      font-size: 12px;
-      position: relative;
-    }
-    .timeline-item::before {
-      content: '';
-      position: absolute;
-      left: -5px; top: 8px;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #1d4ed8;
-    }
-    .timeline-time { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .chart-svg { width: 100%; height: 100%; min-height: 160px; }
-
-    /* ----- Confirmation modal ----- */
-    .confirm-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999;
-    }
-    .confirm-modal {
-      background: #fff;
-      border-radius: 12px;
-      max-width: 480px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      overflow: hidden;
-    }
-    .confirm-header {
-      padding: 16px 20px;
-      background: linear-gradient(135deg, #0F2E5C, #1d4ed8);
-      color: #fff;
-    }
-    .confirm-title { font-size: 15px; font-weight: 700; }
-    .confirm-subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
-    .confirm-body {
-      padding: 16px 20px;
-      font-size: 13px; color: #111827;
-      line-height: 1.5;
-    }
-    .confirm-row { display: grid; grid-template-columns: 80px 1fr; gap: 8px; padding: 4px 0; font-size: 12px; }
-    .confirm-row-label { color: #6b7280; }
-    .confirm-row-value { color: #111827; font-weight: 500; word-break: break-word; }
-    .confirm-actions { display: flex; gap: 8px; padding: 12px 20px 16px; justify-content: flex-end; }
-    .confirm-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
-    .confirm-btn-skip { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
-    .confirm-btn-ok { background: #059669; color: #fff; }
-    .confirm-btn-ok:hover { background: #047857; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Victory Vision AI SDR — Performance & Plans</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f8fafc; color:#333; min-height:100vh; }
+  
+  .navbar { background:#0A3161; color:white; padding:15px 30px; display:flex;
+            justify-content:space-between; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  .navbar .logo img { height:50px; }
+  .navbar nav ul { display:flex; list-style:none; gap:25px; }
+  .navbar nav ul li a { color:white; text-decoration:none; padding:8px 15px; border-radius:5px;
+                        transition:background 0.3s; }
+  .navbar nav ul li a.active, .navbar nav ul li a:hover { background:rgba(255,255,255,0.2); }
+  .user-info { display:flex; align-items:center; gap:15px; }
+  .medallion { background:linear-gradient(45deg,#CD7F32,#A0522D); color:white; padding:8px 15px;
+               border-radius:20px; font-weight:bold; font-size:12px; text-transform:uppercase; }
+  
+  .container { max-width:1400px; margin:0 auto; padding:30px; }
+  .page-header { background:white; padding:25px 30px; border-radius:10px;
+                 box-shadow:0 2px 10px rgba(0,0,0,0.08); margin-bottom:20px; }
+  .page-header h1 { font-size:30px; color:#0A3161; margin-bottom:6px; }
+  .page-header p { color:#666; font-size:14px; }
+  
+  /* === FOCUS SELECTOR (NEW) === */
+  .focus-bar { background:linear-gradient(135deg,#0A3161 0%,#1a4c80 100%); border-radius:10px;
+               padding:18px 24px; margin-bottom:20px; color:white;
+               box-shadow:0 4px 12px rgba(10,49,97,0.25); }
+  .focus-bar-row { display:grid; grid-template-columns: 1.5fr 2fr auto; gap:16px; align-items:end; }
+  .focus-field label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.8px;
+                       margin-bottom:6px; opacity:0.85; font-weight:600; }
+  .focus-field select, .focus-field input { width:100%; padding:9px 12px; border:none; border-radius:6px;
+                                              font-size:14px; background:white; color:#0A3161; font-family:inherit; }
+  .time-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .time-pill { padding:6px 14px; background:rgba(255,255,255,0.15); border:1.5px solid transparent;
+               border-radius:18px; color:white; cursor:pointer; font-size:13px; font-weight:500;
+               transition:all 0.2s; user-select:none; }
+  .time-pill:hover { background:rgba(255,255,255,0.25); }
+  .time-pill.active { background:white; color:#0A3161; font-weight:700; }
+  .custom-range { display:none; gap:8px; align-items:end; margin-top:10px; }
+  .custom-range.active { display:flex; }
+  .custom-range input[type="date"] { padding:6px 10px; border-radius:6px; border:none;
+                                      color:#0A3161; font-size:13px; }
+  .focus-summary { font-size:13px; opacity:0.9; margin-top:8px; padding-top:8px;
+                   border-top:1px solid rgba(255,255,255,0.2); }
+  .focus-summary b { color:#FFD700; }
+  
+  /* SDR toggle */
+  .sdr-toggle { display:flex; justify-content:space-between; align-items:center;
+                background:linear-gradient(135deg,#667eea,#764ba2); padding:20px 24px;
+                border-radius:10px; color:white; margin-bottom:20px; }
+  .sdr-toggle h2 { font-size:20px; margin-bottom:4px; }
+  .sdr-toggle p { font-size:13px; opacity:0.9; }
+  .toggle-switch { position:relative; width:64px; height:32px; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,0.3);
+            border-radius:32px; transition:0.3s; }
+  .slider:before { content:""; position:absolute; height:24px; width:24px; left:4px; bottom:4px;
+                   background:white; border-radius:50%; transition:0.3s; }
+  input:checked + .slider { background:#10b981; }
+  input:checked + .slider:before { transform:translateX(32px); }
+  
+  /* Cards */
+  .card { background:white; padding:24px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.08);
+          margin-bottom:20px; }
+  .card h2 { font-size:20px; color:#0A3161; margin-bottom:16px; display:flex;
+             justify-content:space-between; align-items:center; }
+  .card h3 { font-size:16px; color:#0A3161; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  
+  /* Funnel — 5 tiers */
+  .funnel { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .funnel-row { display:grid; grid-template-columns:180px 1fr 60px; gap:16px; align-items:center;
+                padding:12px 16px; border-radius:8px; cursor:pointer; transition:all 0.2s; }
+  .funnel-row:hover { transform:translateX(4px); }
+  .fr-leads     { background:linear-gradient(90deg,#0A3161,#1a4a8a); color:white; }
+  .fr-outreach  { background:linear-gradient(90deg,#1a4a8a,#5e1f6e); color:white; }
+  .fr-engagement{ background:linear-gradient(90deg,#5e1f6e,#8b1a3a); color:white; }
+  .fr-meetings  { background:linear-gradient(90deg,#8b1a3a,#bb133e); color:white; }
+  .fr-victory   { background:linear-gradient(90deg,#bb133e,#d4365a); color:white; }
+  .funnel-label { font-weight:700; font-size:15px; }
+  .funnel-label small { display:block; font-size:11px; font-weight:400; opacity:0.85; margin-top:2px; }
+  .funnel-count { font-size:30px; font-weight:800; text-align:right; }
+  .funnel-bars { display:flex; gap:8px; flex-wrap:wrap; font-size:12px; }
+  .funnel-bar-chip { background:rgba(255,255,255,0.2); padding:3px 9px; border-radius:10px; }
+  
+  /* Stats grid */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;
+                margin-bottom:20px; }
+  .stat-box { background:white; padding:16px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.08);
+              text-align:center; }
+  .stat-box .v { font-size:28px; font-weight:800; color:#0A3161; display:block; }
+  .stat-box .l { font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;
+                 margin-top:4px; }
+  .stat-box .sub { font-size:11px; color:#94a3b8; margin-top:4px; }
+  
+  /* Attribution */
+  .attr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  .attr-card { background:#f8fafc; padding:16px; border-radius:8px; border-left:4px solid #667eea; }
+  .attr-card h4 { color:#0A3161; margin-bottom:10px; font-size:14px; }
+  .attr-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #e2e8f0;
+              font-size:13px; }
+  .attr-row:last-child { border-bottom:none; }
+  .attr-label { color:#64748b; }
+  .attr-val { font-weight:700; color:#0A3161; }
+  
+  /* PLANS */
+  .plans-list { display:flex; flex-direction:column; gap:12px; }
+  .plan-card { border:1.5px solid #e5e7eb; border-radius:8px; overflow:hidden; transition:border-color 0.2s; }
+  .plan-card:hover, .plan-card.expanded { border-color:#0A3161; }
+  .plan-head { padding:14px 18px; background:#f9fafb; cursor:pointer; display:flex;
+               justify-content:space-between; align-items:center; }
+  .plan-head:hover { background:#f3f4f6; }
+  .plan-head-left { flex:1; min-width:0; }
+  .plan-date { font-size:12px; color:#6b7280; margin-bottom:3px; }
+  .plan-desc { font-weight:600; color:#1f2937; margin-bottom:6px; }
+  .plan-desc.editing { background:white; padding:6px; border-radius:4px; }
+  .plan-meta { display:flex; gap:14px; font-size:13px; color:#4b5563; flex-wrap:wrap; }
+  .plan-meta span { display:flex; align-items:center; gap:4px; }
+  .plan-meta .status-active { color:#059669; font-weight:600; }
+  .plan-meta .status-deprecated { color:#9ca3af; }
+  .plan-meta .status-completed { color:#0369a1; font-weight:600; }
+  .plan-head-right { display:flex; gap:8px; align-items:center; }
+  .plan-body { display:none; padding:18px; border-top:1px solid #e5e7eb; background:white; }
+  .plan-card.expanded .plan-body { display:block; }
+  
+  .plan-edit-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .btn { padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px;
+         font-weight:600; transition:all 0.15s; font-family:inherit; }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+  .btn-primary { background:#0A3161; color:white; }
+  .btn-primary:hover { background:#0d3d77; }
+  .btn-success { background:#10b981; color:white; }
+  .btn-success:hover { background:#059669; }
+  .btn-secondary { background:#e5e7eb; color:#374151; }
+  .btn-secondary:hover { background:#d1d5db; }
+  .btn-warn { background:#f59e0b; color:white; }
+  .btn-danger { background:#ef4444; color:white; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  
+  .actions-list { display:flex; flex-direction:column; gap:10px; }
+  .action { background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:12px;
+            display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start; }
+  .action.action-completed { opacity:0.55; background:#f0fdf4; }
+  .action.action-completed .action-text { text-decoration:line-through; }
+  .action-priority { width:50px; text-align:center; flex-shrink:0; }
+  .action-score { font-weight:700; font-size:18px; color:#1f2937; }
+  .action-impact { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px;
+                   font-weight:700; text-transform:uppercase; }
+  .impact-critical, .impact-high { background:#fecaca; color:#991b1b; }
+  .impact-medium { background:#fed7aa; color:#9a3412; }
+  .impact-low { background:#d1fae5; color:#065f46; }
+  .action-body { min-width:0; }
+  .action-name { font-weight:600; color:#1f2937; font-size:14px; margin-bottom:3px; }
+  .action-contact { font-size:12px; color:#6b7280; margin-bottom:4px; }
+  .action-meta { display:flex; gap:10px; font-size:11px; color:#94a3b8; margin-bottom:6px; flex-wrap:wrap; }
+  .action-meta span { background:#e5e7eb; padding:2px 6px; border-radius:8px; color:#374151; }
+  .action-text { font-size:13px; color:#374151; line-height:1.4; }
+  .action-text textarea, .action-name input { width:100%; padding:6px; border:1px solid #d1d5db;
+                                                border-radius:4px; font-family:inherit; font-size:13px; }
+  .action-controls { display:flex; flex-direction:column; gap:4px; }
+  .action-controls button { padding:4px 8px; font-size:11px; }
+  .action-completion-note { background:#ecfdf5; border-left:3px solid #10b981; padding:6px 10px;
+                            margin-top:6px; font-size:12px; color:#065f46; font-style:italic; border-radius:0 4px 4px 0; }
+  
+  /* Activity timeline */
+  .timeline { max-height:500px; overflow-y:auto; }
+  .timeline-item { display:flex; gap:14px; padding:10px 12px; border-left:3px solid #e5e7eb;
+                   margin-bottom:8px; transition:all 0.2s; }
+  .timeline-item:hover { background:#f9fafb; border-left-color:#0A3161; }
+  .timeline-time { font-size:11px; color:#94a3b8; min-width:80px; flex-shrink:0; }
+  .timeline-title { font-weight:600; color:#0A3161; font-size:13px; margin-bottom:2px; }
+  .timeline-desc { font-size:12px; color:#64748b; margin-bottom:3px; }
+  .timeline-tags { display:flex; gap:4px; flex-wrap:wrap; }
+  .timeline-tag { font-size:10px; padding:1px 6px; border-radius:8px; }
+  .tag-email { background:#dbeafe; color:#1e40af; }
+  .tag-sms { background:#fae8ff; color:#86198f; }
+  .tag-call { background:#fef3c7; color:#92400e; }
+  .tag-meeting { background:#d1fae5; color:#065f46; }
+  .tag-ai { background:linear-gradient(90deg,#667eea,#764ba2); color:white; }
+  
+  /* Weekly email card */
+  .weekly-card { background:linear-gradient(135deg,#0A3161,#1a5fa8); color:white;
+                 padding:18px 22px; border-radius:10px; margin-bottom:20px; }
+  .weekly-card-row { display:flex; align-items:center; gap:16px; }
+  .weekly-card h3 { color:white; }
+  .weekly-card p { font-size:13px; opacity:0.9; margin-top:4px; }
+  
+  .spinner { border:3px solid #f3f3f3; border-top:3px solid #0A3161; border-radius:50%;
+             width:30px; height:30px; animation:spin 1s linear infinite; margin:0 auto; }
+  @keyframes spin { 0% {transform:rotate(0);} 100% {transform:rotate(360deg);} }
+  .empty { text-align:center; padding:30px; color:#94a3b8; font-size:14px; }
+  .auth-loading { position:fixed; inset:0; background:rgba(255,255,255,0.95); z-index:9999;
+                   display:flex; align-items:center; justify-content:center; }
+  .toast { position:fixed; bottom:30px; right:30px; padding:14px 20px; border-radius:8px;
+           color:white; font-weight:600; z-index:10000; box-shadow:0 4px 12px rgba(0,0,0,0.2);
+           animation:slideUp 0.3s ease-out; }
+  @keyframes slideUp { from {transform:translateY(20px);opacity:0;} to {transform:translateY(0);opacity:1;} }
+  .toast.success { background:#10b981; }
+  .toast.error { background:#ef4444; }
+  .toast.info { background:#0A3161; }
+  
+  @media (max-width:768px) {
+    .container { padding:14px; }
+    .focus-bar-row { grid-template-columns:1fr; }
+    .funnel-row { grid-template-columns:120px 1fr 50px; }
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
 </head>
 <body>
 
-<div id="authLoading" class="auth-loading">
-  <div class="spinner"></div>
-  <p>Verifying authentication...</p>
+<div id="authLoading" class="auth-loading" style="display:none;">
+  <div style="text-align:center;">
+    <div class="spinner" style="width:60px;height:60px;border-width:5px;"></div>
+    <p style="color:#0A3161;font-size:18px;font-weight:600;margin-top:20px;">Authenticating...</p>
+  </div>
 </div>
 
 <header class="navbar">
   <div class="logo">
-    <img src="logo.jpg" alt="Victory Vision Logo"
-         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22><rect width=%2250%22 height=%2250%22 fill=%22%230A3161%22 /><text x=%2210%22 y=%2230%22 font-size=%2225%22 fill=%22white%22>VV</text></svg>'" />
+    <img src="logo.jpg" alt="Victory Vision"
+         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
   </div>
   <nav>
     <ul>
-      <li><a href="companyprofile">Profile</a></li>
-      <li><a href="campaigns">Campaigns</a></li>
-      <li><a href="media">Media</a></li>
-      <li><a href="pages">Pages</a></li>
-      <li><a href="social">Social</a></li>
-      <li><a href="ads">Ads</a></li>
-      <li><a href="contacts">Contacts</a></li>
-      <li><a href="messages">Messages</a></li>
-      <li><a href="ai" class="active">AI</a></li>
-      <li><a href="settings">Settings</a></li>
+      <li><a href="companyprofile.html">Profile</a></li>
+      <li><a href="campaigns.html">Campaigns</a></li>
+      <li><a href="media.html">Media</a></li>
+      <li><a href="pages.html">Pages</a></li>
+      <li><a href="social.html">Social</a></li>
+      <li><a href="contacts.html">Contacts</a></li>
+      <li><a href="ads.html">Ads</a></li>
+      <li><a href="messages.html">Messages</a></li>
+      <li><a href="meetings.html">Meetings</a></li>
+      <li><a href="deals.html">Deals</a></li>
+      <li><a href="ai.html" class="active">AI SDR</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="settings.html">Settings</a></li>
     </ul>
   </nav>
   <div class="user-info">
-    <span id="userEmail"></span>
-    <div class="subscription-medallion bronze"><span>Bronze</span></div>
+    <div id="medallion" class="medallion">BRONZE</div>
+    <span id="userEmail">…</span>
   </div>
 </header>
 
-<div class="workspace">
+<div class="container">
+  <div class="page-header">
+    <h1>AI SDR — Performance & Plans</h1>
+    <p>Focus the AI on a deal or category and time window. Track the funnel, edit your plan, push status to your inbox.</p>
+  </div>
 
-  <!-- ============================================================ -->
-  <!-- LEFT: Chat                                                   -->
-  <!-- ============================================================ -->
-  <div class="chat-column">
-    <div class="chat-header">
-      <div>
-        <div class="chat-header-title">Victory Vision AI</div>
-        <div class="chat-header-meta" id="convId">new conversation</div>
+  <!-- FOCUS BAR (master tag + window) -->
+  <div class="focus-bar">
+    <div class="focus-bar-row">
+      <div class="focus-field">
+        <label>Master Focus</label>
+        <select id="masterTag" onchange="onMasterTagChange()">
+          <option value="all">Everything (no filter)</option>
+        </select>
       </div>
-      <button class="tour-btn" onclick="resetConversation()">↻ New chat</button>
-    </div>
-
-    <div class="chat-messages" id="messages">
-      <div class="msg hint">
-        Ask anything about your plan, contacts, deals, or pipeline. I can pull data, update records, draft emails, and render charts on the right.
+      <div class="focus-field">
+        <label>Time Window</label>
+        <div class="time-pills" id="timePills">
+          <span class="time-pill" data-w="1">24h</span>
+          <span class="time-pill" data-w="7">7d</span>
+          <span class="time-pill active" data-w="30">30d</span>
+          <span class="time-pill" data-w="90">90d</span>
+          <span class="time-pill" data-w="365">1y</span>
+          <span class="time-pill" data-w="custom">Custom…</span>
+        </div>
+        <div class="custom-range" id="customRange">
+          <div>
+            <label style="font-size:10px;opacity:0.8;">From</label>
+            <input type="date" id="customFrom"/>
+          </div>
+          <div>
+            <label style="font-size:10px;opacity:0.8;">To</label>
+            <input type="date" id="customTo"/>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="applyCustomRange()">Apply</button>
+        </div>
       </div>
+      <button class="btn btn-success" onclick="refreshAll()">⟳ Refresh</button>
     </div>
-
-    <div class="suggestions" id="suggestionChips">
-      <span class="suggestion-chip" onclick="sendSuggestion('Show me my pipeline as a chart')">📊 Show pipeline</span>
-      <span class="suggestion-chip" onclick="sendSuggestion('What\\'s in my 30-day plan?')">🗓 30-day plan</span>
-      <span class="suggestion-chip" onclick="sendSuggestion('Who are my top contacts to send to first?')">⭐ Top contacts</span>
-      <span class="suggestion-chip" onclick="sendSuggestion('What KPIs am I tracking?')">📈 KPIs</span>
-    </div>
-
-    <div class="attachment-strip" id="attachmentStrip" style="display:none;"></div>
-
-    <div class="input-row">
-      <input type="file" id="fileInput" style="display:none;" multiple
-             accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" onchange="handleFilesPicked(event)">
-      <button class="icon-btn" title="Attach file (PDF or image)"
-              onclick="document.getElementById('fileInput').click()">📎</button>
-      <button class="icon-btn" id="micBtn" title="Dictate (Web Speech)"
-              onclick="toggleDictation()">🎤</button>
-      <textarea
-        id="chatInput"
-        class="chat-input"
-        placeholder="Ask Claude about your data, or ask to render a chart…"
-        rows="1"
-        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+    <div class="focus-summary" id="focusSummary">
+      Analyzing <b>everything</b> for the last <b>30 days</b>.
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- RIGHT: Panes                                                 -->
-  <!-- ============================================================ -->
-  <div class="panes-column" id="panesGrid">
-    <div class="empty-state">Loading…</div>
+  <!-- SDR Auto Toggle -->
+  <div class="sdr-toggle">
+    <div>
+      <h2>Autonomous AI SDR</h2>
+      <p>When enabled, AI continuously prospects, enriches, scores, and engages contacts in the master focus.</p>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="sdrToggle"><span class="slider"></span>
+    </label>
+  </div>
+
+  <!-- Weekly email -->
+  <div class="weekly-card">
+    <div class="weekly-card-row">
+      <div style="font-size:32px;">📬</div>
+      <div style="flex:1;">
+        <h3 style="color:white;">Weekly Status Email</h3>
+        <p>Email yourself a summary of plan progress, what closed, what stalled, and next 7 days priority.</p>
+      </div>
+      <button class="btn btn-success" onclick="sendWeeklyEmail()">Send Now</button>
+    </div>
+  </div>
+
+  <!-- Stats grid -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-box"><span class="v" id="stContacts">0</span><div class="l">Contacts</div></div>
+    <div class="stat-box"><span class="v" id="stEmails">0</span><div class="l">Emails Sent</div><div class="sub" id="stEmailOpenRate">0% opens</div></div>
+    <div class="stat-box"><span class="v" id="stSms">0</span><div class="l">SMS</div></div>
+    <div class="stat-box"><span class="v" id="stCalls">0</span><div class="l">Calls</div></div>
+    <div class="stat-box"><span class="v" id="stMeetings">0</span><div class="l">Meetings</div><div class="sub" id="stMeetingsAttended">0 attended</div></div>
+    <div class="stat-box"><span class="v" id="stPipeline">$0</span><div class="l">Pipeline Value</div><div class="sub" id="stPipelineCount">0 deals</div></div>
+  </div>
+
+  <!-- Funnel -->
+  <div class="card">
+    <h2>Funnel — <span id="funnelLabel">Everything · 30d</span></h2>
+    <div class="funnel" id="funnel">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Plans -->
+  <div class="card">
+    <h2>
+      <span>📋 AI Generated Plans</span>
+      <span>
+        <button class="btn btn-secondary btn-sm" onclick="loadPlans()">⟳ Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="requestNewPlan()">🤖 Request New</button>
+      </span>
+    </h2>
+    <div id="plansList" class="plans-list">
+      <div class="empty"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Attribution -->
+  <div class="card">
+    <h2>Attribution — AI vs Manual</h2>
+    <div class="attr-grid" id="attrGrid"></div>
+  </div>
+
+  <!-- Activity Timeline -->
+  <div class="card">
+    <h2>Activity Timeline</h2>
+    <div class="timeline" id="timeline">
+      <div class="empty"><div class="spinner"></div></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const AI_CHAT_WEBHOOK = 'https://nyyvsdkumxvuwimmucdb.functions.supabase.co/ai-chat';
-const EMAIL_SEND_WEBHOOK = 'https://victoryvision.app.n8n.cloud/webhook/emails/send';
+// ─── Supabase init ───────────────────────────────────────
+const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let CUSTOMER_ID = null, authToken = null;
+let masterTag = 'all';           // current master tag filter
+let timeWindow = 30;             // days
+let customFromDate = null, customToDate = null;
+let allContacts = [], allEmails = [], allSMS = [], allCalls = [];
+let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [];
 
-// ============================================================
-// STATE
-// ============================================================
-let CUSTOMER_ID = null;
-let authToken = null;
-let currentConversationId = null;
-let isSending = false;
-let pendingConfirmsQueue = [];
+const N8N = 'https://victoryvision.app.n8n.cloud/webhook';
 
-// ============================================================
-// UTILITIES
-// ============================================================
-function uuid() {
-  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
-
-function escapeHTML(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function formatMoney(n) {
-  n = Number(n) || 0;
-  if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
-  if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-  if (Math.abs(n) >= 1e3) return '$' + Math.round(n / 1e3) + 'K';
-  return '$' + n.toLocaleString();
-}
-
-function renderMarkdown(md) {
-  if (!md) return '';
-  let html = escapeHTML(md);
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.split(/\n\n+/).map(p => '<p>' + p.replace(/\n/g, '<br>') + '</p>').join('');
-  return html;
-}
-
-// ============================================================
-// AUTH
-// ============================================================
-// authHeaders() returns the headers needed for ANY direct PostgREST call to the
-// user's own data. Sends the user's JWT in Authorization so RLS policies that
-// check auth.uid() can authorize the request. The anon key alone gets denied
-// because RLS is enabled on public.users.
-function authHeaders(extra) {
-  const h = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: 'Bearer ' + (authToken || SUPABASE_ANON_KEY)
-  };
-  if (extra) Object.assign(h, extra);
-  return h;
-}
-
+// ─── Auth ───────────────────────────────────────────────
 async function checkAuth() {
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session && session.user) {
-      CUSTOMER_ID = session.user.email;
-      authToken = session.access_token;
-      document.getElementById('userEmail').textContent = CUSTOMER_ID;
-      return true;
-    }
-    return false;
-  } catch (e) {
-    console.error('Auth error:', e);
-    return false;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.user) return false;
+  CUSTOMER_ID = session.user.email;
+  authToken = session.access_token;
+  document.getElementById('userEmail').textContent = CUSTOMER_ID;
+  return true;
+}
+
+async function loadUser() {
+  const { data } = await sb.from('users').select('subscription_plan, aisdr')
+    .eq('email', CUSTOMER_ID).single();
+  if (data) {
+    const m = document.getElementById('medallion');
+    m.textContent = (data.subscription_plan || 'BRONZE').toUpperCase();
+    m.className = 'medallion ' + (data.subscription_plan || 'bronze').toLowerCase();
+    document.getElementById('sdrToggle').checked = data.aisdr === true || data.aisdr === 'true';
   }
 }
 
-function getConversationId() {
-  if (!currentConversationId) {
-    currentConversationId = uuid();
-    const el = document.getElementById('convId');
-    if (el) el.textContent = currentConversationId.slice(0, 8);
+// ─── Tag helpers ────────────────────────────────────────
+function tagMatches(tagsStr, focus) {
+  if (focus === 'all') return true;
+  if (!tagsStr) return false;
+  return (',' + tagsStr.toLowerCase() + ',').includes(',' + focus.toLowerCase() + ',') ||
+         tagsStr.toLowerCase().includes(focus.toLowerCase());
+}
+
+function getWindow() {
+  if (timeWindow === 'custom' && customFromDate && customToDate) {
+    return { start: new Date(customFromDate), end: new Date(customToDate + 'T23:59:59') };
   }
-  return currentConversationId;
+  const start = new Date();
+  start.setDate(start.getDate() - parseInt(timeWindow || 30));
+  return { start, end: new Date() };
 }
 
-function resetConversation() {
-  currentConversationId = null;
-  const el = document.getElementById('convId');
-  if (el) el.textContent = 'new conversation';
-  document.getElementById('messages').innerHTML =
-    '<div class="msg hint">New conversation. Ask anything about your plan, contacts, deals, or pipeline.</div>';
+function windowLabel() {
+  if (timeWindow === 'custom' && customFromDate && customToDate)
+    return `${customFromDate} → ${customToDate}`;
+  const m = { 1:'24h', 7:'7d', 30:'30d', 90:'90d', 365:'1y' };
+  return m[timeWindow] || '30d';
 }
 
-// ============================================================
-// PANE LOADING + RENDERING
-// ============================================================
-async function loadPanes() {
-  if (!CUSTOMER_ID) {
-    renderEmpty('Sign in to load your workspace.');
+function tagLabel() {
+  if (masterTag === 'all') return 'Everything';
+  return masterTag.replace(/^deal:/, 'Deal: ').replace(/-/g, ' ');
+}
+
+function safeJSON(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return []; } }
+  return [];
+}
+
+function fmtMoney(n) {
+  n = Number(n) || 0;
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + Math.round(n);
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function timeAgo(d) {
+  if (!d) return '';
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  if (s < 604800) return Math.floor(s/86400) + 'd ago';
+  return new Date(d).toLocaleDateString();
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ─── Build master tag dropdown from contacts ────────────
+function populateMasterTagDropdown() {
+  const sel = document.getElementById('masterTag');
+  const counts = {};
+  allContacts.forEach(c => {
+    if (!c.tags) return;
+    c.tags.split(',').forEach(t => {
+      t = t.trim().toLowerCase();
+      if (!t || t.length > 60) return;
+      counts[t] = (counts[t] || 0) + 1;
+    });
+  });
+  // Group: deals first, then categories
+  const deals = Object.entries(counts).filter(([k]) => k.startsWith('deal:') && !k.includes(':no-fit')).sort((a,b) => b[1]-a[1]);
+  const cats  = Object.entries(counts).filter(([k]) => !k.startsWith('deal:') && k.length > 2).sort((a,b) => b[1]-a[1]).slice(0, 25);
+  
+  let html = '<option value="all">Everything (no filter)</option>';
+  if (deals.length) {
+    html += '<optgroup label="— DEALS —">';
+    deals.forEach(([k, c]) => {
+      // Skip stage-suffixed tags (deal:foo:committed)
+      if (k.split(':').length > 2) return;
+      html += `<option value="${esc(k)}">${esc(k.replace('deal:',''))} (${c})</option>`;
+    });
+    html += '</optgroup>';
+  }
+  if (cats.length) {
+    html += '<optgroup label="— CATEGORIES —">';
+    cats.forEach(([k, c]) => {
+      html += `<option value="${esc(k)}">${esc(k)} (${c})</option>`;
+    });
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
+  sel.value = masterTag;
+}
+
+// ─── Direct Supabase loaders (replaces n8n webhooks) ────
+async function loadAllData() {
+  const tasks = await Promise.allSettled([
+    sb.from('contacts').select('id, name, email, company, tags, created, client_won_date, client_ann_est, last_emailed_date, last_opened_date, last_responded, last_called, last_clicked_date, num_emails_opened, num_links_clicked, number_emails_sent, number_call_attempts, meeting_date, next_steps, next_step_due, customer_journey, campaigns')
+      .eq('cus_id', CUSTOMER_ID).order('created', { ascending: false }).limit(2000),
+    sb.from('email').select('id, "from", "to", subject, sent_at, opened_at, replied_at, clicked_at, opens, clicks, inbound, campaign, customer_id, created_at')
+      .eq('customer_id', CUSTOMER_ID).gte('sent_at', new Date(Date.now() - 365*86400000).toISOString()).limit(2000),
+    sb.from('SMS').select('id, message, "to", "from", created_at, customer_id, responded, respondedat, campaign')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
+    sb.from('calls').select('id, person_called, number_called, customer_id, created_at, outcome, contact_id, call_score')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
+    sb.from('meetings').select('id, title, type, start_at, customer_id, attendees_emails, status, summary, score, gcal_event_id')
+      .eq('customer_id', CUSTOMER_ID).order('start_at', { ascending: false }).limit(500),
+    sb.from('meeting_invites').select('id, email, name, company, attend, rsvp, customer_id, meeting_id, start_at, created_at')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
+    sb.from('campaigns').select('id, name, type, status, customer_id, created_at, goal_description, meta, last_updated')
+      .eq('customer_id', CUSTOMER_ID).neq('status', 'archived').limit(200),
+    sb.from('pages').select('id, name, page_type, "URL", customer_id, created_at, views, conversions, subscribers')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(50),
+    sb.from('plans').select('id, plan, customer_id, description, status, start, "end", credits, estimate_conversions, actual_conversions, lessons_learned, created_at, plan_id')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(15),
+  ]);
+
+  allContacts = tasks[0].status==='fulfilled' ? (tasks[0].value.data || []) : [];
+  allEmails   = tasks[1].status==='fulfilled' ? (tasks[1].value.data || []) : [];
+  allSMS      = tasks[2].status==='fulfilled' ? (tasks[2].value.data || []) : [];
+  allCalls    = tasks[3].status==='fulfilled' ? (tasks[3].value.data || []) : [];
+  allMeetings = tasks[4].status==='fulfilled' ? (tasks[4].value.data || []) : [];
+  allInvites  = tasks[5].status==='fulfilled' ? (tasks[5].value.data || []) : [];
+  allDeals    = tasks[6].status==='fulfilled' ? (tasks[6].value.data || []) : [];
+  allPages    = tasks[7].status==='fulfilled' ? (tasks[7].value.data || []) : [];
+  allPlans    = tasks[8].status==='fulfilled' ? (tasks[8].value.data || []) : [];
+
+  console.log('Loaded:', { contacts: allContacts.length, emails: allEmails.length, sms: allSMS.length,
+    calls: allCalls.length, meetings: allMeetings.length, deals: allDeals.length, plans: allPlans.length });
+}
+
+// ─── Apply filters: master tag + time window ────────────
+function filterContacts() {
+  return allContacts.filter(c => tagMatches(c.tags, masterTag));
+}
+
+function emailContactIds() {
+  // Returns Set of contact emails matching focus
+  const set = new Set();
+  filterContacts().forEach(c => { if (c.email) set.add(String(c.email).toLowerCase()); });
+  return set;
+}
+
+function inWindow(date) {
+  if (!date) return false;
+  const { start, end } = getWindow();
+  const d = new Date(date);
+  return d >= start && d <= end;
+}
+
+function emailsInScope() {
+  const ids = emailContactIds();
+  return allEmails.filter(e => {
+    if (e.inbound) return false;
+    if (!inWindow(e.sent_at)) return false;
+    if (masterTag === 'all') return true;
+    return ids.has(String(e.to || '').toLowerCase());
+  });
+}
+
+function smsInScope() {
+  const ids = emailContactIds();
+  return allSMS.filter(s => {
+    if (!inWindow(s.created_at)) return false;
+    if (masterTag === 'all') return true;
+    // SMS doesn't have direct contact link; try to match by phone or skip
+    return true; // be permissive — most SMS in window count
+  });
+}
+
+function callsInScope() {
+  const ids = new Set();
+  filterContacts().forEach(c => { if (c.id) ids.add(c.id); });
+  return allCalls.filter(c => {
+    if (!inWindow(c.created_at)) return false;
+    if (masterTag === 'all') return true;
+    return c.contact_id ? ids.has(c.contact_id) : true;
+  });
+}
+
+function meetingsInScope() {
+  const ids = emailContactIds();
+  return allMeetings.filter(m => {
+    if (!inWindow(m.start_at)) return false;
+    if (masterTag === 'all') return true;
+    if (!m.attendees_emails) return false;
+    const emails = String(m.attendees_emails).toLowerCase().split(/[,\s]+/);
+    return emails.some(e => ids.has(e));
+  });
+}
+
+function contactsInScope() {
+  return filterContacts().filter(c => inWindow(c.created));
+}
+
+// ─── Render funnel ──────────────────────────────────────
+function renderFunnel() {
+  const scoped = filterContacts();
+  const newContacts = contactsInScope();
+  const emails = emailsInScope();
+  const sms = smsInScope();
+  const calls = callsInScope();
+  const meets = meetingsInScope();
+
+  // Engagement
+  const opens = emails.filter(e => e.opened_at || e.opens > 0).length;
+  const clicks = emails.filter(e => e.clicked_at || e.clicks > 0).length;
+  const replies = emails.filter(e => e.replied_at).length;
+  const meetingsAttended = meets.filter(m => m.status === 'completed' || m.summary).length;
+  
+  // Conversion: deal stage tags
+  const committed = scoped.filter(c => (c.tags || '').toLowerCase().includes(':committed')).length;
+  const softCircle = scoped.filter(c => (c.tags || '').toLowerCase().includes(':soft-circle')).length;
+  const wins = scoped.filter(c => c.client_won_date && inWindow(c.client_won_date)).length;
+
+  document.getElementById('funnelLabel').textContent = `${tagLabel()} · ${windowLabel()}`;
+  document.getElementById('funnel').innerHTML = `
+    <div class="funnel-row fr-leads">
+      <div class="funnel-label">Leads<small>contacts in focus (new in window: ${newContacts.length})</small></div>
+      <div class="funnel-bars"><span class="funnel-bar-chip">Total ${scoped.length}</span></div>
+      <div class="funnel-count">${scoped.length}</div>
+    </div>
+    <div class="funnel-row fr-outreach">
+      <div class="funnel-label">Outreach<small>sent in window</small></div>
+      <div class="funnel-bars">
+        <span class="funnel-bar-chip">📧 ${emails.length} emails</span>
+        <span class="funnel-bar-chip">💬 ${sms.length} SMS</span>
+        <span class="funnel-bar-chip">📞 ${calls.length} calls</span>
+      </div>
+      <div class="funnel-count">${emails.length + sms.length + calls.length}</div>
+    </div>
+    <div class="funnel-row fr-engagement">
+      <div class="funnel-label">Engagement<small>email actions on outreach</small></div>
+      <div class="funnel-bars">
+        <span class="funnel-bar-chip">👁 ${opens} opens${emails.length ? ' ('+Math.round(opens*100/emails.length)+'%)':''}</span>
+        <span class="funnel-bar-chip">🖱 ${clicks} clicks</span>
+        <span class="funnel-bar-chip">↩️ ${replies} replies</span>
+      </div>
+      <div class="funnel-count">${opens + clicks + replies}</div>
+    </div>
+    <div class="funnel-row fr-meetings">
+      <div class="funnel-label">Meetings<small>scheduled / attended</small></div>
+      <div class="funnel-bars">
+        <span class="funnel-bar-chip">📅 ${meets.length} scheduled</span>
+        <span class="funnel-bar-chip">✅ ${meetingsAttended} attended</span>
+        <span class="funnel-bar-chip">🤝 ${softCircle} soft-circle</span>
+        <span class="funnel-bar-chip">📝 ${committed} committed</span>
+      </div>
+      <div class="funnel-count">${meets.length}</div>
+    </div>
+    <div class="funnel-row fr-victory">
+      <div class="funnel-label">Victory<small>closed in window</small></div>
+      <div class="funnel-bars"><span class="funnel-bar-chip">🏆 ${wins} won</span></div>
+      <div class="funnel-count">${wins}</div>
+    </div>
+  `;
+}
+
+// ─── Render stats ──────────────────────────────────────
+function renderStats() {
+  const scoped = filterContacts();
+  const emails = emailsInScope();
+  const sms = smsInScope();
+  const calls = callsInScope();
+  const meets = meetingsInScope();
+  
+  const opens = emails.filter(e => e.opened_at || e.opens > 0).length;
+  const openRate = emails.length ? Math.round(opens*100/emails.length) : 0;
+  
+  // Pipeline value from deals matching master tag
+  let pipelineValue = 0, pipelineDeals = 0;
+  if (masterTag === 'all' || masterTag.startsWith('deal:')) {
+    const matchingDeals = allDeals.filter(d => {
+      if (d.type !== 'deal') return false;
+      if (masterTag === 'all') return true;
+      const slug = (d.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      return masterTag === 'deal:' + slug || masterTag.startsWith('deal:' + slug);
+    });
+    pipelineDeals = matchingDeals.length;
+    matchingDeals.forEach(d => {
+      const m = d.meta || {};
+      const pwv = parseFloat(m.pwv_usd) || 
+                  (parseFloat(m.deal_size_usd) || 0) * (parseFloat(m.take_rate_pct) || 0) / 100
+                  * (parseFloat(m.base_close_prob_pct) || 0) / 100;
+      pipelineValue += pwv;
+    });
+  }
+  
+  document.getElementById('stContacts').textContent = scoped.length;
+  document.getElementById('stEmails').textContent = emails.length;
+  document.getElementById('stEmailOpenRate').textContent = openRate + '% opens';
+  document.getElementById('stSms').textContent = sms.length;
+  document.getElementById('stCalls').textContent = calls.length;
+  document.getElementById('stMeetings').textContent = meets.length;
+  document.getElementById('stMeetingsAttended').textContent = 
+    meets.filter(m => m.status === 'completed' || m.summary).length + ' attended';
+  document.getElementById('stPipeline').textContent = fmtMoney(pipelineValue);
+  document.getElementById('stPipelineCount').textContent = pipelineDeals + ' deals';
+}
+
+// ─── Render attribution ────────────────────────────────
+function renderAttribution() {
+  const emails = emailsInScope();
+  const sms = smsInScope();
+  const calls = callsInScope();
+  
+  const aiEmails = emails.filter(e => e.campaign && e.campaign !== 'Direct Message').length;
+  const manualEmails = emails.length - aiEmails;
+  const aiSms = sms.filter(s => s.campaign).length;
+  const manualSms = sms.length - aiSms;
+  
+  const opens = emails.filter(e => e.opened_at || e.opens > 0).length;
+  const clicks = emails.filter(e => e.clicked_at || e.clicks > 0).length;
+  const replies = emails.filter(e => e.replied_at).length;
+  
+  document.getElementById('attrGrid').innerHTML = `
+    <div class="attr-card" style="border-left-color:#667eea;">
+      <h4>🤖 AI Automated</h4>
+      <div class="attr-row"><span class="attr-label">Emails</span><span class="attr-val">${aiEmails}</span></div>
+      <div class="attr-row"><span class="attr-label">SMS</span><span class="attr-val">${aiSms}</span></div>
+      <div class="attr-row"><span class="attr-label">Total</span><span class="attr-val">${aiEmails + aiSms}</span></div>
+    </div>
+    <div class="attr-card" style="border-left-color:#f093fb;">
+      <h4>👤 Manual</h4>
+      <div class="attr-row"><span class="attr-label">Emails</span><span class="attr-val">${manualEmails}</span></div>
+      <div class="attr-row"><span class="attr-label">SMS</span><span class="attr-val">${manualSms}</span></div>
+      <div class="attr-row"><span class="attr-label">Calls</span><span class="attr-val">${calls.length}</span></div>
+    </div>
+    <div class="attr-card" style="border-left-color:#4facfe;">
+      <h4>📊 Engagement</h4>
+      <div class="attr-row"><span class="attr-label">Opens</span><span class="attr-val">${opens} (${emails.length?Math.round(opens*100/emails.length):0}%)</span></div>
+      <div class="attr-row"><span class="attr-label">Clicks</span><span class="attr-val">${clicks}</span></div>
+      <div class="attr-row"><span class="attr-label">Replies</span><span class="attr-val">${replies} (${emails.length?Math.round(replies*100/emails.length):0}%)</span></div>
+    </div>
+    <div class="attr-card" style="border-left-color:#43e97b;">
+      <h4>🎯 Conversion</h4>
+      <div class="attr-row"><span class="attr-label">Meetings</span><span class="attr-val">${meetingsInScope().length}</span></div>
+      <div class="attr-row"><span class="attr-label">Reply rate</span><span class="attr-val">${emails.length?Math.round(replies*100/emails.length):0}%</span></div>
+      <div class="attr-row"><span class="attr-label">Meet/email</span><span class="attr-val">${emails.length?(meetingsInScope().length*100/emails.length).toFixed(1):0}%</span></div>
+    </div>
+  `;
+}
+
+// ─── Render activity timeline ──────────────────────────
+function renderTimeline() {
+  const ids = emailContactIds();
+  const emails = emailsInScope().slice(0, 30).map(e => ({
+    ts: new Date(e.sent_at), type: 'email', title: `Email to ${e.to}`,
+    desc: e.subject || '(no subject)', isAi: e.campaign && e.campaign !== 'Direct Message',
+    tag: 'tag-email'
+  }));
+  const sms = smsInScope().slice(0, 20).map(s => ({
+    ts: new Date(s.created_at), type: 'sms', title: `SMS to ${s.to}`,
+    desc: (s.message || '').slice(0, 100), isAi: !!s.campaign, tag: 'tag-sms'
+  }));
+  const calls = callsInScope().slice(0, 20).map(c => ({
+    ts: new Date(c.created_at), type: 'call', title: `Call ${c.person_called || c.number_called || ''}`,
+    desc: c.outcome || '(no outcome)', isAi: false, tag: 'tag-call'
+  }));
+  const meets = meetingsInScope().slice(0, 20).map(m => ({
+    ts: new Date(m.start_at), type: 'meeting', title: m.title || 'Meeting',
+    desc: (m.summary || '').slice(0, 120), isAi: false, tag: 'tag-meeting'
+  }));
+  
+  const all = [...emails, ...sms, ...calls, ...meets]
+    .filter(x => !isNaN(x.ts.getTime()))
+    .sort((a, b) => b.ts - a.ts).slice(0, 40);
+  
+  const el = document.getElementById('timeline');
+  if (!all.length) { el.innerHTML = '<div class="empty">No activity in this scope.</div>'; return; }
+  el.innerHTML = all.map(a => `
+    <div class="timeline-item">
+      <div class="timeline-time">${timeAgo(a.ts)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="timeline-title">${esc(a.title)}</div>
+        <div class="timeline-desc">${esc(a.desc)}</div>
+        <div class="timeline-tags">
+          <span class="timeline-tag ${a.tag}">${a.type}</span>
+          ${a.isAi ? '<span class="timeline-tag tag-ai">AI</span>' : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── PLANS: render + edit ──────────────────────────────
+let removedActionIds = {};   // { planId: Set(actionIndex) }
+let expandedPlans = new Set();
+
+function renderPlans() {
+  const el = document.getElementById('plansList');
+  if (!allPlans.length) {
+    el.innerHTML = '<div class="empty">No plans yet. Click "Request New" to have AI generate one.</div>';
     return;
   }
+  // Filter plans by master tag if a specific deal is selected
+  const filteredPlans = allPlans.filter(p => {
+    if (masterTag === 'all') return true;
+    const actions = safeJSON(p.plan);
+    return actions.some(a => {
+      const dealMatch = masterTag.startsWith('deal:') ? a.deal === masterTag.replace('deal:','') : false;
+      return dealMatch || tagMatches(a.tags || '', masterTag);
+    });
+  });
+  const plans = filteredPlans.length ? filteredPlans : allPlans.slice(0, 3);
+  el.innerHTML = plans.slice(0, 5).map(p => renderPlanCard(p)).join('');
+}
+
+function renderPlanCard(p) {
+  const actions = safeJSON(p.plan);
+  const completed = actions.filter(a => a.status === 'completed').length;
+  const startD = p.start ? new Date(p.start).toLocaleDateString() : '—';
+  const endD = p.end ? new Date(p.end).toLocaleDateString() : startD;
+  const exp = expandedPlans.has(p.id);
+  const statusCls = p.status === 'active' ? 'status-active' : 
+                    p.status === 'completed' ? 'status-completed' : 'status-deprecated';
+  
+  return `
+    <div class="plan-card ${exp ? 'expanded' : ''}" id="plan-${p.id}">
+      <div class="plan-head" onclick="togglePlan(${p.id})">
+        <div class="plan-head-left">
+          <div class="plan-date">📅 ${startD}${startD !== endD ? ' → ' + endD : ''}</div>
+          <div class="plan-desc" id="planDesc-${p.id}">${esc(p.description || 'AI Generated Plan')}</div>
+          <div class="plan-meta">
+            <span>🎯 ${actions.length} actions (${completed} done)</span>
+            <span>💰 ${p.credits || 0} credits</span>
+            <span>📈 ~${p.estimate_conversions || 0} est.</span>
+            <span class="${statusCls}">● ${p.status || 'unknown'}</span>
+          </div>
+        </div>
+        <div class="plan-head-right" onclick="event.stopPropagation();">
+          <button class="btn btn-secondary btn-sm" onclick="editPlanDescription(${p.id})">✏️ Edit</button>
+          <button class="btn btn-success btn-sm" onclick="executePlan(${p.id})" ${p.actual_conversions ? 'disabled':''}>
+            ${p.actual_conversions ? '✓ Done' : '▶️ Execute'}
+          </button>
+        </div>
+      </div>
+      <div class="plan-body">
+        ${p.lessons_learned ? `
+        <div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:10px 14px;border-radius:4px;margin-bottom:14px;">
+          <div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:4px;">💡 LESSONS LEARNED</div>
+          <div style="font-size:13px;color:#78350f;">${esc(p.lessons_learned)}</div>
+        </div>` : ''}
+        <div class="plan-edit-bar">
+          <button class="btn btn-primary btn-sm" onclick="addAction(${p.id})">➕ Add Action</button>
+          <button class="btn btn-secondary btn-sm" onclick="savePlanActions(${p.id})">💾 Save Changes</button>
+        </div>
+        <div class="actions-list" id="actionsList-${p.id}">
+          ${actions.map((a, i) => renderAction(p.id, a, i)).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAction(planId, a, i) {
+  const completed = a.status === 'completed';
+  const impactCls = 'impact-' + (a.impact || 'medium');
+  return `
+    <div class="action ${completed ? 'action-completed' : ''}" data-plan="${planId}" data-i="${i}">
+      <div class="action-priority">
+        <div class="action-score">${a.score || 0}</div>
+        <div class="action-impact ${impactCls}">${a.impact || 'med'}</div>
+      </div>
+      <div class="action-body">
+        <div class="action-name" id="aname-${planId}-${i}">${esc(a.action_id || 'Action')}</div>
+        <div class="action-contact">📧 ${esc(a.contact_id || '—')}${a.deal ? ' · 🏷️ ' + esc(a.deal) : ''}</div>
+        <div class="action-meta">
+          ${a.due ? `<span>⏰ ${esc(a.due)}</span>` : ''}
+          ${a.priority ? `<span>P${a.priority}</span>` : ''}
+          ${a.est_value ? `<span>💵 ${esc(a.est_value)}</span>` : ''}
+        </div>
+        <div class="action-text" id="atext-${planId}-${i}">${esc(a.action || '')}</div>
+        ${a.completion_note ? `<div class="action-completion-note">✓ ${esc(a.completion_note)}</div>` : ''}
+      </div>
+      <div class="action-controls">
+        ${!completed ? `<button class="btn btn-success btn-sm" onclick="markActionComplete(${planId}, ${i})">✓ Done</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="editAction(${planId}, ${i})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="removeActionLocal(${planId}, ${i})">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+function togglePlan(id) {
+  if (expandedPlans.has(id)) expandedPlans.delete(id);
+  else expandedPlans.add(id);
+  document.getElementById('plan-' + id).classList.toggle('expanded');
+}
+
+function editPlanDescription(id) {
+  const plan = allPlans.find(p => p.id === id);
+  if (!plan) return;
+  const newDesc = prompt('Edit plan description:', plan.description || '');
+  if (newDesc === null) return;
+  plan.description = newDesc;
+  document.getElementById('planDesc-' + id).textContent = newDesc;
+  savePlanDescription(id, newDesc);
+}
+
+async function savePlanDescription(id, desc) {
+  const { error } = await sb.from('plans').update({ description: desc }).eq('id', id);
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  toast('Description saved', 'success');
+}
+
+function markActionComplete(planId, idx) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const actions = safeJSON(plan.plan);
+  if (!actions[idx]) return;
+  const note = prompt('Completion note (optional):', '');
+  actions[idx].status = 'completed';
+  if (note) actions[idx].completion_note = note;
+  actions[idx].completed_at = new Date().toISOString();
+  plan.plan = actions;
+  document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
+  savePlanActions(planId);
+}
+
+function editAction(planId, idx) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const actions = safeJSON(plan.plan);
+  if (!actions[idx]) return;
+  const newText = prompt('Edit action text:', actions[idx].action || '');
+  if (newText === null) return;
+  actions[idx].action = newText;
+  plan.plan = actions;
+  document.getElementById('atext-' + planId + '-' + idx).textContent = newText;
+}
+
+function removeActionLocal(planId, idx) {
+  if (!confirm('Remove this action?')) return;
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const actions = safeJSON(plan.plan);
+  actions.splice(idx, 1);
+  plan.plan = actions;
+  document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
+}
+
+function addAction(planId) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const txt = prompt('New action description:');
+  if (!txt) return;
+  const due = prompt('Due date (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  const contact = prompt('Contact email (optional):');
+  const actions = safeJSON(plan.plan);
+  actions.push({
+    action: txt, due, contact_id: contact, status: 'active', score: 50,
+    impact: 'medium', priority: 2, action_id: 'manual_' + Date.now()
+  });
+  plan.plan = actions;
+  document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
+}
+
+async function savePlanActions(planId) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const { error } = await sb.from('plans').update({ plan: plan.plan }).eq('id', planId);
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  toast('Plan saved', 'success');
+}
+
+async function executePlan(id) {
+  const plan = allPlans.find(p => p.id === id);
+  if (!plan) return;
+  if (!confirm(`Execute "${plan.description || 'this plan'}"? Triggers all non-completed actions.`)) return;
   try {
-    const resp = await fetch(
-      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(CUSTOMER_ID) + '&select=ai_panes&limit=1',
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
-    const state = rows[0] && rows[0].ai_panes;
-    renderAllPanes(state);
+    const res = await fetch(N8N + '/plan/execute', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, id: String(id) })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('Plan execution started', 'success');
   } catch (e) {
-    console.warn('loadPanes failed:', e);
-    renderEmpty('Could not load panes.');
+    toast('Execution failed: ' + e.message, 'error');
   }
 }
 
-function renderEmpty(msg) {
-  document.getElementById('panesGrid').innerHTML =
-    '<div class="empty-state">' + escapeHTML(msg) + '</div>';
-}
-
-function renderAllPanes(state) {
-  const grid = document.getElementById('panesGrid');
-  grid.innerHTML = '';
-  const slots = (state && state.slots) || [];
-  if (slots.length === 0) {
-    renderEmpty('No panes yet. Ask me to show you something.');
-    return;
-  }
-  slots.sort(function (a, b) { return (a.slot || 0) - (b.slot || 0); });
-  slots.forEach(function (slot) { grid.appendChild(buildPane(slot)); });
-}
-
-function buildPane(slot) {
-  const pane = document.createElement('div');
-  pane.className = 'pane';
-  pane.dataset.slot = slot.slot;
-
-  const header = document.createElement('div');
-  header.className = 'pane-header';
-  header.innerHTML =
-    '<div>' +
-      '<div class="pane-title">' + escapeHTML(slot.title || 'Pane ' + slot.slot) + '</div>' +
-      '<div class="pane-meta">slot ' + slot.slot + ' · ' + escapeHTML(slot.component || 'unknown') + '</div>' +
-    '</div>' +
-    '<div class="pane-actions">' +
-      '<button class="pane-action-btn" onclick="clearPaneFromUI(' + slot.slot + ')" title="Remove">×</button>' +
-    '</div>';
-  pane.appendChild(header);
-
-  const body = document.createElement('div');
-  body.className = 'pane-body';
-  body.innerHTML = renderPaneBody(slot);
-  pane.appendChild(body);
-
-  return pane;
-}
-
-function renderPaneBody(slot) {
-  const component = slot.component || '';
-  const data = slot.data || {};
+async function requestNewPlan() {
+  const focus = masterTag === 'all' ? null : masterTag;
+  const focusLabel = focus ? ` focused on ${focus}` : '';
+  if (!confirm(`Request new AI plan${focusLabel} for the next 14 days?`)) return;
   try {
-    switch (component) {
-      case 'kpi_grid': return renderKpiGrid(data);
-      case 'bar_chart': return renderBarChart(data);
-      case 'line_chart': return renderLineChart(data);
-      case 'pie_chart': return renderPieChart(data);
-      case 'funnel': return renderFunnel(data);
-      case 'plan_action_checklist': return renderChecklist(data, slot);
-      case 'pipeline_stage_breakdown': return renderPipeline(data);
-      case 'contact_card_grid': return renderContacts(data);
-      case 'deal_card': return renderDealCard(data);
-      case 'table_simple': return renderTable(data);
-      case 'markdown_text': return '<div class="markdown-body">' + renderMarkdown(data.markdown || '') + '</div>';
-      case 'timeline': return renderTimeline(data);
-      default:
-        return '<div class="pane-placeholder">Unknown component: ' + escapeHTML(component) + '</div>';
-    }
+    const res = await fetch(N8N + '/plans/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, master_tag: focus, window_days: timeWindow })
+    });
+    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+    toast('Plan generation requested — refresh in ~3 min', 'info');
   } catch (e) {
-    console.error('Pane render error:', e, slot);
-    return '<div class="pane-placeholder">Render error: ' + escapeHTML(e.message) + '</div>';
+    toast('Request failed: ' + e.message, 'error');
   }
 }
 
-// ----- Pane renderers -----
-
-function renderKpiGrid(data) {
-  const tiles = data.tiles || [];
-  if (tiles.length === 0) return '<div class="pane-placeholder">No KPIs.</div>';
-  return '<div class="kpi-grid">' + tiles.map(function (t) {
-    let cls = 'flat';
-    if (typeof t.delta === 'number') cls = t.delta > 0 ? 'up' : (t.delta < 0 ? 'down' : 'flat');
-    return '<div class="kpi-tile">' +
-      '<div class="kpi-label">' + escapeHTML(t.label || '') + '</div>' +
-      '<div class="kpi-value">' + escapeHTML(String(t.value == null ? '0' : t.value)) + '</div>' +
-      (t.delta != null ? '<div class="kpi-delta ' + cls + '">' + (t.delta > 0 ? '↑ ' : (t.delta < 0 ? '↓ ' : '')) + escapeHTML(String(Math.abs(t.delta))) + '</div>' : '') +
-    '</div>';
-  }).join('') + '</div>';
-}
-
-function renderBarChart(data) {
-  const labels = data.labels || [];
-  const values = data.values || [];
-  if (labels.length === 0) return '<div class="pane-placeholder">No data.</div>';
-  const max = Math.max.apply(null, values.concat([1]));
-  const h = Math.max(160, labels.length * 32);
-  const labelW = 90;
-  const barAreaStart = labelW + 10;
-  let svg = '<svg class="chart-svg" viewBox="0 0 400 ' + h + '" preserveAspectRatio="xMinYMin meet">';
-  labels.forEach(function (label, i) {
-    const v = values[i] || 0;
-    const barLen = max > 0 ? ((400 - barAreaStart - 60 - 4) * v / max) : 0;
-    const y = i * 32 + 8;
-    svg += '<text x="' + (labelW - 4) + '" y="' + (y + 14) + '" text-anchor="end" font-size="11" fill="#374151">' + escapeHTML(label) + '</text>';
-    svg += '<rect x="' + barAreaStart + '" y="' + y + '" width="' + barLen + '" height="18" rx="3" fill="#1d4ed8"/>';
-    svg += '<text x="' + (barAreaStart + barLen + 6) + '" y="' + (y + 14) + '" font-size="11" fill="#111827">' + (typeof v === 'number' && v >= 1000 ? formatMoney(v) : v) + '</text>';
-  });
-  svg += '</svg>';
-  return svg;
-}
-
-function renderLineChart(data) {
-  const labels = data.labels || [];
-  const values = data.values || [];
-  if (labels.length < 2) return '<div class="pane-placeholder">Need 2+ points.</div>';
-  const w = 380, h = 180;
-  const m = { top: 20, right: 10, bottom: 30, left: 40 };
-  const iw = w - m.left - m.right;
-  const ih = h - m.top - m.bottom;
-  const max = Math.max.apply(null, values.concat([1]));
-  const min = Math.min.apply(null, values.concat([0]));
-  const range = (max - min) || 1;
-  const xStep = iw / (values.length - 1);
-  const points = values.map(function (v, i) {
-    const x = m.left + i * xStep;
-    const y = m.top + ih - ((v - min) / range) * ih;
-    return x + ',' + y;
-  }).join(' ');
-  let svg = '<svg class="chart-svg" viewBox="0 0 ' + w + ' ' + h + '">';
-  svg += '<line x1="' + m.left + '" y1="' + m.top + '" x2="' + m.left + '" y2="' + (m.top + ih) + '" stroke="#e5e7eb"/>';
-  svg += '<line x1="' + m.left + '" y1="' + (m.top + ih) + '" x2="' + (m.left + iw) + '" y2="' + (m.top + ih) + '" stroke="#e5e7eb"/>';
-  svg += '<polyline points="' + points + '" fill="none" stroke="#1d4ed8" stroke-width="2"/>';
-  values.forEach(function (v, i) {
-    const x = m.left + i * xStep;
-    const y = m.top + ih - ((v - min) / range) * ih;
-    svg += '<circle cx="' + x + '" cy="' + y + '" r="3" fill="#1d4ed8"/>';
-  });
-  [0, Math.floor(labels.length / 2), labels.length - 1].forEach(function (i) {
-    const x = m.left + i * xStep;
-    svg += '<text x="' + x + '" y="' + (h - 8) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + escapeHTML(labels[i]) + '</text>';
-  });
-  svg += '</svg>';
-  return svg;
-}
-
-function renderPieChart(data) {
-  const labels = data.labels || [];
-  const values = data.values || [];
-  if (labels.length === 0) return '<div class="pane-placeholder">No data.</div>';
-  const total = values.reduce(function (s, v) { return s + (Number(v) || 0); }, 0);
-  if (total === 0) return '<div class="pane-placeholder">All zero.</div>';
-  const colors = ['#1d4ed8', '#0F2E5C', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d'];
-  const cx = 90, cy = 90, r = 70;
-  let startAngle = -Math.PI / 2;
-  let svg = '<svg class="chart-svg" viewBox="0 0 380 180">';
-  let legendY = 12;
-  values.forEach(function (v, i) {
-    const angle = (v / total) * 2 * Math.PI;
-    const endAngle = startAngle + angle;
-    const x1 = cx + r * Math.cos(startAngle);
-    const y1 = cy + r * Math.sin(startAngle);
-    const x2 = cx + r * Math.cos(endAngle);
-    const y2 = cy + r * Math.sin(endAngle);
-    const largeArc = angle > Math.PI ? 1 : 0;
-    const color = colors[i % colors.length];
-    svg += '<path d="M ' + cx + ',' + cy + ' L ' + x1 + ',' + y1 + ' A ' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '" opacity="0.85"/>';
-    svg += '<rect x="200" y="' + legendY + '" width="10" height="10" fill="' + color + '"/>';
-    svg += '<text x="216" y="' + (legendY + 9) + '" font-size="11" fill="#111827">' + escapeHTML(labels[i]) + ' (' + Math.round(v / total * 100) + '%)</text>';
-    legendY += 18;
-    startAngle = endAngle;
-  });
-  svg += '</svg>';
-  return svg;
-}
-
-function renderFunnel(data) {
-  const stages = data.stages || [];
-  if (stages.length === 0) return '<div class="pane-placeholder">No stages.</div>';
-  const max = Math.max.apply(null, stages.map(function (s) { return s.count || 0; }).concat([1]));
-  return stages.map(function (s) {
-    const pct = max > 0 ? (s.count / max) * 100 : 0;
-    return '<div class="funnel-stage">' +
-      '<div class="funnel-label">' + escapeHTML(s.label || '') + '</div>' +
-      '<div class="funnel-bar" style="width: ' + pct + '%;">' + escapeHTML(String(s.count || 0)) + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function renderChecklist(data, slot) {
-  if (data.actions && Array.isArray(data.actions)) {
-    return renderChecklistInner(data.actions);
-  }
-  if (data.plan_id) {
-    const bodyId = 'planChecklist_' + slot.slot;
-    setTimeout(function () { fetchAndRenderPlan(data.plan_id, bodyId); }, 0);
-    return '<div id="' + bodyId + '"><div class="pane-placeholder">Loading plan ' + data.plan_id + '…</div></div>';
-  }
-  return '<div class="pane-placeholder">No actions.</div>';
-}
-
-function renderChecklistInner(actions) {
-  const sorted = actions.slice().sort(function (a, b) {
-    const statusOrder = { pending: 0, completed: 1, skipped: 2 };
-    const sa = statusOrder[a.status || 'pending'] || 0;
-    const sb = statusOrder[b.status || 'pending'] || 0;
-    if (sa !== sb) return sa - sb;
-    return (b.score || 0) - (a.score || 0);
-  });
-  return sorted.slice(0, 20).map(function (a) {
-    const status = a.status || 'pending';
-    return '<div class="checklist-item">' +
-      '<span class="checklist-status ' + status + '"></span>' +
-      '<div class="checklist-text">' + escapeHTML(a.action || a.action_id || 'unnamed') + '</div>' +
-      '<div class="checklist-score">' + (a.score != null ? a.score : '') + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-async function fetchAndRenderPlan(planId, bodyId) {
+// ─── Weekly status email ───────────────────────────────
+async function sendWeeklyEmail() {
+  const scoped = filterContacts();
+  const emails = emailsInScope();
+  const meets = meetingsInScope();
+  const calls = callsInScope();
+  const sms = smsInScope();
+  const opens = emails.filter(e => e.opened_at || e.opens > 0).length;
+  const replies = emails.filter(e => e.replied_at).length;
+  
+  // Active plans
+  const active = allPlans.filter(p => p.status === 'active');
+  const totalActions = active.reduce((s,p) => s + safeJSON(p.plan).length, 0);
+  const doneActions = active.reduce((s,p) => s + safeJSON(p.plan).filter(a => a.status==='completed').length, 0);
+  
+  const body = `
+    <h2>Victory Vision Weekly Status — ${tagLabel()}</h2>
+    <p>Window: <b>${windowLabel()}</b></p>
+    <h3>Plan Progress</h3>
+    <ul>
+      <li><b>${active.length}</b> active plan${active.length !== 1 ? 's' : ''}</li>
+      <li><b>${doneActions}/${totalActions}</b> actions completed (${totalActions ? Math.round(doneActions*100/totalActions) : 0}%)</li>
+    </ul>
+    <h3>Funnel This Window</h3>
+    <ul>
+      <li>📧 ${emails.length} emails sent · ${opens} opens · ${replies} replies</li>
+      <li>💬 ${sms.length} SMS · 📞 ${calls.length} calls</li>
+      <li>📅 ${meets.length} meetings scheduled</li>
+    </ul>
+    <h3>Top 3 Open Plan Actions</h3>
+    <ol>
+      ${active.flatMap(p => safeJSON(p.plan))
+        .filter(a => a.status !== 'completed')
+        .sort((a,b) => (b.score||0) - (a.score||0))
+        .slice(0, 3)
+        .map(a => `<li><b>${esc(a.action_id || 'action')}</b> — ${esc(a.action || '')} (${esc(a.contact_id || '')})</li>`)
+        .join('')}
+    </ol>
+    <p><a href="https://victoryvision.app/ai">View full dashboard →</a></p>
+  `;
   try {
-    const resp = await fetch(
-      SUPABASE_URL + '/rest/v1/plans?id=eq.' + planId + '&select=plan',
-      { headers: authHeaders() }
-    );
-    const rows = await resp.json();
-    const actions = (rows[0] && rows[0].plan) || [];
-    const target = document.getElementById(bodyId);
-    if (target) target.innerHTML = renderChecklistInner(actions);
-  } catch (e) {
-    const target = document.getElementById(bodyId);
-    if (target) target.innerHTML = '<div class="pane-placeholder">Could not load plan.</div>';
-  }
-}
-
-function renderPipeline(data) {
-  const deals = data.deals || [];
-  if (deals.length === 0) return '<div class="pane-placeholder">No deals.</div>';
-  const max = Math.max.apply(null, deals.map(function (d) { return d.gross || 0; }).concat([1]));
-  return deals.map(function (d) {
-    const grossPct = max > 0 ? (d.gross / max) * 100 : 0;
-    const pwvPct = max > 0 ? (d.pwv / max) * 100 : 0;
-    return '<div class="pipeline-row">' +
-      '<div class="pipeline-label">' + escapeHTML(d.name || '') + '</div>' +
-      '<div class="pipeline-track">' +
-        '<div class="pipeline-fill" style="width: ' + grossPct + '%;"></div>' +
-        '<div class="pipeline-pwv" style="width: ' + pwvPct + '%;"></div>' +
-      '</div>' +
-      '<div class="pipeline-value">' + formatMoney(d.gross) + ' / ' + formatMoney(d.pwv) + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function renderContacts(data) {
-  const contacts = data.contacts || [];
-  if (contacts.length === 0) return '<div class="pane-placeholder">No contacts.</div>';
-  return contacts.slice(0, 10).map(function (c) {
-    const tags = (c.tags || '').split(',').slice(0, 4).map(function (t) { return t.trim(); }).filter(Boolean);
-    return '<div class="contact-card">' +
-      (c.score != null ? '<div class="contact-card-score">' + escapeHTML(String(c.score)) + '</div>' : '') +
-      '<div class="contact-card-name">' + escapeHTML(c.name || '(unnamed)') + '</div>' +
-      '<div class="contact-card-meta">' + escapeHTML([c.title, c.company].filter(Boolean).join(' · ')) + '</div>' +
-      (tags.length ? '<div class="contact-card-tags">' + tags.map(function (t) {
-        return '<span class="contact-card-tag">' + escapeHTML(t) + '</span>';
-      }).join('') + '</div>' : '') +
-    '</div>';
-  }).join('');
-}
-
-function renderDealCard(data) {
-  return '<div class="deal-card">' +
-    '<div class="deal-name">' + escapeHTML(data.name || '') + '</div>' +
-    (data.tagline ? '<div class="deal-tagline">' + escapeHTML(data.tagline) + '</div>' : '') +
-    '<div class="deal-numbers">' +
-      '<div><div class="deal-num-label">Gross</div><div class="deal-num-value">' + formatMoney(data.gross_value_usd) + '</div></div>' +
-      '<div><div class="deal-num-label">PWV</div><div class="deal-num-value">' + formatMoney(data.pwv_usd) + '</div></div>' +
-    '</div>' +
-  '</div>';
-}
-
-function renderTable(data) {
-  const cols = data.columns || [];
-  const rows = data.rows || [];
-  if (cols.length === 0 || rows.length === 0) return '<div class="pane-placeholder">No data.</div>';
-  let html = '<table class="data-table"><thead><tr>';
-  cols.forEach(function (c) { html += '<th>' + escapeHTML(c) + '</th>'; });
-  html += '</tr></thead><tbody>';
-  rows.slice(0, 30).forEach(function (row) {
-    html += '<tr>';
-    row.forEach(function (cell) { html += '<td>' + escapeHTML(String(cell == null ? '' : cell)) + '</td>'; });
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  return html;
-}
-
-function renderTimeline(data) {
-  const events = data.events || [];
-  if (events.length === 0) return '<div class="pane-placeholder">No events.</div>';
-  return events.slice(0, 12).map(function (e) {
-    return '<div class="timeline-item">' +
-      (e.time ? '<div class="timeline-time">' + escapeHTML(e.time) + '</div>' : '') +
-      '<div>' + escapeHTML(e.text || e.label || '') + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-// ============================================================
-// PANE ACTIONS (clear from UI)
-// ============================================================
-window.clearPaneFromUI = async function (slot) {
-  if (!CUSTOMER_ID) return;
-  try {
-    const resp = await fetch(
-      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(CUSTOMER_ID) + '&select=ai_panes',
-      { headers: authHeaders() }
-    );
-    const rows = await resp.json();
-    const current = (rows[0] && rows[0].ai_panes) || { slots: [] };
-    current.slots = (current.slots || []).filter(function (s) { return s.slot !== slot; });
-    await fetch(
-      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(CUSTOMER_ID),
-      {
-        method: 'PATCH',
-        headers: authHeaders({
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        }),
-        body: JSON.stringify({ ai_panes: current })
-      }
-    );
-    renderAllPanes(current);
-  } catch (e) {
-    console.warn('clearPaneFromUI failed:', e);
-  }
-};
-
-// ============================================================
-// CONFIRMATION MODAL
-// ============================================================
-function showConfirm(confirm) {
-  const existing = document.getElementById('confirmOverlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'confirm-overlay';
-  overlay.id = 'confirmOverlay';
-  overlay.innerHTML =
-    '<div class="confirm-modal">' +
-      '<div class="confirm-header">' +
-        '<div class="confirm-title">Confirm: ' + escapeHTML(confirm.action || 'action') + '</div>' +
-        '<div class="confirm-subtitle">' + escapeHTML(confirm.summary || '') + '</div>' +
-      '</div>' +
-      '<div class="confirm-body">' +
-        (confirm.to ? '<div class="confirm-row"><div class="confirm-row-label">To</div><div class="confirm-row-value">' + escapeHTML(confirm.to) + '</div></div>' : '') +
-        (confirm.subject ? '<div class="confirm-row"><div class="confirm-row-label">Subject</div><div class="confirm-row-value">' + escapeHTML(confirm.subject) + '</div></div>' : '') +
-        (confirm.draft_id ? '<div class="confirm-row"><div class="confirm-row-label">Draft</div><div class="confirm-row-value">#' + confirm.draft_id + '</div></div>' : '') +
-      '</div>' +
-      '<div class="confirm-actions">' +
-        '<button class="confirm-btn confirm-btn-skip" id="confirmSkipBtn">Skip</button>' +
-        '<button class="confirm-btn confirm-btn-ok" id="confirmOkBtn">Send now</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(overlay);
-
-  document.getElementById('confirmSkipBtn').onclick = function () {
-    overlay.remove();
-    appendMsg('assistant', 'Skipped: ' + (confirm.summary || ''));
-    processNextConfirm();
-  };
-  document.getElementById('confirmOkBtn').onclick = async function () {
-    overlay.remove();
-    await executeConfirmed(confirm);
-    processNextConfirm();
-  };
-}
-
-async function executeConfirmed(confirm) {
-  if (confirm.action === 'send_email' && confirm.draft_id) {
-    try {
-      const resp = await fetch(EMAIL_SEND_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_id: confirm.draft_id, customer_id: CUSTOMER_ID })
-      });
-      if (resp.ok) {
-        appendMsg('assistant', '✓ Sent draft #' + confirm.draft_id + ' to ' + (confirm.to || 'recipient') + '.');
-      } else {
-        const t = await resp.text();
-        appendMsg('assistant', '✗ Send failed [' + resp.status + ']: ' + t.slice(0, 200));
-      }
-    } catch (e) {
-      appendMsg('assistant', '✗ Network error: ' + e.message);
-    }
-  } else {
-    appendMsg('assistant', 'Action "' + confirm.action + '" not yet wired.');
-  }
-}
-
-function processNextConfirm() {
-  if (pendingConfirmsQueue.length > 0) {
-    showConfirm(pendingConfirmsQueue.shift());
-  }
-}
-
-// ============================================================
-// CHAT I/O
-// ============================================================
-function appendMsg(role, text) {
-  const messages = document.getElementById('messages');
-  const msg = document.createElement('div');
-  msg.className = 'msg ' + role;
-  msg.textContent = text;
-  messages.appendChild(msg);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function showTyping() {
-  const messages = document.getElementById('messages');
-  const t = document.createElement('div');
-  t.className = 'typing';
-  t.id = 'typingIndicator';
-  t.textContent = 'Claude is thinking…';
-  messages.appendChild(t);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function hideTyping() {
-  const t = document.getElementById('typingIndicator');
-  if (t) t.remove();
-}
-
-window.sendSuggestion = function (text) {
-  document.getElementById('chatInput').value = text;
-  sendMessage();
-};
-
-// ============================================================
-// FILE UPLOAD via Cloudinary unsigned preset
-// ============================================================
-const CLOUDINARY_CLOUD = 'dv94te4zt';            // your existing cloud
-const CLOUDINARY_PRESET = 'vv_ai_uploads';        // unsigned preset — create in Cloudinary dashboard
-let pendingAttachments = [];                      // [{name, url, mime_type, size, tempId, status}]
-
-function renderAttachmentStrip() {
-  const strip = document.getElementById('attachmentStrip');
-  if (pendingAttachments.length === 0) { strip.style.display = 'none'; return; }
-  strip.style.display = 'flex';
-  strip.innerHTML = pendingAttachments.map(function (a) {
-    const cls = a.status === 'uploading' ? ' uploading' : (a.status === 'error' ? ' error' : '');
-    const label = a.status === 'uploading' ? '⏳ ' + escapeHTML(a.name)
-                : a.status === 'error'     ? '✗ ' + escapeHTML(a.name)
-                                            : '📄 ' + escapeHTML(a.name);
-    return '<span class="attachment-pill' + cls + '" data-id="' + a.tempId + '">' +
-           label +
-           '<span class="remove" onclick="removeAttachment(\'' + a.tempId + '\')">×</span>' +
-           '</span>';
-  }).join('');
-}
-
-window.removeAttachment = function (tempId) {
-  pendingAttachments = pendingAttachments.filter(function (a) { return a.tempId !== tempId; });
-  renderAttachmentStrip();
-};
-
-async function uploadFileToCloudinary(file) {
-  // PDF goes to /image/upload per the project's Cloudinary config (PDF delivery enabled).
-  const resourceType = file.type.startsWith('image/') || file.type === 'application/pdf'
-    ? 'image' : 'raw';
-  const url = 'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/' + resourceType + '/upload';
-  const form = new FormData();
-  form.append('file', file);
-  form.append('upload_preset', CLOUDINARY_PRESET);
-  // XMLHttpRequest to avoid CORS preflight quirks
-  return new Promise(function (resolve, reject) {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.onload = function () {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { reject(e); }
-      } else { reject(new Error('Cloudinary ' + xhr.status + ': ' + xhr.responseText.slice(0, 200))); }
-    };
-    xhr.onerror = function () { reject(new Error('Network error')); };
-    xhr.send(form);
-  });
-}
-
-window.handleFilesPicked = async function (event) {
-  const files = Array.from(event.target.files || []);
-  event.target.value = ''; // reset so picking the same file twice works
-  for (const file of files) {
-    if (file.size > 20 * 1024 * 1024) {
-      appendMsg('assistant', '[skip] ' + file.name + ' is over 20MB.');
-      continue;
-    }
-    const tempId = 'att_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const entry = { tempId: tempId, name: file.name, mime_type: file.type, size: file.size, status: 'uploading', url: null };
-    pendingAttachments.push(entry);
-    renderAttachmentStrip();
-    try {
-      const result = await uploadFileToCloudinary(file);
-      entry.url = result.secure_url;
-      entry.status = 'ready';
-    } catch (e) {
-      console.warn('Upload failed:', e);
-      entry.status = 'error';
-    }
-    renderAttachmentStrip();
-  }
-};
-
-// ============================================================
-// VOICE DICTATION via Web Speech API
-// ============================================================
-let dictation = { recognition: null, active: false };
-
-function initDictation() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { return null; }
-  const r = new SR();
-  r.continuous = true;
-  r.interimResults = true;
-  r.lang = 'en-US';
-  return r;
-}
-
-window.toggleDictation = function () {
-  const micBtn = document.getElementById('micBtn');
-  const input = document.getElementById('chatInput');
-
-  if (dictation.active) {
-    if (dictation.recognition) dictation.recognition.stop();
-    dictation.active = false;
-    micBtn.classList.remove('recording');
-    micBtn.title = 'Dictate (Web Speech)';
-    return;
-  }
-  if (!dictation.recognition) {
-    dictation.recognition = initDictation();
-    if (!dictation.recognition) {
-      appendMsg('assistant', 'Dictation needs Chrome/Edge — your browser does not support the Web Speech API.');
-      return;
-    }
-    let baseText = '';
-    dictation.recognition.onstart = function () {
-      baseText = input.value ? input.value + ' ' : '';
-    };
-    dictation.recognition.onresult = function (event) {
-      let interim = '', final = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) final += transcript;
-        else interim += transcript;
-      }
-      if (final) { baseText = baseText + final; }
-      input.value = baseText + interim;
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-    };
-    dictation.recognition.onerror = function (e) {
-      console.warn('Dictation error', e);
-      dictation.active = false;
-      micBtn.classList.remove('recording');
-    };
-    dictation.recognition.onend = function () {
-      dictation.active = false;
-      micBtn.classList.remove('recording');
-    };
-  }
-  try {
-    dictation.recognition.start();
-    dictation.active = true;
-    micBtn.classList.add('recording');
-    micBtn.title = 'Click to stop dictation';
-  } catch (e) {
-    console.warn('Could not start dictation', e);
-  }
-};
-
-window.sendMessage = async function () {
-  if (isSending) return;
-  const input = document.getElementById('chatInput');
-  const btn = document.getElementById('sendBtn');
-  const message = input.value.trim();
-  const readyAttachments = pendingAttachments.filter(function (a) { return a.status === 'ready' && a.url; });
-  if (!message && readyAttachments.length === 0) return;
-  if (pendingAttachments.some(function (a) { return a.status === 'uploading'; })) {
-    appendMsg('assistant', 'Wait for uploads to finish.');
-    return;
-  }
-  if (!CUSTOMER_ID) {
-    appendMsg('assistant', 'Need to sign in first.');
-    return;
-  }
-
-  isSending = true;
-  btn.disabled = true;
-  btn.textContent = '…';
-  const displayMsg = message + (readyAttachments.length
-    ? '\n[+' + readyAttachments.length + ' attachment(s): ' + readyAttachments.map(function(a){return a.name;}).join(', ') + ']'
-    : '');
-  appendMsg('user', displayMsg);
-  input.value = '';
-  input.style.height = 'auto';
-  showTyping();
-
-  // Hide the suggestion chips after first interaction
-  const chips = document.getElementById('suggestionChips');
-  if (chips) chips.style.display = 'none';
-
-  // Snapshot attachments then clear
-  const attachmentsPayload = readyAttachments.map(function (a) {
-    return { name: a.name, url: a.url, mime_type: a.mime_type, size: a.size };
-  });
-  pendingAttachments = [];
-  renderAttachmentStrip();
-
-  try {
-    const resp = await fetch(AI_CHAT_WEBHOOK, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (authToken || SUPABASE_ANON_KEY),
-        'apikey': SUPABASE_ANON_KEY
-      },
+    const res = await fetch(N8N + '/emails/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        customer_id: CUSTOMER_ID,
-        conversation_id: getConversationId(),
-        message: message,
-        attachments: attachmentsPayload
+        customer_id: CUSTOMER_ID, to_email: CUSTOMER_ID,
+        subject: `VV Weekly: ${tagLabel()} (${windowLabel()})`,
+        body
       })
     });
-    hideTyping();
-    if (!resp.ok) {
-      const txt = await resp.text();
-      appendMsg('assistant', '[error ' + resp.status + '] ' + (txt || '').slice(0, 300));
-      return;
-    }
-    const data = await resp.json();
-    appendMsg('assistant', data.message || '(empty response)');
-
-    if (data.panes_update && data.panes_update.length > 0) {
-      loadPanes();
-    }
-    if (data.pending_confirms && data.pending_confirms.length > 0) {
-      pendingConfirmsQueue.push.apply(pendingConfirmsQueue, data.pending_confirms);
-      processNextConfirm();
-    }
-    if (data.conversation_id) {
-      currentConversationId = data.conversation_id;
-    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('Weekly status email sent', 'success');
   } catch (e) {
-    hideTyping();
-    console.error('Network error:', e);
-    appendMsg('assistant', 'Network error: ' + e.message);
-  } finally {
-    isSending = false;
-    btn.disabled = false;
-    btn.textContent = 'Send';
-    input.focus();
+    toast('Send failed: ' + e.message, 'error');
   }
-};
-
-// Auto-resize textarea
-function attachAutoResize() {
-  const input = document.getElementById('chatInput');
-  if (!input) return;
-  input.addEventListener('input', function () {
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-  });
 }
 
-// ============================================================
-// INIT
-// ============================================================
-(async function init() {
-  const ok = await checkAuth();
-  if (!ok) {
-    window.location.href = 'login.html';
-    return;
-  }
+// ─── Auto SDR toggle ───────────────────────────────────
+async function toggleSdr(enabled) {
+  const { error } = await sb.from('users').update({ aisdr: enabled }).eq('email', CUSTOMER_ID);
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  toast('Auto SDR ' + (enabled ? 'enabled' : 'disabled'), 'success');
+  // Optional: fire n8n webhook to actually start/stop the agent
+  fetch(N8N + '/aisdr/toggle', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customer_id: CUSTOMER_ID, enabled })
+  }).catch(() => {});
+}
+
+// ─── Filter changes ─────────────────────────────────────
+function onMasterTagChange() {
+  masterTag = document.getElementById('masterTag').value;
+  updateSummary();
+  renderAll();
+}
+
+function setTimeWindow(w) {
+  timeWindow = w === 'custom' ? 'custom' : parseInt(w);
+  document.querySelectorAll('.time-pill').forEach(p => p.classList.toggle('active', p.dataset.w === w));
+  document.getElementById('customRange').classList.toggle('active', w === 'custom');
+  if (w !== 'custom') { updateSummary(); renderAll(); }
+}
+
+function applyCustomRange() {
+  customFromDate = document.getElementById('customFrom').value;
+  customToDate = document.getElementById('customTo').value;
+  if (!customFromDate || !customToDate) { toast('Pick both dates', 'error'); return; }
+  timeWindow = 'custom';
+  updateSummary();
+  renderAll();
+}
+
+function updateSummary() {
+  document.getElementById('focusSummary').innerHTML = 
+    `Analyzing <b>${tagLabel()}</b> for the last <b>${windowLabel()}</b>. Contacts in scope: <b>${filterContacts().length}</b>.`;
+}
+
+// ─── Plans loader ──────────────────────────────────────
+async function loadPlans() {
+  const { data } = await sb.from('plans').select('*').eq('customer_id', CUSTOMER_ID)
+    .order('created_at', { ascending: false }).limit(15);
+  allPlans = data || [];
+  renderPlans();
+}
+
+// ─── Master render ─────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderFunnel();
+  renderAttribution();
+  renderTimeline();
+  renderPlans();
+}
+
+async function refreshAll() {
+  toast('Refreshing…', 'info');
+  await loadAllData();
+  populateMasterTagDropdown();
+  updateSummary();
+  renderAll();
+}
+
+// ─── Init ──────────────────────────────────────────────
+async function init() {
+  document.getElementById('authLoading').style.display = 'flex';
+  if (!await checkAuth()) { window.location.href = 'login.html'; return; }
   document.getElementById('authLoading').style.display = 'none';
-  attachAutoResize();
-  loadPanes();
+  
+  await Promise.all([loadUser(), loadAllData()]);
+  populateMasterTagDropdown();
+  
+  // Honor URL param ?tag=...&window=...
+  const params = new URLSearchParams(location.search);
+  if (params.get('tag')) {
+    masterTag = params.get('tag');
+    document.getElementById('masterTag').value = masterTag;
+  }
+  if (params.get('window')) {
+    setTimeWindow(params.get('window'));
+  }
+  
+  // Wire up time pills
+  document.querySelectorAll('.time-pill').forEach(p => {
+    p.addEventListener('click', () => setTimeWindow(p.dataset.w));
+  });
+  document.getElementById('sdrToggle').addEventListener('change', e => toggleSdr(e.target.checked));
+  
+  updateSummary();
+  renderAll();
+}
 
-  // Re-check session every 5 minutes
-  setInterval(async function () {
-    const stillOk = await checkAuth();
-    if (!stillOk) window.location.href = 'login.html';
-  }, 300000);
-})();
+window.addEventListener('DOMContentLoaded', init);
+window.onMasterTagChange = onMasterTagChange;
+window.applyCustomRange = applyCustomRange;
+window.refreshAll = refreshAll;
+window.loadPlans = loadPlans;
+window.requestNewPlan = requestNewPlan;
+window.sendWeeklyEmail = sendWeeklyEmail;
+window.togglePlan = togglePlan;
+window.editPlanDescription = editPlanDescription;
+window.executePlan = executePlan;
+window.markActionComplete = markActionComplete;
+window.editAction = editAction;
+window.removeActionLocal = removeActionLocal;
+window.addAction = addAction;
+window.savePlanActions = savePlanActions;
 </script>
-
 </body>
 </html>
