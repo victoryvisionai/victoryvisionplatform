@@ -147,6 +147,23 @@
   .badge-very_low  { background: #dc2626; color: #fff; }
   .badge-won       { background: #065f46; color: #fff; }
   .badge-lost      { background: #6b7280; color: #fff; }
+
+  /* ── Grouped-by-person view ───────────────────────────── */
+  .person-group{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px;overflow:hidden;background:#fff;}
+  .person-head{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;user-select:none;background:#f8fafc;transition:background .15s;}
+  .person-head:hover{background:#eef2f7;}
+  .person-caret{transition:transform .15s;color:#94a3b8;font-size:11px;flex:0 0 auto;}
+  .person-group.open .person-caret{transform:rotate(90deg);}
+  .person-name{font-weight:700;color:#0A3161;font-size:15px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .person-company{font-weight:500;color:#64748b;font-size:13px;}
+  .person-meta{font-size:11px;color:#475569;background:#e2e8f0;padding:2px 10px;border-radius:999px;flex:0 0 auto;}
+  .person-next{font-size:12px;color:#94a3b8;flex:0 0 auto;}
+  .person-next.up{color:#0A3161;font-weight:600;}
+  .person-meetings{display:none;padding:8px 10px 12px;}
+  .person-group.open .person-meetings{display:block;}
+  .person-meetings .meeting-card{margin-bottom:8px;}
+  .btn-danger{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+  .btn-danger:hover{background:#fee2e2;}
 </style>
 </head>
 <body>
@@ -267,7 +284,8 @@
     getUser:       'https://victoryvision.app.n8n.cloud/webhook/user/get',
     sendEmail:     'https://victoryvision.app.n8n.cloud/webhook/emails/send',
     followup:      'https://victoryvision.app.n8n.cloud/webhook/emails/followup',
-    updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update'
+    updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update',
+    deleteMeeting: 'https://victoryvision.app.n8n.cloud/webhook/meetings/delete'
   };
 
   let CUSTOMER_ID = null, AUTH_TOKEN = null;
@@ -536,14 +554,86 @@
     return allMeetings;
   }
 
+  // Collapse any residual duplicates (same person + same start time) → keep richest
+  function dedupeMeetings(list) {
+    const richness = m => (m.transcript ? 2 : 0) + (m.summary ? 2 : 0) + (getCoachEntries(m).length ? 1 : 0);
+    const seen = new Map();
+    list.forEach(m => {
+      const key = (m.participant_name || m.title || '') + '|' + (m.start_at || '');
+      const prev = seen.get(key);
+      if (!prev || richness(m) > richness(prev)) seen.set(key, m);
+    });
+    return Array.from(seen.values());
+  }
+
+  function groupKeyFor(m) {
+    return (m.participant_name || m.title || 'Untitled').trim() || 'Untitled';
+  }
+
   function renderList() {
-    const meetings = filterMeetings();
+    let meetings = dedupeMeetings(filterMeetings());
     const el = document.getElementById('meetingsList');
     document.getElementById('meetingCount').textContent = '· ' + meetings.length + ' shown';
-
     if (!meetings.length) { el.innerHTML = '<div class="empty-state">No meetings match this filter yet.</div>'; return; }
 
-    el.innerHTML = meetings.map(m => renderMeetingCard(m)).join('');
+    // Group by participant name
+    const groups = {};
+    meetings.forEach(m => { (groups[groupKeyFor(m)] = groups[groupKeyFor(m)] || []).push(m); });
+
+    const groupArr = Object.keys(groups).map(name => {
+      // within a person: furthest-in-advance at top → oldest at bottom
+      const mlist = groups[name].slice().sort((a, b) =>
+        new Date(b.start_at || b.created_at || 0) - new Date(a.start_at || a.created_at || 0));
+      const maxDate = new Date(mlist[0].start_at || mlist[0].created_at || 0).getTime();
+      let company = '';
+      for (const mm of mlist) {
+        const c = findContactFor(mm);
+        if (c && c.company) { company = c.company; break; }
+        if (mm.company) { company = mm.company; break; }
+      }
+      return { name, mlist, maxDate, company };
+    });
+    // groups ordered by their furthest-in-advance meeting (upcoming people first)
+    groupArr.sort((a, b) => b.maxDate - a.maxDate);
+
+    el.innerHTML = groupArr.map(renderPersonGroup).join('');
+  }
+
+  function renderPersonGroup(g) {
+    const gid = 'grp-' + String(g.name).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40) + '-' + g.maxDate;
+    const count = g.mlist.length;
+    const next = g.mlist[0];
+    const upcoming = g.maxDate > Date.now();
+    const dateStr = next.start_at ? new Date(next.start_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+    return `
+      <div class="person-group" id="${gid}">
+        <div class="person-head" onclick="toggleGroup('${gid}')">
+          <span class="person-caret">▶</span>
+          <div class="person-name">${esc(g.name)}${g.company ? ` <span class="person-company">· ${esc(g.company)}</span>` : ''}</div>
+          <span class="person-meta">${count} meeting${count > 1 ? 's' : ''}</span>
+          <span class="person-next ${upcoming ? 'up' : ''}">${upcoming ? 'next ' : 'last '}${esc(dateStr)}</span>
+        </div>
+        <div class="person-meetings">
+          ${g.mlist.map(m => renderMeetingCard(m)).join('')}
+        </div>
+      </div>`;
+  }
+
+  function toggleGroup(gid) {
+    const el = document.getElementById(gid);
+    if (el) el.classList.toggle('open');
+  }
+
+  async function deleteMeeting(id, ev) {
+    if (ev) ev.stopPropagation();
+    if (!confirm('Delete this meeting permanently? (It is backed up server-side and can be restored from meetings_deleted_backup.)')) return;
+    const r = await api(ENDPOINTS.deleteMeeting, { meeting_id: String(id) });
+    if (r && (r.ok || r.deleted)) {
+      allMeetings = allMeetings.filter(x => String(x.id) !== String(id));
+      renderKPIs(); renderCharts(); renderInsights(); renderList();
+    } else {
+      alert('Could not delete the meeting. Make sure the "Meetings - Delete - Production" workflow is imported and active.');
+    }
   }
 
   function renderMeetingCard(m) {
@@ -605,6 +695,7 @@
             ${contact ? `<button class="btn btn-outline" onclick="window.location.href='/contacts?id=${esc(contact.id || contact.contact_id || '')}'">👤 View Contact</button>` : ''}
             ${m.room_url ? `<button class="btn btn-ghost" onclick="window.open('${esc(m.room_url)}','_blank')">🎥 Open Meeting Room</button>` : ''}
             <button class="btn btn-ghost" onclick="copyMeetingSummary(${m.id})">📋 Copy Summary</button>
+            <button class="btn btn-danger" onclick="deleteMeeting(${m.id}, event)">🗑️ Delete</button>
           </div>
         </div>
       </div>
