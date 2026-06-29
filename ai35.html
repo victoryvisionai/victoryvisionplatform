@@ -1,0 +1,3001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Victory Vision AI SDR Performance Dashboard"/>
+  <meta name="author" content="Victory Vision"/>
+  <title>Victory Vision AI SDR - Performance & Attribution</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .navbar {
+      background: #0A3161;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .navbar .logo img {
+      height: 50px;
+      width: auto;
+    }
+
+    .navbar nav ul {
+      display: flex;
+      list-style: none;
+      gap: 25px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar nav ul li a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .navbar nav ul li a.active,
+    .navbar nav ul li a:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .navbar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .subscription-medallion {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(45deg, #CD7F32, #A0522D);
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .subscription-medallion.bronze {
+      background: linear-gradient(45deg, #CD7F32, #A0522D);
+    }
+
+    .subscription-medallion.silver {
+      background: linear-gradient(45deg, #C0C0C0, #808080);
+    }
+
+    .subscription-medallion.gold {
+      background: linear-gradient(45deg, #FFD700, #FFA500);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    .page-header {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    .page-header h1 {
+      font-size: 32px;
+      color: #0A3161;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    /* AI SDR Toggle */
+    .ai-sdr-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 25px 30px;
+      border-radius: 10px;
+      color: white;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-sdr-toggle-info h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .ai-sdr-toggle-info p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 80px;
+      height: 40px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.3);
+      transition: .4s;
+      border-radius: 40px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 32px;
+      width: 32px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #10b981;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(40px);
+    }
+
+    /* Funnel Section */
+    .funnel-section {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    .funnel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .funnel-header h2 {
+      font-size: 24px;
+      color: #0A3161;
+    }
+
+    .time-window-selector {
+      display: flex;
+      gap: 10px;
+    }
+
+    .time-window-btn {
+      padding: 8px 16px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #64748b;
+      transition: all 0.3s;
+    }
+
+    .time-window-btn:hover {
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .time-window-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .sales-funnel-container {
+      display: flex;
+      gap: 30px;
+    }
+
+    .funnel-visual {
+      flex: 1;
+    }
+
+    .funnel-tier {
+      margin-bottom: 20px;
+    }
+
+    .funnel-shape-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+
+    .funnel-shape {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      padding: 25px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .funnel-shape:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+
+   .funnel-leads { background: linear-gradient(135deg, #0a3161, #1a4a8a); color: white; }
+    .funnel-outreach { background: linear-gradient(135deg, #1a4a8a, #8b1a3a); color: white; }
+    .funnel-meetings { background: linear-gradient(135deg, #8b1a3a, #bb133e); color: white; }
+    .funnel-followup { background: linear-gradient(135deg, #bb133e, #d4365a); color: white; }
+    .funnel-victory { background: linear-gradient(135deg, #d4365a, #ffffff); color: #0a3161; }
+
+    .funnel-content {
+      text-align: center;
+    }
+
+    .funnel-count {
+      display: block;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .funnel-label {
+      font-size: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .expand-icon {
+      font-size: 14px;
+      transition: transform 0.3s;
+    }
+
+    .expand-icon.expanded {
+      transform: rotate(180deg);
+    }
+
+    .funnel-activities {
+      text-align: center;
+      margin-top: 10px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .outreach-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .outreach-details.expanded {
+      max-height: 200px;
+    }
+
+    .outreach-detail-item {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .detail-icon {
+      font-size: 24px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .detail-label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .detail-count {
+      display: block;
+      font-size: 28px;
+      font-weight: 700;
+      color: #0A3161;
+    }
+.action-remove-btn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #9ca3af;
+  padding: 4px 8px;
+  align-self: start;
+  transition: all 0.2s;
+}
+.action-remove-btn:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+    .funnel-activities-panel {
+      width: 250px;
+      background: white;
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .activity-panel-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .activity-icon {
+      font-size: 28px;
+    }
+
+    .activity-label {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0A3161;
+    }
+
+    .activity-step {
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      background: #f8fafc;
+      border-left: 3px solid #667eea;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #64748b;
+      transition: all 0.3s;
+    }
+
+    .activity-step:hover {
+      background: #ede9fe;
+      border-left-color: #7c3aed;
+      color: #7c3aed;
+    }
+
+    /* Attribution Dashboard */
+    .attribution-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .attribution-card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .attribution-card h3 {
+      font-size: 18px;
+      color: #0A3161;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .attribution-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .icon-ai { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    .icon-manual { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+    .icon-engagement { background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; }
+    .icon-conversion { background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .metric-row:last-child {
+      border-bottom: none;
+    }
+
+    .metric-label {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0A3161;
+    }
+
+    .metric-subtext {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .comparison-bar {
+      display: flex;
+      height: 30px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .bar-ai {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .bar-manual {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Performance Metrics */
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .performance-stat {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #0A3161;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    .stat-change.positive {
+      color: #10b981;
+    }
+
+    .stat-change.negative {
+      color: #ef4444;
+    }
+
+    /* Priority Leads Section */
+    .priority-leads-section {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    .priority-leads-section h2 {
+      font-size: 24px;
+      color: #0A3161;
+      margin-bottom: 20px;
+    }
+
+    .leads-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 10px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-btn:hover {
+      color: #0A3161;
+    }
+
+    .tab-btn.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .leads-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .leads-table thead {
+      background: #f8fafc;
+    }
+
+    .leads-table th {
+      padding: 15px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .leads-table td {
+      padding: 15px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .leads-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .lead-name {
+      display: block;
+      font-weight: 600;
+      color: #0A3161;
+      margin-bottom: 4px;
+    }
+
+    .lead-company {
+      display: block;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .lead-score {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .score-hot {
+      background: linear-gradient(135deg, #fee140, #fa709a);
+      color: white;
+    }
+
+    .score-warm {
+      background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+      color: #2d3436;
+    }
+
+    .score-cold {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    .lead-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .action-btn:hover {
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .action-btn.priority.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* Activity Timeline */
+    .activity-timeline {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .activity-timeline h2 {
+      font-size: 24px;
+      color: #0A3161;
+      margin-bottom: 25px;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 20px;
+      padding: 15px;
+      border-left: 3px solid #e2e8f0;
+      margin-bottom: 15px;
+      transition: all 0.3s;
+    }
+
+    .timeline-item:hover {
+      background: #f8fafc;
+      border-left-color: #667eea;
+    }
+
+    .timeline-item.ai-action {
+      border-left-color: #667eea;
+    }
+
+    .timeline-time {
+      font-size: 13px;
+      color: #94a3b8;
+      min-width: 100px;
+    }
+
+    .timeline-content {
+      flex: 1;
+    }
+
+    .timeline-title {
+      font-weight: 600;
+      color: #0A3161;
+      margin-bottom: 4px;
+    }
+
+    .timeline-description {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .timeline-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-ai {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .badge-manual {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+.plans-section {
+  backg
+    round: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #1e3a8a;
+}
+
+.refresh-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.refresh-btn:hover {
+  background: #2563eb;
+}
+
+.plans-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.plan-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.plan-card.expanded {
+  border-color: #3b82f6;
+}
+
+.plan-header {
+  background: #f9fafb;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.plan-header:hover {
+  background: #f3f4f6;
+}
+
+.plan-header-left {
+  flex: 1;
+}
+
+.plan-date {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.plan-description {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.plan-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.plan-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.plan-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.execute-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.execute-btn:hover {
+  background: #059669;
+}
+
+.execute-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.expand-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s;
+}
+
+.plan-card.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+.plan-body {
+  display: none;
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+}
+
+.plan-card.expanded .plan-body {
+  display: block;
+}
+
+.plan-insights {
+  background: #fef3c7;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.plan-insights h4 {
+  margin: 0 0 0.5rem 0;
+  color: #92400e;
+  font-size: 0.9rem;
+}
+
+.plan-insights p {
+  margin: 0;
+  color: #78350f;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.actions-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.action-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.action-priority {
+  width: 60px;
+  text-align: center;
+}
+
+.priority-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.priority-high {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.priority-medium {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.priority-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.action-score {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.action-details h5 {
+  margin: 0 0 0.25rem 0;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.action-company {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.action-type {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.action-rationale {
+  color: #4b5563;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.loading-text {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem;
+}
+
+.no-plans {
+  text-align: center;
+  color: #9ca3af;
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="authLoading" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    <div style="text-align: center;">
+      <div class="spinner" style="width: 60px; height: 60px; border: 5px solid #f3f3f3; border-top: 5px solid #0A3161; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+      <p style="color: #0A3161; font-size: 18px; font-weight: 600;">Authenticating...</p>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <div class="navbar">
+    <div class="logo">
+    <img class="logo-image" src="logo.jpg" alt="Victory Vision Logo"
+         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+  </div> 
+    <nav>
+      <ul>
+        <li><a href="/companyprofile">Profile</a></li>
+        <li><a href="/campaigns">Campaigns</a></li>
+        <li><a href="/media">Media</a></li>
+        <li><a href="/pages">Pages</a></li>
+        <li><a href="/social">Social</a></li>
+        <li><a href="/contacts">Contacts</a></li>
+        <li><a href="/ads">Ads</a></li>
+        <li><a href="/messages">Messages</a></li>
+        <li><a href="/meetings">Meetings</a></li>
+        <li><a href="/ai" class="active">AI SDR</a></li>
+        <li><a href="/analytics">Analytics</a></li>
+        <li><a href="/settings">Settings</a></li>
+      </ul>
+    </nav>
+    <div class="user-info">
+      <div id="userSubscription" class="subscription-medallion bronze">BRONZE</div>
+      <span id="userEmail">Loading...</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>AI SDR Performance Dashboard</h1>
+      <p>Track autonomous lead discovery, multi-channel outreach, engagement, and conversion attribution</p>
+    </div>
+
+    <!-- AI SDR Toggle -->
+    <div class="ai-sdr-toggle">
+      <div class="ai-sdr-toggle-info">
+        <h2>Autonomous AI SDR</h2>
+        <p>When enabled, AI continuously prospects, enriches, scores, and engages leads across email, SMS, and calls</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoSdrToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Sales Funnel -->
+    <div class="funnel-section">
+      <div class="funnel-header">
+        <h2>Victory Vision Sales Funnel</h2>
+       <div class="time-window-selector">
+          <button class="time-window-btn" data-window="1">Last 24 hrs</button>
+          <button class="time-window-btn" data-window="7">Last 7 days</button>
+          <button class="time-window-btn active" data-window="30">Last 30 days</button>
+          <button class="time-window-btn" data-window="90">Last 90 days</button>
+          <button class="time-window-btn" data-window="365">Last 12 months</button>
+        </div>
+      </div>
+
+      <div class="sales-funnel-container">
+        <div class="funnel-visual">
+          <!-- Leads Found -->
+          <div class="funnel-tier funnel-tier-1">
+            <div class="funnel-shape-wrapper">
+              <div class="funnel-shape funnel-leads">
+                <div class="funnel-content">
+                  <span class="funnel-count" id="funnelLeads">0</span>
+                  <span class="funnel-label">Leads Found</span>
+                </div>
+              </div>
+            </div>
+            <div class="funnel-activities" id="leadsActivity">Lead discovery via LinkedIn</div>
+          </div>
+
+          <!-- Outreach (Collapsible) -->
+          <div class="funnel-tier funnel-tier-2">
+            <div class="funnel-shape-wrapper">
+              <div class="funnel-shape funnel-outreach" onclick="toggleOutreachDetails()">
+                <div class="funnel-content">
+                  <span class="funnel-count" id="funnelOutreach">0</span>
+                  <span class="funnel-label">Outreach <span class="expand-icon">▼</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="funnel-activities" id="outreachActivity">Multi-channel engagement</div>
+            
+            <!-- Collapsible Outreach Details -->
+            <div class="outreach-details" id="outreachDetails">
+              <div class="outreach-detail-item">
+                <span class="detail-icon">📧</span>
+                <span class="detail-label">Emailed</span>
+                <span class="detail-count" id="outreachEmailed">0</span>
+              </div>
+              <div class="outreach-detail-item">
+                <span class="detail-icon">💬</span>
+                <span class="detail-label">SMS Sent</span>
+                <span class="detail-count" id="outreachSms">0</span>
+              </div>
+              <div class="outreach-detail-item">
+                <span class="detail-icon">📞</span>
+                <span class="detail-label">Called</span>
+                <span class="detail-count" id="outreachCalled">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Meetings -->
+          <div class="funnel-tier funnel-tier-3">
+            <div class="funnel-shape-wrapper">
+              <div class="funnel-shape funnel-meetings">
+                <div class="funnel-content">
+                  <span class="funnel-count" id="funnelMeetings">0</span>
+                  <span class="funnel-label">Meetings</span>
+                </div>
+              </div>
+            </div>
+            <div class="funnel-activities" id="meetingsActivity">Scheduled conversations</div>
+          </div>
+
+          <!-- Follow Up -->
+          <div class="funnel-tier funnel-tier-4">
+            <div class="funnel-shape-wrapper">
+              <div class="funnel-shape funnel-followup">
+                <div class="funnel-content">
+                  <span class="funnel-count" id="funnelFollowup">0</span>
+                  <span class="funnel-label">Follow Up</span>
+                </div>
+              </div>
+            </div>
+            <div class="funnel-activities" id="followupActivity">Proposals & negotiations</div>
+          </div>
+
+          <!-- Victory -->
+          <div class="funnel-tier funnel-tier-5">
+            <div class="funnel-shape-wrapper">
+              <div class="funnel-shape funnel-victory">
+                <div class="funnel-content">
+                  <span class="funnel-count" id="funnelVictory">0</span>
+                  <span class="funnel-label">Victory</span>
+                </div>
+              </div>
+            </div>
+            <div class="funnel-activities" id="victoryActivity">Deals won</div>
+          </div>
+        </div>
+
+        <!-- Side Activities Panel -->
+        <div class="funnel-activities-panel">
+          <div class="activity-panel-item">
+            <div class="activity-icon">🏭</div>
+            <div class="activity-label">Sales Activities</div>
+          </div>
+          <div class="activity-step">Prospecting tasks</div>
+          <div class="activity-step">Sales proposal</div>
+          <div class="activity-step">Deal acceptance</div>
+          <div class="activity-step">Project delivery</div>
+          <div class="activity-step">Payment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="performance-grid">
+      <div class="performance-stat">
+        <span class="stat-value" id="statSearches">0</span>
+        <div class="stat-label">Searches</div>
+        <div class="stat-change positive" id="searchesChange">+0%</div>
+      </div>
+      <div class="performance-stat">
+        <span class="stat-value" id="statEmails">0</span>
+        <div class="stat-label">Emails Sent</div>
+        <div class="stat-change positive" id="emailsChange">+0%</div>
+      </div>
+      <div class="performance-stat">
+        <span class="stat-value" id="statCalls">0</span>
+        <div class="stat-label">Calls Made</div>
+        <div class="stat-change positive" id="callsChange">+0%</div>
+      </div>
+      <div class="performance-stat">
+        <span class="stat-value" id="statMeetings">0</span>
+        <div class="stat-label">Meetings</div>
+        <div class="stat-change positive" id="meetingsChange">+0%</div>
+      </div>
+      <div class="performance-stat">
+        <span class="stat-value" id="statVictories">0</span>
+        <div class="stat-label">Victories</div>
+        <div class="stat-change positive" id="victoriesChange">+0%</div>
+      </div>
+    </div>
+
+    <!-- Attribution Dashboard -->
+    <div class="attribution-grid">
+      <!-- AI Actions -->
+      <div class="attribution-card">
+        <h3>
+          <span class="attribution-icon icon-ai">🤖</span>
+          AI Automated Actions
+        </h3>
+        <div class="metric-row">
+          <span class="metric-label">Emails Sent</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="aiEmails">0</div>
+            <div class="metric-subtext" id="aiEmailsRate">0% open rate</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">SMS Sent</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="aiSms">0</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Calls Made</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="aiCalls">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manual Actions -->
+      <div class="attribution-card">
+        <h3>
+          <span class="attribution-icon icon-manual">👤</span>
+          Manual Actions
+        </h3>
+        <div class="metric-row">
+          <span class="metric-label">Emails Sent</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="manualEmails">0</div>
+            <div class="metric-subtext" id="manualEmailsRate">0% open rate</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">SMS Sent</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="manualSms">0</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Calls Made</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="manualCalls">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engagement Metrics -->
+      <div class="attribution-card">
+        <h3>
+          <span class="attribution-icon icon-engagement">📊</span>
+          Engagement Metrics
+        </h3>
+        <div class="metric-row">
+          <span class="metric-label">Email Opens</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="emailOpens">0</div>
+            <div class="metric-subtext" id="emailOpensRate">0% rate</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Link Clicks</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="linkClicks">0</div>
+            <div class="metric-subtext" id="linkClicksRate">0% CTR</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Replies</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="replies">0</div>
+            <div class="metric-subtext" id="repliesRate">0% reply rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conversion Metrics -->
+      <div class="attribution-card">
+        <h3>
+          <span class="attribution-icon icon-conversion">🎯</span>
+          Conversion Metrics
+        </h3>
+        <div class="metric-row">
+          <span class="metric-label">Meetings Booked</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="meetingsBooked">0</div>
+            <div class="metric-subtext" id="meetingsBookedRate">0% conversion</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Deals Won</span>
+          <div style="text-align: right;">
+            <div class="metric-value" id="dealsWon">0</div>
+            <div class="metric-subtext" id="dealsWonRate">$0K pipeline</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI vs Manual Comparison -->
+    <div class="attribution-card" style="margin-bottom: 30px;">
+      <h3>AI vs Manual Activity Breakdown</h3>
+      <div class="comparison-bar">
+        <div class="bar-ai" id="barAi" style="width: 50%;">AI: 0</div>
+        <div class="bar-manual" id="barManual" style="width: 50%;">Manual: 0</div>
+      </div>
+      <div style="text-align: center; margin-top: 10px; color: #64748b; font-size: 14px;">
+        <span id="totalActivities">0 total activities</span>
+      </div>
+    </div>
+<!-- AI Plans Section - Add this RIGHT ABOVE Priority Leads -->
+<section class="plans-section">
+  <div class="section-header">
+    <h2>📋 AI Generated Plans</h2>
+    <button onclick="loadPlans()" class="refresh-btn">🔄 Refresh</button>
+  </div>
+  
+  <div id="plansContainer" class="plans-container">
+    <p class="loading-text">Loading plans...</p>
+  </div>
+</section>
+    <!-- Priority Leads -->
+    <div class="priority-leads-section">
+      <h2>Priority Leads</h2>
+      
+      <div class="leads-tabs">
+        <button class="tab-btn active" data-tab="hot">🔥 Hot Leads</button>
+        <button class="tab-btn" data-tab="warm">⭐ Warm Leads</button>
+        <button class="tab-btn" data-tab="cold">❄️ Cold Leads</button>
+        <button class="tab-btn" data-tab="priority">⚡ Priority Tagged</button>
+      </div>
+
+      <div class="leads-table-container">
+        <table class="leads-table">
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Score</th>
+              <th>Last Activity</th>
+              <th>Engagement</th>
+              <th>Recommended Next Step</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="leadsTableBody">
+            <tr>
+              <td colspan="6" class="loading">
+                <div class="spinner"></div>
+                Loading leads...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="activity-timeline">
+      <h2>Live AI SDR Activity Timeline</h2>
+      <div id="timelineContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          Loading activity timeline...
+        </div>
+      </div>
+    </div>
+<!-- AI Feedback Section -->
+<div class="attribution-card" style="margin-top: 30px;">
+  <h3>
+    <span class="attribution-icon icon-ai">💡</span>
+    AI Feedback — Calls, Meetings & Strategy
+  </h3>
+  <p style="color: #64748b; font-size: 14px; margin-bottom: 15px;">
+    AI analyzes your last 2 weeks of calls, meetings, SMS, emails, contact journeys, and social posts to give you actionable feedback.
+  </p>
+  <button id="getFeedbackBtn" onclick="getAIFeedback()" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
+    🤖 Get AI Feedback
+  </button>
+  <div id="feedbackResults" style="margin-top: 20px; display: none;">
+    <div id="feedbackContent"></div>
+  </div>
+</div>
+
+<!-- ═══ SEGMENT PERFORMANCE ═══ -->
+<div class="attribution-card" style="margin-top: 30px;" id="segmentSection">
+  <h3>
+    <span class="attribution-icon icon-engagement">📊</span>
+    Performance by Segment
+  </h3>
+  <p style="color: #64748b; font-size: 14px; margin-bottom: 15px;">
+    Filter by lead magnet, campaign, tag, or customer journey stage.
+  </p>
+  <!-- Search bar -->
+  <div style="position:relative; margin-bottom:12px;">
+    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;">🔍</span>
+    <input type="text" id="segmentSearchInput" placeholder="Search tags, campaigns, lead magnets, journey stages…"
+      oninput="filterSegmentTable(this.value)"
+      style="width:100%;padding:10px 12px 10px 36px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;font-family:inherit;">
+  </div>
+  <!-- Quick-filter pills populated by JS -->
+  <div id="segmentPills" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Segment</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Type</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Contacts</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Emails Sent</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Open Rate</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Replies</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Meetings</th>
+        </tr>
+      </thead>
+      <tbody id="segmentTableBody">
+        <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">Loading segments…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ VICTORIES ADVICE ═══ -->
+<div class="attribution-card" style="margin-top: 30px;" id="victoriesAdviceSection">
+  <h3>
+    <span class="attribution-icon icon-conversion">🏆</span>
+    Advice from Victories
+  </h3>
+  <p style="color: #64748b; font-size: 14px; margin-bottom: 15px;">
+    Patterns synthesized from your closed wins — what messaging, triggers, and journeys actually convert.
+  </p>
+  <div id="victoriesAdviceContent">
+    <div style="text-align:center;padding:30px;color:#94a3b8;">Loading insights…</div>
+  </div>
+</div>
+
+<!-- ═══ NEXT STEPS TRACKER ═══ -->
+<div class="attribution-card" style="margin-top: 30px;" id="nextStepsSection">
+  <h3>
+    <span class="attribution-icon icon-manual">✅</span>
+    Next Steps Tracker
+  </h3>
+  <!-- Walkthrough email banner -->
+  <div style="background:linear-gradient(135deg,#0A3161,#1a5fa8);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+    <span style="font-size:28px;flex-shrink:0;">📬</span>
+    <div style="flex:1;">
+      <div style="font-weight:700;color:#fff;font-size:14px;">Get the Walkthrough</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px;">Send yourself a step-by-step summary of all open next steps.</div>
+    </div>
+    <button onclick="sendWalkthroughEmail()" style="padding:8px 18px;background:#C9A84C;color:#0A3161;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;font-family:inherit;">Send Email</button>
+  </div>
+  <div id="nextStepsContent">
+    <div style="text-align:center;padding:30px;color:#94a3b8;">Loading next steps…</div>
+  </div>
+</div>
+
+  </div><!-- /container -->
+
+  <script>
+    // Initialize Supabase with CORRECT credentials
+    const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Global variables
+    let CUSTOMER_ID = null;
+    let authToken = null;
+    let userCredits = { credits: 0 };
+    let currentUser = null;
+    let currentTimeWindow = 30; // days
+    let allContacts = [];
+    let allEmails = [];
+    let allMeetings = [];
+    let allSMS = [];
+    let allCalls = [];
+    let allSearches = [];
+    const removedActions = {};
+    
+    // API endpoints 
+    const ENDPOINTS = {
+      getUserData: 'https://victoryvision.app.n8n.cloud/webhook/user/get',
+      getContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+      getEmails: 'https://victoryvision.app.n8n.cloud/webhook/emails/get',
+      getFeedback: 'https://victoryvision.app.n8n.cloud/webhook/ai/feedback',
+      getMeetings: 'https://victoryvision.app.n8n.cloud/webhook/meetings/get',
+      toggleAutoSDR: 'https://victoryvision.app.n8n.cloud/webhook/aisdr/toggle',
+      getPlans: 'https://victoryvision.app.n8n.cloud/webhook/plans/get', 
+      getSMS: 'https://victoryvision.app.n8n.cloud/webhook/sms/get',
+      getCalls: 'https://victoryvision.app.n8n.cloud/webhook/calls/get',
+      updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update'
+    };
+
+    // Check authentication
+    async function checkAuthentication() {
+      console.log('checkAuthentication START');
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        console.log('Session:', session);
+        
+        if (error) {
+          console.error('Auth error:', error);
+          return false;
+        }
+
+        if (session && session.user) {
+          CUSTOMER_ID = session.user.email;
+          authToken = session.access_token;
+         
+ // { planId: Set of action indices } 
+          const userEmailEl = document.getElementById('userEmail');
+          if (userEmailEl) {
+            userEmailEl.textContent = CUSTOMER_ID;
+          }
+          
+          console.log('Auth successful, CUSTOMER_ID:', CUSTOMER_ID);
+          return true;
+        }
+
+        console.log('No session found');
+        return false;
+      } catch (e) {
+        console.error('Auth check error:', e);
+        return false;
+      }
+    }
+
+    function redirectToLogin() {
+      localStorage.removeItem('vv_session');
+      window.location.href = 'login.html';
+    }
+// API call function with authentication
+async function apiCall(endpoint, data = {}) {
+  try {
+    const url = endpoint.includes('/user/get') ? 
+      `${endpoint}?customer_id=${encodeURIComponent(CUSTOMER_ID)}` : 
+      endpoint;
+    
+    const requestOptions = {
+      method: endpoint.includes('/user/get') ? 'GET' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Customer-ID': CUSTOMER_ID,
+        'Authorization': authToken ? `Bearer ${authToken}` : ''
+      }
+    };
+
+    if (!endpoint.includes('/user/get')) {
+      requestOptions.body = JSON.stringify({
+        customer_id: CUSTOMER_ID,
+        ...data
+      });
+    }
+
+
+
+console.log('📡 Calling:', endpoint);
+    const timeout = endpoint.includes('/ai/feedback') ? 600000 : 30000; // 10 min for feedback, 30s for everything else
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    requestOptions.signal = controller.signal;
+    const response = await fetch(url, requestOptions);
+    clearTimeout(timeoutId);
+    console.log('📡 Response status:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      console.warn(`HTTP ${response.status} for ${endpoint}`);
+      return null;
+    }
+
+    // Get response as text first
+    const text = await response.text();
+    console.log('📡 Response text length:', text.length, 'chars');
+    
+    // Check if response has content
+    if (!text || text.trim() === '') {
+      console.warn(`⚠️ Empty response from ${endpoint}`);
+      return null;
+    }
+
+    // Try to parse JSON
+    try {
+      const parsed = JSON.parse(text);
+      console.log('✅ Parsed response from', endpoint, ':', parsed);
+      return parsed;
+    } catch (parseError) {
+      console.error('❌ JSON parse error for', endpoint);
+      console.error('Response text:', text.substring(0, 200));
+      return null;
+    }
+
+  } catch (error) {
+    console.error('❌ API call failed:', endpoint, error);
+    return null;
+  }
+}
+   
+    async function loadUserData() {
+      try {
+        const response = await apiCall(ENDPOINTS.getUserData);
+        console.log('Raw user response:', response);
+        
+        const userData = Array.isArray(response) ? response[0] : response;
+        console.log('User data:', userData);
+      
+        // Universal credits system
+        userCredits = {
+          credits: userData.credits || 0
+        };
+        
+        // Update subscription medallion
+        const medallion = document.getElementById('userSubscription');
+        const plan = userData.subscription_plan || 'Bronze';
+        medallion.className = `subscription-medallion ${plan.toLowerCase()}`;
+        medallion.textContent = plan.toUpperCase();
+        
+        // Store currentUser for compatibility
+        currentUser = userData;
+        currentUser.email = CUSTOMER_ID;
+        // Load saved AI feedback if exists
+        if (userData.aifeedback) {
+          displayFeedback(userData.aifeedback);
+        }
+        // Set AI SDR toggle from saved state
+const sdrToggle = document.getElementById('autoSdrToggle');
+if (sdrToggle) {
+  sdrToggle.checked = userData.aisdr === true || userData.aisdr === 'true';
+}
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    // Toggle outreach details
+    function toggleOutreachDetails() {
+      const details = document.getElementById('outreachDetails');
+      const icon = document.querySelector('.expand-icon');
+      
+      if (details.classList.contains('expanded')) {
+        details.classList.remove('expanded');
+        icon.classList.remove('expanded');
+      } else {
+        details.classList.add('expanded');
+        icon.classList.add('expanded');
+      }
+    }
+
+    // Initialize page
+    async function init() {
+      document.getElementById('authLoading').style.display = 'flex';
+      
+      try {
+        const isAuthenticated = await checkAuthentication();
+        
+        if (isAuthenticated) {
+          document.getElementById('authLoading').style.display = 'none';
+          await loadUserData();
+          await loadDashboard();
+          setupEventListeners();
+        } else {
+          redirectToLogin();
+        }
+      } catch (e) {
+        console.error('Initialization failed:', e);
+        redirectToLogin();
+      }
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Time window selector
+      document.querySelectorAll('.time-window-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.time-window-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          currentTimeWindow = parseInt(e.target.dataset.window);
+          loadDashboard();
+        });
+      });
+
+      // AI SDR Toggle
+      document.getElementById('autoSdrToggle').addEventListener('change', async (e) => {
+        await toggleAutoSDR(e.target.checked);
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          const tab = e.target.dataset.tab;
+          loadLeadsByScore(tab);
+        });
+      });
+    }
+
+    // Toggle Auto SDR
+    async function toggleAutoSDR(enabled) {
+      try {
+        const response = await apiCall(ENDPOINTS.toggleAutoSDR, {
+          enabled: enabled,
+          customer_id: CUSTOMER_ID
+        });
+        
+        console.log(`AI SDR ${enabled ? 'enabled' : 'disabled'}`);
+        
+        // Show success message
+        alert(`AI SDR has been ${enabled ? 'enabled' : 'disabled'}`);
+      } catch (error) {
+        console.error('Error toggling Auto SDR:', error);
+        alert('Failed to toggle AI SDR. Please try again.');
+      }
+    }
+
+
+async function loadDashboard() {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - currentTimeWindow);
+
+  // Load all data first
+  await loadPerformanceMetrics(startDate);
+  
+  // Then compute views that depend on loaded data
+  await Promise.all([
+    loadFunnelData(startDate),
+    loadAttributionData(startDate),
+    loadActivityTimeline(startDate),
+    loadLeadsByScore('hot')
+  ]);
+
+  // New sections — run after all data is loaded
+  loadPlans();
+  renderSegmentTable('');
+  loadVictoriesAdvice();
+  renderNextSteps();
+}
+    // Load funnel data
+    async function loadFunnelData(startDate) {
+      try {
+      
+        // Filter by date
+        const contacts = allContacts.filter(c => 
+          c.created && new Date(c.created) >= startDate
+        );
+
+        // Calculate Victory Vision funnel stages
+        const leadsFound = contacts?.length || 0;
+     // Outreach breakdown - count from actual data sources, not just new contacts
+        // FIX: Emails = outbound only (inbound=false) with sent_at in window — excludes drafts & inbound
+        const emailsInPeriod = allEmails.filter(e => !e.inbound && e.sent_at && new Date(e.sent_at) >= startDate);
+        const emailed = emailsInPeriod.length || 0;
+        console.log('📧 Emails in period (outbound sent):', emailed, 'from', allEmails.length, 'total');
+        
+        // FIX: Calls = from calls table (each row = a real Telnyx session)
+        const called = allCalls.filter(c => c.created_at && new Date(c.created_at) >= startDate).length || 0;
+        // SMS count from actual SMS data
+        const smsContacted = allSMS.filter(s => {
+          return s.created_at && new Date(s.created_at) >= startDate;
+        }).length;
+        const outreached = emailed + smsContacted + called;
+        // Meetings - contacts with meeting_date
+    // Meetings - use the actual meetings data instead of contacts
+const meetingsInPeriod = allMeetings.filter(m => {
+  const meetingDate = m.created_at || m.start_at || m.created || m.startDate;
+  if (!meetingDate) return false;
+  try {
+    return new Date(meetingDate) >= startDate;
+  } catch (e) {
+    return false;
+  }
+}).length;
+
+const meetings = meetingsInPeriod || 0;    
+        // Follow Up - contacts with follow-up indicators in customer_journey
+        const followup = contacts?.filter(c => 
+          c.customer_journey?.toLowerCase().includes('follow') ||
+          c.customer_journey?.toLowerCase().includes('proposal') ||
+          c.customer_journey?.toLowerCase().includes('negotiat') ||
+          c.customer_journey?.toLowerCase().includes('contract')
+        ).length || 0;
+        
+        // Victory - closed deals
+        const victories = contacts?.filter(c => c.client_won_date).length || 0;
+
+        // Update funnel counts
+        document.getElementById('funnelLeads').textContent = leadsFound;
+        document.getElementById('funnelOutreach').textContent = outreached;
+        document.getElementById('funnelMeetings').textContent = meetings;
+        document.getElementById('funnelFollowup').textContent = followup;
+        document.getElementById('funnelVictory').textContent = victories;
+
+        // Update outreach breakdown
+        document.getElementById('outreachEmailed').textContent = emailed;
+        document.getElementById('outreachSms').textContent = smsContacted;
+        document.getElementById('outreachCalled').textContent = called;
+
+        // Update activity descriptions
+        document.getElementById('leadsActivity').textContent = `${leadsFound} contacts discovered`;
+        document.getElementById('outreachActivity').textContent = `${outreached} contacts engaged`;
+        document.getElementById('meetingsActivity').textContent = `${meetings} meetings scheduled`;
+        document.getElementById('followupActivity').textContent = `${followup} in follow-up stage`;
+        document.getElementById('victoryActivity').textContent = `${victories} deals closed`;
+
+      } catch (error) {
+        console.error('Error loading funnel data:', error);
+      }
+    }
+
+    // Load emails via webhook if needed
+  async function loadPerformanceMetrics(startDate) {
+  try {
+    // Load contacts first - other functions depend on this
+    if (!allContacts || allContacts.length === 0) {
+      try {
+        const contactsResponse = await apiCall(ENDPOINTS.getContacts);
+        allContacts = Array.isArray(contactsResponse) ? contactsResponse : 
+                     contactsResponse.contacts || [];
+        console.log('✅ Loaded contacts:', allContacts.length);
+      } catch (e) {
+        console.error('Contact load error:', e);
+        allContacts = [];
+      }
+    }
+
+    // Load emails via webhook if needed
+    
+    if (!allEmails || allEmails.length === 0) {
+      try {
+        const emailsResponse = await apiCall(ENDPOINTS.getEmails);
+        
+        if (emailsResponse) {
+          // Handle different response formats
+          if (emailsResponse.emails && Array.isArray(emailsResponse.emails)) {
+            allEmails = emailsResponse.emails;
+          } else if (Array.isArray(emailsResponse)) {
+            allEmails = emailsResponse;
+          } else {
+            console.warn('⚠️ Unexpected emails format, setting to empty array');
+            allEmails = [];
+          }
+          console.log('✅ Loaded emails:', allEmails.length);
+        } else {
+          console.warn('⚠️ No emails response');
+          allEmails = [];
+        }
+      } catch (e) {
+        console.error('❌ Email load error:', e);
+        allEmails = [];
+      }
+    }
+    
+    // Load meetings via webhook if needed
+    if (!allMeetings || allMeetings.length === 0) {
+      try {
+        const meetingsResponse = await apiCall(ENDPOINTS.getMeetings);
+        
+        if (meetingsResponse) {
+          // Handle different response formats
+          if (meetingsResponse.meetings && Array.isArray(meetingsResponse.meetings)) {
+            allMeetings = meetingsResponse.meetings;
+          } else if (Array.isArray(meetingsResponse)) {
+            allMeetings = meetingsResponse;
+          } else {
+            console.warn('⚠️ Unexpected meetings format, setting to empty array');
+            allMeetings = [];
+          }
+          console.log('✅ Loaded meetings:', allMeetings.length);
+        } else {
+          console.warn('⚠️ No meetings response');
+          allMeetings = [];
+        }
+      } catch (e) {
+        console.error('❌ Meeting load error:', e);
+        allMeetings = [];
+      }
+    }
+
+console.log('🔍 First meeting object:', allMeetings[0]);
+console.log('🔍 Meeting date fields:', {
+  created_at: allMeetings[0]?.created_at,
+  start_at: allMeetings[0]?.start_at,
+  created: allMeetings[0]?.created,
+  startDate: allMeetings[0]?.startDate
+});
+  if (!allSMS || allSMS.length === 0) {
+  try {
+    const smsResponse = await apiCall(ENDPOINTS.getSMS);
+    allSMS = Array.isArray(smsResponse) ? smsResponse : smsResponse?.sms || [];
+  } catch (e) { allSMS = []; }
+}
+
+if (!allCalls || allCalls.length === 0) {
+  try {
+    const callsResponse = await apiCall(ENDPOINTS.getCalls);
+    allCalls = Array.isArray(callsResponse) ? callsResponse : callsResponse?.calls || [];
+  } catch (e) { allCalls = []; }
+}  
+    // FIX: Emails = outbound only (inbound=false) with sent_at in window — excludes drafts & inbound
+    const emails = allEmails.filter(e => 
+      !e.inbound && e.sent_at && new Date(e.sent_at) >= startDate
+    );
+    
+    const meetings = allMeetings.filter(m => 
+      m.created_at && new Date(m.created_at) >= startDate
+    );
+    
+    const searches = allContacts.filter(c => 
+      c.created && new Date(c.created) >= startDate
+    ).length;
+    
+    // FIX: Calls = from calls table (each row = a real Telnyx session), not last_called on contacts
+    const calls = allCalls.filter(c => 
+      c.created_at && new Date(c.created_at) >= startDate
+    ).length;
+    
+    const victories = allContacts.filter(c => 
+      c.client_won_date && new Date(c.client_won_date) >= startDate
+    ).length;
+    
+    document.getElementById('statSearches').textContent = searches || 0;
+    document.getElementById('statEmails').textContent = emails?.length || 0;
+    document.getElementById('statCalls').textContent = calls || 0;
+    document.getElementById('statMeetings').textContent = meetings?.length || 0;
+    document.getElementById('statVictories').textContent = victories || 0;
+
+  } catch (error) {
+    console.error('❌ Error loading performance metrics:', error);
+    document.getElementById('statSearches').textContent = 0;
+    document.getElementById('statEmails').textContent = 0;
+    document.getElementById('statCalls').textContent = 0;
+    document.getElementById('statMeetings').textContent = 0;
+    document.getElementById('statVictories').textContent = 0;
+  }
+}
+
+    // Load attribution data
+    async function loadAttributionData(startDate) {
+      try {
+        // FIX: outbound only (inbound=false) with sent_at in window
+        const emails = allEmails.filter(e => 
+          !e.inbound && e.sent_at && new Date(e.sent_at) >= startDate
+        );
+
+        // Separate AI vs manual
+        const aiEmails = emails?.filter(e => 
+          e.campaign && e.campaign !== 'Direct Message'
+        ) || [];
+        const manualEmails = emails?.filter(e => 
+          !e.campaign || e.campaign === 'Direct Message'
+        ) || [];
+
+        // Calculate email metrics
+        const aiEmailOpens = aiEmails.filter(e => e.opened_at || e.opens > 0).length;
+        const manualEmailOpens = manualEmails.filter(e => e.opened_at || e.opens > 0).length;
+        const aiEmailOpenRate = aiEmails.length > 0 ? 
+          ((aiEmailOpens / aiEmails.length) * 100).toFixed(1) : 0;
+        const manualEmailOpenRate = manualEmails.length > 0 ? 
+          ((manualEmailOpens / manualEmails.length) * 100).toFixed(1) : 0;
+
+        document.getElementById('aiEmails').textContent = aiEmails.length;
+        document.getElementById('aiEmailsRate').textContent = `${aiEmailOpenRate}% open rate`;
+        document.getElementById('manualEmails').textContent = manualEmails.length;
+        document.getElementById('manualEmailsRate').textContent = `${manualEmailOpenRate}% open rate`;
+
+const smsInPeriod = allSMS.filter(s => {
+  const d = s.created_at || s.created_at || s.created;
+  return d && new Date(d) >= startDate;
+});
+const aiSms = smsInPeriod.filter(s => s.source === 'ai' || s.campaign).length;
+const manualSms = smsInPeriod.length - aiSms;
+
+const callsInPeriod = allCalls.filter(c => {
+  const d = c.called_at || c.created_at || c.created;
+  return d && new Date(d) >= startDate;
+});
+const aiCallsCount = callsInPeriod.filter(c => c.source === 'ai').length;
+const manualCallsCount = callsInPeriod.length - aiCallsCount;
+
+document.getElementById('aiSms').textContent = aiSms;
+document.getElementById('manualSms').textContent = manualSms;
+document.getElementById('aiCalls').textContent = aiCallsCount;
+document.getElementById('manualCalls').textContent = manualCallsCount;
+      
+        // Engagement metrics
+        const totalEmailOpens = emails.filter(e => e.opened_at || e.opens > 0).length;
+        const totalEmailClicks = emails.filter(e => e.clicked_at || e.clicks > 0).length;
+        const totalReplies = emails.filter(e => e.replied_at).length;
+
+        document.getElementById('emailOpens').textContent = totalEmailOpens;
+        document.getElementById('emailOpensRate').textContent = 
+          `${emails?.length > 0 ? ((totalEmailOpens / emails.length) * 100).toFixed(1) : 0}% rate`;
+        
+        document.getElementById('linkClicks').textContent = totalEmailClicks;
+        document.getElementById('linkClicksRate').textContent = 
+          `${totalEmailOpens > 0 ? ((totalEmailClicks / totalEmailOpens) * 100).toFixed(1) : 0}% CTR`;
+        
+        document.getElementById('replies').textContent = totalReplies;
+        document.getElementById('repliesRate').textContent = 
+          `${emails?.length > 0 ? ((totalReplies / emails.length) * 100).toFixed(1) : 0}% reply rate`;
+
+        // Conversion metrics
+        const meetings = allMeetings.filter(m => {
+  // Check different possible date fields in meetings
+  const meetingDate = m.created_at || m.start_at || m.created || m.startDate;
+  if (!meetingDate) return false;
+  
+  try {
+    return new Date(meetingDate) >= startDate;
+  } catch (e) {
+    return false;
+  }
+});
+
+console.log('📊 Meetings in time window:', meetings.length, 'out of', allMeetings.length, 'total');
+
+const victories = allContacts.filter(c => 
+          c.client_won_date && new Date(c.client_won_date) >= startDate
+        );
+
+        document.getElementById('meetingsBooked').textContent = meetings?.length || 0;
+        document.getElementById('meetingsBookedRate').textContent = 
+          `${emails?.length > 0 ? ((meetings.length / emails.length) * 100).toFixed(1) : 0}% conversion`;
+
+        document.getElementById('dealsWon').textContent = victories?.length || 0;
+        const totalPipeline = victories?.reduce((sum, v) => 
+          sum + (parseFloat(v.client_ann_est) || 0), 0) || 0;
+        document.getElementById('dealsWonRate').textContent = `$${(totalPipeline / 1000).toFixed(0)}K pipeline`;
+
+        // Update comparison bar
+        const totalAiActions = aiEmails.length + aiSms;
+        const totalManualActions = manualEmails.length + manualSms + allCalls;
+        const totalActions = totalAiActions + totalManualActions;
+
+        if (totalActions > 0) {
+          const aiPercent = (totalAiActions / totalActions) * 100;
+          const manualPercent = (totalManualActions / totalActions) * 100;
+          
+          document.getElementById('barAi').style.width = `${aiPercent}%`;
+          document.getElementById('barAi').textContent = `AI: ${totalAiActions}`;
+          document.getElementById('barManual').style.width = `${manualPercent}%`;
+          document.getElementById('barManual').textContent = `Manual: ${totalManualActions}`;
+          document.getElementById('totalActivities').textContent = `${totalActions} total`;
+        }
+
+      } catch (error) {
+        console.error('Error loading attribution data:', error);
+      }
+    }
+
+    // Load activity timeline
+    async function loadActivityTimeline(startDate) {
+      try {
+        const timelineContainer = document.getElementById('timelineContainer');
+        
+        // Get recent activities from emails
+        const recentEmails = allEmails
+          .filter(e => e.created_at && new Date(e.created_at) >= startDate)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 10);
+
+        const recentMeetings = allMeetings
+          .filter(m => m.created_at && new Date(m.created_at) >= startDate)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 10);
+
+        // Combine activities
+        const activities = [];
+
+        recentEmails?.forEach(e => {
+          activities.push({
+            type: 'email',
+            time: new Date(e.created_at),
+            title: `Email sent to ${e.to_email || e.to || 'unknown'}`,
+            description: e.subject || 'No subject',
+            isAi: e.campaign && e.campaign !== 'Direct Message'
+          });
+        });
+
+        recentMeetings?.forEach(m => {
+          activities.push({
+            type: 'meeting',
+            time: new Date(m.created_at),
+            title: `Meeting scheduled: ${m.title || 'Untitled'}`,
+            description: m.description || '',
+            isAi: false
+          });
+        });
+
+        // Sort by time
+        activities.sort((a, b) => b.time - a.time);
+
+        // Render timeline
+        if (activities.length === 0) {
+          timelineContainer.innerHTML = '<p style="text-align: center; color: #64748b;">No recent activity</p>';
+        } else {
+          timelineContainer.innerHTML = activities.slice(0, 15).map(activity => {
+            const timeStr = formatTimeAgo(activity.time);
+            const actionClass = activity.isAi ? 'ai-action' : 'manual-action';
+            const badge = activity.isAi ? 'badge-ai' : 'badge-manual';
+            const badgeText = activity.isAi ? 'AI' : 'Manual';
+
+            return `
+              <div class="timeline-item ${actionClass}">
+                <div class="timeline-time">${timeStr}</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">${escapeHtml(activity.title)}</div>
+                  <div class="timeline-description">${escapeHtml(activity.description)}</div>
+                  <span class="timeline-badge ${badge}">${badgeText}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+      } catch (error) {
+        console.error('Error loading activity timeline:', error);
+        document.getElementById('timelineContainer').innerHTML = 
+          '<p style="text-align: center; color: #ef4444;">Error loading timeline</p>';
+      }
+    }
+
+    // Load leads by score
+    async function loadLeadsByScore(scoreType) {
+      try {
+        const tbody = document.getElementById('leadsTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div>Loading leads...</td></tr>';
+
+        if (!allContacts || allContacts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">No contacts found</td></tr>';
+          return;
+        }
+
+        // Score contacts
+        const scoredContacts = allContacts.map(contact => {
+          let score = 0;
+          
+          // Recent activity
+          if (contact.last_emailed_date) {
+            const daysSinceEmail = Math.floor((new Date() - new Date(contact.last_emailed_date)) / (1000 * 60 * 60 * 24));
+            if (daysSinceEmail < 7) score += 20;
+          }
+          
+          // Engagement
+          if (contact.num_emails_opened > 0) score += 15;
+          if (contact.num_links_clicked > 0) score += 20;
+          if (contact.last_responded) score += 30;
+          
+          // Meeting interest
+          if (contact.meeting_date) score += 40;
+          if (contact.customer_journey?.toLowerCase().includes('meeting')) score += 25;
+          
+          // Priority tag
+          if (contact.tags?.includes('priority')) score += 15;
+
+          // Classify
+          let classification = 'cold';
+          if (score >= 60) classification = 'hot';
+          else if (score >= 30) classification = 'warm';
+
+          return { ...contact, score, classification };
+        });
+
+// Exclude won clients from leads
+const activeContacts = scoredContacts.filter(c => !c.client_won_date);
+let filteredContacts;
+        if (scoreType === 'priority') {
+          filteredContacts = activeContacts.filter(c => c.tags?.includes('priority'));
+        } else {
+          filteredContacts = activeContacts.filter(c => c.classification === scoreType);
+        }
+
+        // Sort by score
+        filteredContacts.sort((a, b) => b.score - a.score);
+
+        // Limit to top 20
+        filteredContacts = filteredContacts.slice(0, 20);
+
+        if (filteredContacts.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">No ${scoreType} leads found</td></tr>`;
+          return;
+        }
+
+        // Render leads
+        tbody.innerHTML = filteredContacts.map(contact => {
+          const scoreClass = contact.classification === 'hot' ? 'score-hot' : 
+                            contact.classification === 'warm' ? 'score-warm' : 'score-cold';
+          const scoreIcon = contact.classification === 'hot' ? '🔥' : 
+                           contact.classification === 'warm' ? '⭐' : '❄️';
+          
+          const lastActivity = getLastActivity(contact);
+          const engagement = getEngagementSummary(contact);
+          const isPriority = contact.tags?.includes('priority');
+          const rec = getRecommendedNextStep(contact);
+
+          return `
+            <tr>
+              <td>
+                <span class="lead-name">${escapeHtml(contact.name || 'Unknown')}</span>
+                <span class="lead-company">${escapeHtml(contact.company || '')}</span>
+              </td>
+              <td>
+                <span class="lead-score ${scoreClass}">
+                  ${scoreIcon} ${contact.score}
+                </span>
+              </td>
+              <td>${lastActivity}</td>
+              <td>${engagement}</td>
+              <td>
+                <div style="display:flex;align-items:flex-start;gap:6px;">
+                  <span style="font-size:16px;flex-shrink:0;">${rec.icon}</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:600;color:${rec.color};">${rec.text}</div>
+                    <div style="margin-top:3px;">
+                      <span style="font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:${rec.color}20;color:${rec.color};">${rec.deadline}</span>
+                    </div>
+                    ${contact.next_steps ? `<div style="font-size:11px;color:#64748b;margin-top:4px;font-style:italic;">📌 ${escapeHtml(contact.next_steps)}</div>` : ''}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="lead-actions">
+                  <button class="action-btn" onclick="viewContact('${contact.contact_id || contact.id}')">
+                    👁️ View
+                  </button>
+                  <button class="action-btn priority ${isPriority ? 'active' : ''}" 
+                          onclick="togglePriority('${contact.contact_id || contact.id}', ${!isPriority})">
+                    ${isPriority ? '✓ Priority' : '⚡ Set Priority'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Error loading leads:', error);
+        document.getElementById('leadsTableBody').innerHTML = 
+          '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #ef4444;">Error loading leads</td></tr>';
+      }
+    }
+
+    // Get recommended next step for a contact
+    function getRecommendedNextStep(contact) {
+      const now = new Date();
+      const last72h = new Date(now - 72 * 3600 * 1000);
+      const last7d  = new Date(now - 7 * 24 * 3600 * 1000);
+
+      if (contact.last_clicked_date && new Date(contact.last_clicked_date) > last72h) {
+        return { icon: '📞', text: 'Call today — clicked link <72h', deadline: 'TODAY', color: '#dc2626' };
+      }
+      if (contact.last_responded && !contact.next_steps) {
+        return { icon: '📧', text: 'They replied — send follow-up', deadline: 'Today', color: '#d97706' };
+      }
+      const hasMeeting = allMeetings.some(m =>
+        (m.attendees_emails || '').includes(contact.email) && m.status === 'completed'
+      );
+      if (hasMeeting) {
+        return { icon: '📋', text: 'Meeting held — send proposal', deadline: 'Within 24h', color: '#d97706' };
+      }
+      if (contact.last_opened_date && new Date(contact.last_opened_date) > last72h && !contact.last_responded) {
+        return { icon: '💬', text: 'Opened email — send personal note', deadline: 'This week', color: '#0369a1' };
+      }
+      if (!contact.last_emailed_date || new Date(contact.last_emailed_date) < last7d) {
+        return { icon: '📤', text: 'No touch in 7+ days — re-engage', deadline: 'Today', color: '#dc2626' };
+      }
+      if (contact.score >= 50) {
+        return { icon: '🤝', text: 'High score — book a meeting', deadline: 'This week', color: '#059669' };
+      }
+      return { icon: '📤', text: 'Continue nurture sequence', deadline: 'This week', color: '#64748b' };
+    }
+
+    // Get last activity for contact
+    function getLastActivity(contact) {
+      const activities = [];
+      
+      if (contact.last_emailed_date) activities.push({ date: new Date(contact.last_emailed_date), type: 'email' });
+      if (contact.last_called) activities.push({ date: new Date(contact.last_called), type: 'call' });
+      if (contact.last_responded) activities.push({ date: new Date(contact.last_responded), type: 'reply' });
+      if (contact.meeting_date) activities.push({ date: new Date(contact.meeting_date), type: 'meeting' });
+      
+      if (activities.length === 0) return '<span style="color: #94a3b8;">No activity</span>';
+      
+      activities.sort((a, b) => b.date - a.date);
+      const latest = activities[0];
+      
+      return `${latest.type} ${formatTimeAgo(latest.date)}`;
+    }
+
+    // Get engagement summary
+    function getEngagementSummary(contact) {
+      const metrics = [];
+      
+      if (contact.num_emails_opened > 0) metrics.push(`${contact.num_emails_opened} opens`);
+      if (contact.num_links_clicked > 0) metrics.push(`${contact.num_links_clicked} clicks`);
+      if (contact.last_responded) metrics.push('replied');
+      
+      return metrics.length > 0 ? metrics.join(', ') : '<span style="color: #94a3b8;">No engagement</span>';
+    }
+
+    // Toggle priority tag
+    async function togglePriority(contactId, addPriority) {
+      try {
+        // Find contact
+        const contact = allContacts.find(c => c.contact_id === contactId || c.id === contactId);
+        if (!contact) return;
+
+        let tags = contact.tags || '';
+        
+        if (addPriority) {
+          // Add priority tag
+          tags = tags ? `${tags},priority` : 'priority';
+        } else {
+          // Remove priority tag
+          tags = tags.split(',').filter(t => t.trim() !== 'priority').join(',');
+        }
+
+        // Update contact via webhook
+        await apiCall(ENDPOINTS.updateContact, {
+          contact_id: contactId,
+          tags: tags
+        });
+
+        // Update local data
+        contact.tags = tags;
+
+        // Reload current tab
+        const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+        await loadLeadsByScore(activeTab);
+
+      } catch (error) {
+        console.error('Error toggling priority:', error);
+        alert('Error updating priority tag');
+      }
+    }
+
+    // View contact (navigate to contacts page)
+    function viewContact(contactId) {
+      window.location.href = `/contacts?id=${contactId}`;
+    }
+
+    // Format time ago
+    function formatTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      
+      if (seconds < 60) return 'just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+      
+      return date.toLocaleDateString();
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+// Load plans function
+async function loadPlans() {
+  const container = document.getElementById('plansContainer');
+  container.innerHTML = '<p class="loading-text">Loading plans...</p>';
+  
+  try {
+    // Use the same apiCall pattern as contacts/get
+    const plans = await apiCall(ENDPOINTS.getPlans);
+    
+    if (!plans || plans.length === 0) {
+      container.innerHTML = '<p class="no-plans">No plans generated yet. Check back soon! 🤖</p>';
+      return;
+    }
+    
+    // Show only the 2 most recent plans
+    const topPlans = [...plans]
+      .sort((a, b) => new Date(b.created_at || b.start || 0) - new Date(a.created_at || a.start || 0))
+      .slice(0, 2);
+    
+    // Render plans
+    container.innerHTML = topPlans.map((plan, i) => renderPlan(plan, i + 1, topPlans.length)).join('');
+    
+  } catch (error) {
+    console.error('Error loading plans:', error);
+    container.innerHTML = '<p class="loading-text" style="color: #ef4444;">Error loading plans. Please try again.</p>';
+  }
+}
+// Render individual plan
+function renderPlan(plan, planIndex, totalPlans) {
+  const planNum = planIndex ? `<span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;font-weight:700;">Play ${planIndex} of ${totalPlans || 2}</span><br>` : '';
+  // Parse the plan actions array
+  const actions = typeof plan.plan === 'string' ? JSON.parse(plan.plan) : plan.plan;
+  
+  // Format dates
+  const startDate = plan.start ? new Date(plan.start).toLocaleDateString() : 'N/A';
+  const endDate = plan.end ? new Date(plan.end).toLocaleDateString() : startDate;
+  
+  // Get plan metadata from the first action (if available)
+  const firstAction = actions && actions.length > 0 ? actions[0] : {};
+  const planId = firstAction.plan_id || plan.plan_id || plan.id;
+  
+  return `
+    <div class="plan-card" id="plan-${plan.id}">
+      <div class="plan-header" onclick="togglePlan('${plan.id}')">
+        <div class="plan-header-left">
+          <div class="plan-date">📅 ${startDate}${startDate !== endDate ? ' → ' + endDate : ''}</div>
+          ${planNum}<div class="plan-description">${plan.description || 'AI Generated Plan'}</div>
+          <div class="plan-stats">
+            <span class="plan-stat">🎯 ${actions ? actions.length : 0} actions</span>
+            <span class="plan-stat">💰 ${plan.credits || 0} credits</span>
+            <span class="plan-stat">📈 ~${plan.estimate_conversions || 0} conversions</span>
+          </div>
+        </div>
+        <div class="plan-header-right">
+          <button class="execute-btn" onclick="executePlan(event, '${plan.id}', '${plan.customer_id}')" 
+                  ${plan.actual_conversions ? 'disabled' : ''}>
+            ${plan.actual_conversions ? '✅ Executed' : '▶️ Execute Plan'}
+          </button>
+          <span class="expand-icon">▼</span>
+        </div>
+      </div>
+      
+      <div class="plan-body">
+        ${plan.lessons_learned ? `
+          <div class="plan-insights">
+            <h4>💡 Lessons Learned</h4>
+            <p>${plan.lessons_learned}</p>
+          </div>
+        ` : ''}
+        
+        <div class="actions-grid">
+     ${actions && actions.length > 0 ? actions.slice(0, 15).map((action, i) => renderAction(action, plan.id, i)).join('') : '<p>No actions in this plan</p>'}
+          ${actions && actions.length > 15 ? `<p style="text-align: center; color: #6b7280; font-size: 0.9rem;">...and ${actions.length - 15} more actions</p>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+function removeAction(event, planId, actionIndex) {
+  event.stopPropagation();
+  if (!confirm('Remove this task from the plan?')) return;
+  
+  if (!removedActions[planId]) removedActions[planId] = new Set();
+  removedActions[planId].add(parseInt(actionIndex));
+  
+  event.target.closest('.action-item').remove();
+}
+    
+    // Render individual action
+function renderAction(action, planId, index) {
+  const priorityClass = action.conversion_probability === 'high' ? 'priority-high' : 
+                       action.conversion_probability === 'medium' ? 'priority-medium' : 'priority-low';
+  
+  const actionTypeMap = {
+    'meeting': '📧 Meeting Invite',
+    'send': '✉️ Email',
+    'followup': '↩️ Follow-up',
+    'nurture': '🌱 Nurture',
+    'make': '📞 Call',
+    'ai': '💬 AI SMS',
+    'create': '📱 SMS',
+    'enrich': '🔍 Enrich',
+    'look': '👀 Lookup',
+    'create-post': '📱 Social Post'
+  };
+  
+  return `
+      <div class="action-item" data-plan="${planId}" data-index="${index}">
+      <div class="action-priority">
+        <div class="priority-badge ${priorityClass}">
+          ${action.conversion_probability || 'N/A'}
+        </div>
+        <div class="action-score">${action.score || 0}</div>
+      </div>
+      
+      <div class="action-details">
+        <h5>${action.contact_name || 'Unknown Contact'}</h5>
+        <div class="action-company">${action.contact_company || 'No company'}</div>
+        <div class="action-type">${actionTypeMap[action.webhook?.split('/').pop()] || action.action_type || 'Action'}</div>
+        <div class="action-rationale">${action.rationale || 'No rationale provided'}</div>
+        <button class="action-remove-btn" onclick="removeAction(event, '${planId}', ${index})" title="Remove">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+function togglePlan(planId) {
+  const card = document.getElementById(`plan-${planId}`);
+  if (card) {
+    card.classList.toggle('expanded');
+  }
+}
+// Execute plan
+async function executePlan(event, planId, customerId) {
+  event.stopPropagation(); // Prevent card expansion
+  
+  const button = event.target;
+  const originalText = button.textContent;
+  
+  if (!confirm('Execute this plan? This will trigger all actions immediately.')) {
+    return;
+  }
+  
+  button.disabled = true;
+  button.textContent = '⏳ Executing...';
+  
+  try {
+    // Get the plan data and filter out removed actions
+    const planCard = document.getElementById(`plan-${planId}`);
+    const remainingActions = Array.from(planCard.querySelectorAll('.action-item'))
+      .map(el => ({
+        index: parseInt(el.dataset.index),
+        planId: el.dataset.plan
+      }));
+    const remainingIndices = remainingActions.map(a => a.index);
+
+    const response = await fetch('https://victoryvision.app.n8n.cloud/webhook/plan/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        customer_id: customerId,
+        id: String(planId),
+        remaining_action_indices: remainingIndices,
+        removed_action_indices: removedActions[planId] ? Array.from(removedActions[planId]) : []
+      })
+    });
+    
+    if (!response.ok) throw new Error('Execution failed');
+    
+    button.textContent = '✅ Executed';
+    alert('Plan executed successfully! Actions are now running.');
+    
+    // Reload plans to show updated status
+    setTimeout(() => loadPlans(), 2000);
+    
+  } catch (error) {
+    console.error('Error executing plan:', error);
+    button.disabled = false;
+    button.textContent = originalText;
+    alert('Failed to execute plan. Please try again.');
+  }
+}
+
+// Plans loaded via loadDashboard()
+
+function displayFeedback(data) {
+  const resultsDiv = document.getElementById('feedbackResults');
+  resultsDiv.style.display = 'block';
+
+  const statusColors = {
+    on_track: { bg: '#f0fdf4', border: '#22c55e', text: '#166534', icon: '🟢' },
+    behind: { bg: '#fffbeb', border: '#f59e0b', text: '#92400e', icon: '🟡' },
+    at_risk: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b', icon: '🔴' },
+    unknown: { bg: '#f8fafc', border: '#94a3b8', text: '#64748b', icon: '⚪' }
+  };
+  const goalStyle = statusColors[data.goal_progress?.status] || statusColors.unknown;
+
+  const impactBadge = (impact) => {
+    const colors = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
+    return `<span style="background:${colors[impact] || '#94a3b8'}; color:white; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">${(impact || 'medium').toUpperCase()}</span>`;
+  };
+
+  document.getElementById('feedbackContent').innerHTML = `
+    <div style="background:${goalStyle.bg}; border-left:4px solid ${goalStyle.border}; padding:20px; border-radius:8px; margin-bottom:20px;">
+      <h4 style="color:${goalStyle.text}; margin-bottom:8px;">${goalStyle.icon} Goal Progress: ${(data.goal_progress?.status || 'unknown').replace('_', ' ').toUpperCase()}</h4>
+      <p style="color:${goalStyle.text}; font-size:15px; margin:0;">${data.goal_progress?.message || ''}</p>
+    </div>
+
+    <div style="background:#f8fafc; padding:20px; border-radius:8px; margin-bottom:20px;">
+      <p style="color:#334155; font-size:15px; line-height:1.6; margin:0;">${data.summary || ''}</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+      <div style="background:white; border:1px solid #e2e8f0; padding:15px; border-radius:8px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#0A3161;">${data.key_metrics?.emails_sent || 0}</div>
+        <div style="font-size:12px; color:#64748b;">Emails Sent</div>
+        <div style="font-size:11px; color:#10b981; margin-top:4px;">${data.key_metrics?.email_open_rate || '0%'} open · ${data.key_metrics?.email_reply_rate || '0%'} reply</div>
+      </div>
+      <div style="background:white; border:1px solid #e2e8f0; padding:15px; border-radius:8px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#0A3161;">${data.key_metrics?.calls_made || 0}</div>
+        <div style="font-size:12px; color:#64748b;">Calls Made</div>
+        <div style="font-size:11px; color:#10b981; margin-top:4px;">${data.key_metrics?.calls_connected || 0} connected</div>
+      </div>
+      <div style="background:white; border:1px solid #e2e8f0; padding:15px; border-radius:8px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#0A3161;">${data.key_metrics?.meetings_booked || 0}</div>
+        <div style="font-size:12px; color:#64748b;">Meetings</div>
+        <div style="font-size:11px; color:#10b981; margin-top:4px;">${data.key_metrics?.meetings_completed || 0} completed</div>
+      </div>
+    </div>
+
+    <div style="background:#f0fdf4; padding:20px; border-radius:8px; margin-bottom:15px;">
+      <h4 style="color:#166534; margin-bottom:12px;">✅ What's Working</h4>
+      ${(data.whats_working || []).map(item => 
+        `<div style="color:#15803d; padding:8px 0; border-bottom:1px solid #dcfce7; font-size:14px; line-height:1.5;">• ${item}</div>`
+      ).join('') || '<p style="color:#6b7280;">No data yet</p>'}
+    </div>
+
+    <div style="background:#fef2f2; padding:20px; border-radius:8px; margin-bottom:15px;">
+      <h4 style="color:#991b1b; margin-bottom:12px;">⚠️ What Needs Improvement</h4>
+      ${(data.whats_not_working || []).map(item => 
+        `<div style="color:#dc2626; padding:8px 0; border-bottom:1px solid #fecaca; font-size:14px; line-height:1.5;">• ${item}</div>`
+      ).join('') || '<p style="color:#6b7280;">No data yet</p>'}
+    </div>
+
+    <div style="background:#eff6ff; padding:20px; border-radius:8px;">
+      <h4 style="color:#1e40af; margin-bottom:12px;">🎯 Top 5 Actions This Week</h4>
+      ${(data.top_5_actions || []).map((a, i) => `
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #dbeafe;">
+          <div style="background:#1e40af; color:white; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0;">${i+1}</div>
+          <div style="flex:1;">
+            <div style="color:#1e3a5f; font-weight:600; font-size:14px; margin-bottom:4px;">${a.action} ${impactBadge(a.impact)}</div>
+            ${a.why ? `<div style="color:#64748b; font-size:13px;">${a.why}</div>` : ''}
+          </div>
+        </div>
+      `).join('') || '<p style="color:#6b7280;">No actions available</p>'}
+    </div>
+
+    <p style="text-align:center; color:#94a3b8; font-size:12px; margin-top:15px;">Analysis generated ${data.generated_at ? new Date(data.generated_at).toLocaleString() : 'N/A'}</p>
+  `;
+}
+
+async function getAIFeedback() {
+  const btn = document.getElementById('getFeedbackBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Requesting new analysis...';
+  
+  const resultsDiv = document.getElementById('feedbackResults');
+  resultsDiv.style.display = 'block';
+  document.getElementById('feedbackContent').innerHTML = '<div class="spinner"></div><p style="text-align:center;color:#64748b;">AI analysis requested — this runs in the background and takes 3-5 minutes.<br>Refresh the page shortly to see updated results.</p>';
+  
+  try {
+    // Fire and forget — don't wait for response
+    fetch(ENDPOINTS.getFeedback, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Customer-ID': CUSTOMER_ID
+      },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID })
+    }).catch(() => {});
+    
+    btn.textContent = '✅ Analysis requested — refresh page in ~5 min';
+    
+  } catch (error) {
+    console.error('Feedback error:', error);
+    document.getElementById('feedbackContent').innerHTML = '<p style="color: #ef4444; text-align:center;">Failed to request feedback. Try again.</p>';
+    btn.textContent = '🤖 Get AI Feedback';
+  }
+  
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = '🤖 Get AI Feedback';
+  }, 10000);
+}    
+
+// ═══════════════════════════════════════════════════
+// SEGMENT PERFORMANCE
+// ═══════════════════════════════════════════════════
+let allSegments = [];
+
+function buildSegments() {
+  const map = {};
+  function add(key, type, label, contact) {
+    if (!key || key === 'null' || key === 'undefined' || !String(key).trim()) return;
+    const k = type + '::' + String(key).trim();
+    if (!map[k]) map[k] = { type, label: label || String(key).trim(), contacts: [] };
+    map[k].contacts.push(contact);
+  }
+  allContacts.forEach(function(c) {
+    if (c.campaigns) add(c.campaigns, 'campaign', c.campaigns, c);
+    if (c.customer_journey) add(c.customer_journey, 'journey', c.customer_journey, c);
+    if (c.tags) {
+      c.tags.split(',').map(function(t){ return t.trim(); }).filter(Boolean).forEach(function(tag) {
+        var type = tag.toLowerCase().startsWith('leadmagnet') ? 'leadmagnet' : 'tag';
+        add(tag, type, tag, c);
+      });
+    }
+  });
+  return Object.values(map);
+}
+
+function renderSegmentTable(searchTerm) {
+  allSegments = buildSegments();
+  var term = (searchTerm || '').toLowerCase();
+  var filtered = term
+    ? allSegments.filter(function(s){ return s.label.toLowerCase().includes(term) || s.type.toLowerCase().includes(term); })
+    : allSegments;
+
+  var pills = document.getElementById('segmentPills');
+  if (pills && !term) {
+    var typeIcon = { leadmagnet: '🧲', campaign: '🎯', journey: '🗺️', tag: '🏷️' };
+    var topSegs = allSegments.slice().sort(function(a,b){ return b.contacts.length - a.contacts.length; }).slice(0, 10);
+    pills.innerHTML = '<span onclick="document.getElementById(\'segmentSearchInput\').value=\'\';renderSegmentTable(\'\')" style="padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #0A3161;background:#0A3161;color:#fff;margin-right:4px;">All</span>'
+      + topSegs.map(function(s) {
+          var lbl = escapeHtml(s.label);
+          var safeLabel = lbl.replace(/'/g, '').replace(/"/g, '');
+          return '<span onclick="document.getElementById(\'segmentSearchInput\').value=\'' + safeLabel + '\';renderSegmentTable(\'' + safeLabel + '\')" style="padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#374151;margin-right:4px;">' + (typeIcon[s.type]||'🏷️') + ' ' + lbl + '</span>';
+        }).join('');
+  }
+
+  var tbody = document.getElementById('segmentTableBody');
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">No segments match "' + escapeHtml(term) + '"</td></tr>';
+    return;
+  }
+
+  var sorted = filtered.slice().sort(function(a,b){ return b.contacts.length - a.contacts.length; }).slice(0, 25);
+  var typeIcon = { leadmagnet: '🧲', campaign: '🎯', journey: '🗺️', tag: '🏷️' };
+  var typeColor = { leadmagnet: '#7c3aed', campaign: '#0369a1', journey: '#059669', tag: '#64748b' };
+
+  tbody.innerHTML = sorted.map(function(seg) {
+    var cs = seg.contacts;
+    var totalEmails = cs.reduce(function(s,c){ return s + (parseInt(c.number_emails_sent)||0); }, 0);
+    var totalOpens  = cs.reduce(function(s,c){ return s + (parseInt(c.num_emails_opened)||0); }, 0);
+    var replies     = cs.filter(function(c){ return c.last_responded; }).length;
+    var meetings    = cs.filter(function(c){ return allMeetings.some(function(m){ return (m.attendees_emails||'').includes(c.email); }); }).length;
+    var openRate    = totalEmails > 0 ? ((totalOpens / totalEmails) * 100).toFixed(0) : 0;
+    var rateColor   = openRate >= 30 ? '#059669' : openRate >= 15 ? '#d97706' : '#dc2626';
+    var col         = typeColor[seg.type] || '#64748b';
+    return '<tr style="border-bottom:1px solid #f1f5f9;">'
+      + '<td style="padding:12px;">' + (typeIcon[seg.type]||'🏷️') + ' <strong style="color:#0A3161;">' + escapeHtml(seg.label) + '</strong></td>'
+      + '<td style="padding:12px;"><span style="font-size:11px;font-weight:600;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:' + col + '20;color:' + col + ';">' + seg.type + '</span></td>'
+      + '<td style="padding:12px;text-align:center;font-weight:700;color:#0A3161;">' + cs.length + '</td>'
+      + '<td style="padding:12px;text-align:center;color:#64748b;">' + totalEmails + '</td>'
+      + '<td style="padding:12px;text-align:center;font-weight:700;color:' + rateColor + ';">' + openRate + '%</td>'
+      + '<td style="padding:12px;text-align:center;font-weight:700;color:' + (replies > 0 ? '#059669' : '#94a3b8') + ';">' + replies + '</td>'
+      + '<td style="padding:12px;text-align:center;font-weight:700;color:' + (meetings > 0 ? '#059669' : '#94a3b8') + ';">' + meetings + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterSegmentTable(val) { renderSegmentTable(val); }
+
+// ═══════════════════════════════════════════════════
+// VICTORIES ADVICE
+// ═══════════════════════════════════════════════════
+async function loadVictoriesAdvice() {
+  var container = document.getElementById('victoriesAdviceContent');
+  if (!container) return;
+  try {
+    var response = await apiCall('https://victoryvision.app.n8n.cloud/webhook/victories/get');
+    var victories = Array.isArray(response) ? response : (response && response.victories ? response.victories : []);
+
+    if (!victories.length) {
+      container.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">Close your first deal to unlock win-pattern insights.</p>';
+      return;
+    }
+
+    var insights = [];
+
+    var msgs = victories.map(function(v){ return v.messages_that_landed; }).filter(Boolean);
+    if (msgs.length) insights.push({ icon: '💬', title: 'Messages That Close', color: '#667eea',
+      text: '"' + escapeHtml(msgs[msgs.length - 1]) + '"', source: msgs.length + ' win' + (msgs.length > 1 ? 's' : '') });
+
+    var reasons = victories.map(function(v){ return v.reasons_they_chose_us; }).filter(Boolean);
+    if (reasons.length) insights.push({ icon: '🏅', title: 'Why They Said Yes', color: '#10b981',
+      text: escapeHtml(reasons[reasons.length - 1]), source: reasons.length + ' deal' + (reasons.length > 1 ? 's' : '') + ' analyzed' });
+
+    var triggers = victories.map(function(v){ return v.final_trigger; }).filter(Boolean);
+    if (triggers.length) {
+      var counts = {};
+      triggers.forEach(function(t){ counts[t] = (counts[t] || 0) + 1; });
+      var top = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; })[0];
+      insights.push({ icon: '⚡', title: 'Final Conversion Trigger', color: '#f59e0b',
+        text: 'Most common closing trigger: <strong>' + escapeHtml(top[0]) + '</strong>. Include this in every follow-up sequence.',
+        source: triggers.length + ' closes' });
+    }
+
+    var days = victories.map(function(v){ return parseInt(v.days_to_convert); }).filter(function(n){ return !isNaN(n) && n > 0; });
+    if (days.length) {
+      var avg = Math.round(days.reduce(function(a,b){ return a+b; }, 0) / days.length);
+      insights.push({ icon: '📅', title: 'Avg ' + avg + ' Days to Close', color: '#0A3161',
+        text: 'Prospects beyond <strong>' + Math.round(avg * 1.5) + ' days</strong> need re-engagement or disqualification.',
+        source: days.length + ' win' + (days.length > 1 ? 's' : '') });
+    }
+
+    var useCases = victories.map(function(v){ return v.use_cases_that_resonated; }).filter(Boolean);
+    if (useCases.length) insights.push({ icon: '🎯', title: 'Use Cases That Win', color: '#dc2626',
+      text: escapeHtml(useCases[useCases.length - 1]), source: 'from victories' });
+
+    var traits = victories.map(function(v){ return v.conversion_traits; }).filter(Boolean);
+    if (traits.length) insights.push({ icon: '🔬', title: 'Who Converts', color: '#7c3aed',
+      text: escapeHtml(traits[traits.length - 1]), source: traits.length + ' pattern' + (traits.length > 1 ? 's' : '') });
+
+    if (!insights.length) {
+      container.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">No structured win data yet. Fill in victory fields to unlock insights.</p>';
+      return;
+    }
+
+    container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">'
+      + insights.slice(0, 6).map(function(ins) {
+        return '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;background:#fafafa;">'
+          + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+          + '<div style="width:36px;height:36px;border-radius:8px;background:' + ins.color + ';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + ins.icon + '</div>'
+          + '<div style="font-weight:700;color:#0A3161;font-size:14px;">' + ins.title + '</div></div>'
+          + '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:8px;">' + ins.text + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + ins.color + ';text-transform:uppercase;letter-spacing:0.5px;">Source: ' + ins.source + '</div>'
+          + '</div>';
+      }).join('') + '</div>';
+
+  } catch (e) {
+    console.error('Victories advice error:', e);
+    if (container) container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">Could not load victories data.</p>';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// NEXT STEPS TRACKER
+// ═══════════════════════════════════════════════════
+function renderNextSteps() {
+  var container = document.getElementById('nextStepsContent');
+  if (!container) return;
+  var withSteps = allContacts.filter(function(c){ return c.next_steps && c.next_steps.trim(); }).slice(0, 30);
+
+  if (!withSteps.length) {
+    container.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">No open next steps. Add them via the leads table above.</p>';
+    return;
+  }
+
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+
+  var rows = withSteps.map(function(c) {
+    var due = c.next_step_due ? new Date(c.next_step_due) : null;
+    var dueLabel = '—', dueBg = '#f1f5f9', dueColor = '#64748b';
+    if (due) {
+      var d = new Date(due); d.setHours(0, 0, 0, 0);
+      dueLabel = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (d < today)                              { dueBg = '#fee2e2'; dueColor = '#dc2626'; dueLabel = 'OVERDUE'; }
+      else if (d.getTime() === today.getTime())   { dueBg = '#fef3c7'; dueColor = '#d97706'; dueLabel = 'TODAY'; }
+      else                                        { dueBg = '#e0f2fe'; dueColor = '#0369a1'; }
+    }
+    var safeId    = escapeHtml(String(c.id || ''));
+    var safeEmail = escapeHtml(c.email || '');
+    return '<tr id="nstr_' + safeId + '" style="border-bottom:1px solid #f1f5f9;">'
+      + '<td style="padding:12px;font-weight:600;color:#0A3161;">' + escapeHtml(c.name || c.email || 'Unknown') + '</td>'
+      + '<td style="padding:12px;font-size:13px;color:#374151;">' + escapeHtml(c.next_steps) + '</td>'
+      + '<td style="padding:12px;text-align:center;"><span style="padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + dueBg + ';color:' + dueColor + ';">' + dueLabel + '</span></td>'
+      + '<td style="padding:12px;text-align:center;"><button onclick="completeNextStep(\'' + safeId + '\',\'' + safeEmail + '\',this)" style="background:#f0fdf4;border:1.5px solid #86efac;color:#166534;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;">✓ Done</button></td>'
+      + '</tr>';
+  }).join('');
+
+  container.innerHTML = '<table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr style="background:#f8fafc;">'
+    + '<th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;">Contact</th>'
+    + '<th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;">Next Step</th>'
+    + '<th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;">Due</th>'
+    + '<th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;">Done</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+async function completeNextStep(contactId, email, btn) {
+  btn.textContent = '…';
+  btn.disabled = true;
+  try {
+    await apiCall('https://victoryvision.app.n8n.cloud/webhook/contacts/add', { id: contactId, email: email, next_steps: '', next_step_due: null });
+    var c = allContacts.find(function(x){ return String(x.id) === String(contactId) || x.email === email; });
+    if (c) c.next_steps = '';
+    var row = document.getElementById('nstr_' + contactId);
+    if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.4s'; setTimeout(function(){ row.remove(); }, 400); }
+  } catch (e) {
+    btn.textContent = '✓ Done';
+    btn.disabled = false;
+    console.error('Error completing next step:', e);
+  }
+}
+
+async function sendWalkthroughEmail() {
+  var steps = allContacts.filter(function(c){ return c.next_steps && c.next_steps.trim(); }).slice(0, 30);
+  if (!steps.length) { alert('No open next steps to send.'); return; }
+  var rows = steps.map(function(c){
+    return '<tr><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(c.name || c.email) + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(c.next_steps) + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;">' + (c.next_step_due || '—') + '</td></tr>';
+  }).join('');
+  var body = '<p>Hi,</p><p>Here are your <strong>' + steps.length + '</strong> open next steps in Victory Vision:</p>'
+    + '<table style="width:100%;border-collapse:collapse;margin-top:10px;">'
+    + '<tr style="background:#0A3161;color:white;"><th style="padding:10px;text-align:left;">Contact</th><th style="padding:10px;text-align:left;">Next Step</th><th style="padding:10px;text-align:left;">Due</th></tr>'
+    + rows + '</table>'
+    + '<p style="margin-top:16px;">Log into <a href="https://www.victoryvision.app/ai">Victory Vision AI</a> to take action.</p>';
+  try {
+    await apiCall('https://victoryvision.app.n8n.cloud/webhook/emails/send', { to_email: CUSTOMER_ID, subject: 'Victory Vision: ' + steps.length + ' Open Next Steps', body: body });
+    alert('Walkthrough email sent to ' + CUSTOMER_ID);
+  } catch (e) { alert('Error sending email: ' + e.message); }
+}
+
+    // Session management - check every 5 minutes
+    setInterval(async function() {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+          redirectToLogin();
+        }
+      } catch (e) {
+        console.error('Session check failed:', e);
+        redirectToLogin();
+      }
+    }, 300000);
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <!-- ── Email tour trigger: ?tour=aisdr|plans|execute|victories|feedback ── -->
+  <script>
+  (function() {
+    const tour = new URLSearchParams(window.location.search).get('tour');
+    if (!tour) return;
+
+    const TOURS = {
+      aisdr:     { sel: '#sdrToggle, .sdr-section, [id*="sdr"]',           msg: '👆 Toggle <strong>Auto SDR</strong> to let AI automatically reach out to your leads while you sleep.' },
+      plans:     { sel: '.plans-section, #plansContainer',                   msg: '📋 These are your <strong>AI-generated action plans</strong>. Click <em>Execute Plan</em> to trigger all actions instantly.' },
+      execute:   { sel: '.execute-btn, .plans-section',                      msg: '▶️ Click <strong>Execute Plan</strong> to trigger every action in your plan — emails, SMS, calls — automatically.' },
+      victories: { sel: '#victoriesAdviceSection, #statVictories',           msg: '🏆 <strong>Victories</strong> tracks your closed deals and surfaces the patterns that got them. Add wins to unlock deeper insights.' },
+      feedback:  { sel: '#getFeedbackBtn, #feedbackResults',                 msg: '🤖 Click <strong>Get AI Feedback</strong> to get a full analysis of your last 2 weeks of calls, emails, SMS, and meetings.' },
+    };
+
+    const config = TOURS[tour];
+    if (!config) return;
+
+    function showTour() {
+      const el = document.querySelector(config.sel);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.cssText += ';outline:3px solid #bb133e;outline-offset:4px;border-radius:8px;transition:outline 0.3s;';
+      }
+
+      const tip = document.createElement('div');
+      tip.id = 'vv-tour-tip';
+      tip.style.cssText = [
+        'position:fixed','top:72px','left:50%','transform:translateX(-50%)',
+        'background:#0a3161','color:white','padding:18px 28px','border-radius:14px',
+        'z-index:99999','font-size:14px','line-height:1.6','font-weight:500',
+        'box-shadow:0 8px 32px rgba(0,0,0,0.35)','text-align:center',
+        'max-width:440px','width:90%'
+      ].join(';');
+      tip.innerHTML = config.msg + '<br><br>'
+        + '<button onclick="document.getElementById(\'vv-tour-tip\').remove();'
+        + 'document.querySelectorAll(\'[style*=\\\"outline:3px\\\"]\').forEach(e=>{e.style.outline=\'\';});"'
+        + ' style="background:#bb133e;color:white;border:none;padding:8px 20px;border-radius:8px;'
+        + 'cursor:pointer;font-weight:700;font-size:13px;">Got it ✓</button>';
+      document.body.appendChild(tip);
+    }
+
+    // Wait for page data to load before scrolling
+    if (document.readyState === 'complete') {
+      setTimeout(showTour, 1500);
+    } else {
+      window.addEventListener('load', () => setTimeout(showTour, 1500));
+    }
+  })();
+  </script>
+
+</body>
+</html>
