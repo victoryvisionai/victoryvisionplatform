@@ -973,6 +973,18 @@ function getDealStageMeta(stageKey) {
   return DEAL_STAGES.find(s => s.key === stageKey) || { key: 'unknown', label: 'Unknown', color: '#6c757d' };
 }
 
+// Defensive helper: customer_journey is a jsonb column that may be returned as
+// null, a JSON string (when supabase-js doesn't auto-parse), or an array.
+// Always returns a (possibly empty) array so callers can safely .forEach/.slice/.spread.
+function safeJourney(c) {
+  if (!c) return [];
+  let j = c.customer_journey;
+  if (typeof j === 'string') {
+    try { j = JSON.parse(j); } catch (e) { return []; }
+  }
+  return Array.isArray(j) ? j : [];
+}
+
 // ============================================================
 // STAGES — loaded from localStorage; falls back to defaults.
 // Stage KEYS stay stable (referenced by every contact's tags + every n8n workflow).
@@ -1694,9 +1706,14 @@ function updateFocusCounts() {
     if (isAwaitingReply(c)) awaiting++;
 
     // Look at customer_journey for any pending "next_action_due" entries
-    const journey = c.customer_journey || [];
+    // Defensive: customer_journey may be null, a JSON string, or an array
+    let journey = c.customer_journey;
+    if (typeof journey === 'string') {
+      try { journey = JSON.parse(journey); } catch (e) { journey = []; }
+    }
+    if (!Array.isArray(journey)) journey = [];
     journey.forEach(ev => {
-      if (ev.due) {
+      if (ev && ev.due) {
         const due = new Date(ev.due);
         if (isNaN(due.getTime())) return;
         if (due < today) overdue++;
@@ -1738,7 +1755,7 @@ function passesFocus(c) {
   // overdue/today/week look at journey.due entries
   const today = new Date(); today.setHours(0,0,0,0);
   const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
-  const journey = c.customer_journey || [];
+  const journey = safeJourney(c);
   for (const ev of journey) {
     if (!ev.due) continue;
     const due = new Date(ev.due);
@@ -2027,7 +2044,7 @@ async function moveContactToStage(contactId, newStage) {
     from: contact._stage,
     to: newStage
   };
-  const existingJourney = contact.customer_journey || [];
+  const existingJourney = safeJourney(contact);
   const newJourney = [...existingJourney, journeyEntry];
 
   const { error } = await supabaseClient
@@ -2075,7 +2092,7 @@ async function quickEmailFromCard(contactId) {
     deal: slug,
     note: 'Opened Gmail compose from Deals page quick action'
   };
-  const newJourney = [...(c.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(c), journeyEntry];
   await supabaseClient.from('contacts').update({ customer_journey: newJourney }).eq('id', contactId);
   c.customer_journey = newJourney;
 }
@@ -2093,7 +2110,7 @@ async function quickLogCallFromCard(contactId) {
     deal: slug,
     note: note || 'Call logged via quick action'
   };
-  const newJourney = [...(c.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(c), journeyEntry];
   const newAttempts = (c.number_call_attempts || 0) + 1;
   const today = new Date().toISOString().split('T')[0];
 
@@ -2220,7 +2237,7 @@ function renderActivity() {
   if (!selectedDeal) return;
   const events = [];
   dealTargets.forEach(t => {
-    (t.customer_journey || []).forEach(ev => {
+    safeJourney(t).forEach(ev => {
       events.push({ ...ev, contact_name: t.name });
     });
   });
@@ -2524,7 +2541,7 @@ async function openContactModal(contactId) {
 
   document.getElementById('cmSummary').textContent = c.personal_summary || '—';
 
-  const journey = (c.customer_journey || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+  const journey = safeJourney(c).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
   if (journey.length === 0) {
     document.getElementById('cmJourney').innerHTML = '<p style="color: #888; margin: 0; font-size: 0.85rem;">No activity logged yet.</p>';
   } else {
@@ -2586,7 +2603,7 @@ async function saveContactScore() {
     new: newScore,
     rationale: 'Manual edit from Deals page contact modal'
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ scores: newScores, customer_journey: newJourney })
@@ -2615,7 +2632,7 @@ async function saveContactNote() {
     deal: slug,
     note: noteText
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ customer_journey: newJourney })
@@ -2647,7 +2664,7 @@ async function removeFromDeal() {
     from: currentContact._stage || 'not-contacted',
     rationale: 'Marked no-fit from Deals page — will not return to pipeline.'
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ tags: newTagsStr, customer_journey: newJourney })
@@ -2810,7 +2827,7 @@ async function addContactToDeal() {
     score: score,
     rationale: rationale
   };
-  const newJourney = [...(fetched.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(fetched), journeyEntry];
 
   const { error: updErr } = await supabaseClient.from('contacts')
     .update({ tags: newTagsStr, scores: newScores, customer_journey: newJourney })
