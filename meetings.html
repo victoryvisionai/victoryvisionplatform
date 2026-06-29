@@ -630,7 +630,15 @@ async function joinMeeting(invite) {
 
     // Detect host: in this schema the host's invite row has email === customer_id
     // (also typically rsvp === 'accepted'). Non-host invitees have a different email.
-    const isHost = !!(invite.email && invite.customer_id && invite.email === invite.customer_id);
+    const _norm = (s) => (s || '').toString().trim().toLowerCase();
+    const isHost = (
+      // host's invite row is stored with email === customer_id
+      (!!invite.email && !!invite.customer_id && _norm(invite.email) === _norm(invite.customer_id))
+      // fallback: the logged-in user is this invite's accepted attendee (covers customer_id mismatches)
+      || (invite.rsvp === 'accepted' && !!invite.email && _norm(invite.email) === _norm(userEmail))
+      // fallback: logged-in user matches the meeting owner / customer_id
+      || (!!invite.customer_id && _norm(invite.customer_id) === _norm(userEmail))
+    );
 
     // For hosts, fetch host_token + invitee email via secure n8n webhook
     // (server-side service-role lookup; meetings table stays RLS-protected).
@@ -683,6 +691,20 @@ async function joinMeeting(invite) {
     // error in the panel rather than silently failing inside Daily.
     if (isHost) {
       startCoach(invite, { hostToken, contactEmail });
+
+      // Start cloud recording (owner-only) so meetingsTranscript has a recording to fetch
+      // post-meeting. enable_recording:'cloud' on the room only enables the capability —
+      // it must be STARTED by an owner. Without this, no transcript/summary is ever saved.
+      try {
+        if (hostToken && typeof callFrame.startRecording === 'function') {
+          callFrame.startRecording();
+          console.log('cloud recording started');
+        } else if (!hostToken) {
+          console.warn('no host token — cloud recording NOT started (transcript will not save)');
+        }
+      } catch (e) {
+        console.warn('startRecording failed', e);
+      }
     }
 
     showSuccess('Successfully joined the meeting!');
