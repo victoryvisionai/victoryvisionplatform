@@ -526,7 +526,7 @@ function isValidEmail(email) {
 
 // Find meetings for the user
 async function findMeetings() {
-  const email = emailInput.value.trim();
+  const email = emailInput.value.trim().toLowerCase();
   
   if (!email) {
     showError('Please enter your email address');
@@ -547,11 +547,11 @@ async function findMeetings() {
   try {
     console.log('Searching for email:', email);
     
-    // Query meeting_invites table - simple email match
+    // Query meeting_invites table - case-insensitive email match
     const { data: meetingInvites, error } = await supabaseClient
       .from('meeting_invites')
       .select('*')
-      .eq('email', email);
+      .ilike('email', email);
 
     console.log('Query result:', { meetingInvites, error });
 
