@@ -553,37 +553,63 @@ async function findMeetings() {
   try {
     console.log('Searching for email:', email);
     
-    // Primary: service-role webhook (RLS/anon-independent, case-insensitive)
     let meetingInvites = null;
-    let lookupErr = null;
+    let lookupSource = null;
+
+    // PRIMARY (host path): the proven meetings/get endpoint, keyed by customer_id = your email.
+    // Meetings rows already carry room_url, host_token, start_at — no invite table or
+    // host-token webhook needed. This is the same endpoint the analysis page uses.
     try {
-      const resp = await fetch('https://victoryvision.app.n8n.cloud/webhook/meetings/by-email', {
+      const resp = await fetch('https://victoryvision.app.n8n.cloud/webhook/meetings/get', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ customer_id: email })
       });
       if (resp.ok) {
-        const txt = await resp.text();
-        const parsed = txt ? JSON.parse(txt) : [];
-        let rows = Array.isArray(parsed) ? parsed : (parsed.meetings || parsed.data || (parsed.email ? [] : [parsed]));
-        rows = (rows || []).filter(r => r && !r._empty && (r.room_url || r.meeting_id || r.id));
-        meetingInvites = rows;
-      } else {
-        lookupErr = 'webhook ' + resp.status;
+        const parsed = JSON.parse((await resp.text()) || '{}');
+        const list = Array.isArray(parsed) ? parsed : (parsed.meetings || parsed.data || []);
+        const rows = (list || []).filter(m => m && m.room_url);
+        if (rows.length) {
+          meetingInvites = rows.map(m => ({
+            name: m.participant_name || m.title || m.meeting_name || 'Victory Vision Meeting',
+            room_url: m.room_url,
+            host_token: m.host_token,
+            customer_id: m.customer_id,
+            email: m.customer_id,            // host rows: email === customer_id → isHost
+            contact_email: m.participant_name && m.attendees_emails ? m.attendees_emails : '',
+            start_at: m.start_at,
+            meeting_id: m.id,
+            rsvp: 'accepted'
+          }));
+          lookupSource = 'meetings/get';
+        }
       }
-    } catch (e) {
-      lookupErr = e.message;
-      console.warn('by-email webhook failed, falling back to direct query:', e);
+    } catch (e) { console.warn('meetings/get lookup failed:', e); }
+
+    // FALLBACK (guest path): invite lookup by email via service-role webhook.
+    if (meetingInvites === null) {
+      try {
+        const resp = await fetch('https://victoryvision.app.n8n.cloud/webhook/meetings/by-email', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (resp.ok) {
+          const parsed = JSON.parse((await resp.text()) || '[]');
+          let rows = Array.isArray(parsed) ? parsed : (parsed.meetings || parsed.data || []);
+          rows = (rows || []).filter(r => r && !r._empty && (r.room_url || r.meeting_id || r.id));
+          if (rows.length) { meetingInvites = rows; lookupSource = 'by-email'; }
+        }
+      } catch (e) { console.warn('by-email lookup failed:', e); }
     }
 
-    // Fallback: direct anon query (case-insensitive)
+    // LAST RESORT: direct anon query.
     if (meetingInvites === null) {
       const res = await supabaseClient.from('meeting_invites').select('*').ilike('email', email);
-      if (res.error) { console.error('Database error:', res.error); }
       meetingInvites = res.data || [];
+      lookupSource = 'anon';
     }
 
-    console.log('Lookup result:', { count: meetingInvites.length, lookupErr });
+    console.log('Lookup result:', { count: meetingInvites.length, source: lookupSource });
 
     loadingState.style.display = 'none';
 
@@ -685,11 +711,11 @@ async function joinMeeting(invite) {
       || (!!invite.customer_id && _norm(invite.customer_id) === _norm(userEmail))
     );
 
-    // For hosts, fetch host_token + invitee email via secure n8n webhook
-    // (server-side service-role lookup; meetings table stays RLS-protected).
-    let hostToken = null;
-    let contactEmail = '';
-    if (isHost && invite.meeting_id) {
+    // Host token: prefer the one already on the row (from meetings/get); only
+    // fall back to the host-token webhook if it isn't present.
+    let hostToken = invite.host_token || null;
+    let contactEmail = invite.contact_email || '';
+    if (isHost && !hostToken && invite.meeting_id) {
       try {
         const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/meeting/host-token', {
           method: 'POST',
