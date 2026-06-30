@@ -898,6 +898,11 @@
         <div class="wf-btn-label">Saved Template</div>
         <div class="wf-btn-desc">A/B drip from a template you built</div>
       </div>
+      <div class="wf-btn" data-wf="vvcampaign" onclick="selectEnrollWorkflow('vvcampaign')">
+        <span class="wf-btn-icon">🚀</span>
+        <div class="wf-btn-label">VV Campaign</div>
+        <div class="wf-btn-desc">Email sequence using THIS deal's brief</div>
+      </div>
     </div>
 
     <!-- Nurture-specific fields -->
@@ -990,6 +995,24 @@
       </div>
       <div class="wf-summary" style="background:#fff8e1; border-left-color:#f59e0b;">
         Templates support <code>&lt;&lt;first_name&gt;&gt;</code>, <code>&lt;&lt;company&gt;&gt;</code>, <code>&lt;&lt;title&gt;&gt;</code> merge tokens. Follow-ups auto-pause if the contact replies.
+      </div>
+    </div>
+
+    <!-- VV Campaign fields -->
+    <div class="wf-fields" id="wf-fields-vvcampaign">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Sequence parameters</label>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:6px;">
+        <div class="form-group">
+          <label>Total emails</label>
+          <input type="number" id="enrollVvTotal" value="3" min="1" max="12"/>
+        </div>
+        <div class="form-group">
+          <label>Days between</label>
+          <input type="number" id="enrollVvDays" value="2" min="1" max="30"/>
+        </div>
+      </div>
+      <div class="wf-summary" id="enrollVvSummary" style="background:#e8f5e9; border-left-color:#28a745;">
+        Pulls the current deal's <b>main prompt</b>, <b>tagline</b>, <b>ICP</b>, and <b>landing page URL</b> from the campaigns table and uses them as the email brief. Email 1 fires ~30 sec after enroll. Each subsequent email lands on the next Tue/Wed/Thu 10am or 1:30pm ET slot.
       </div>
     </div>
 
@@ -2361,7 +2384,8 @@ const WORKFLOW_ENDPOINTS = {
   meeting:    N8N_WEBHOOK_BASE + '/emails/meeting',
   newsletter: N8N_WEBHOOK_BASE + '/emails/newsletter',
   leadmagnet: N8N_WEBHOOK_BASE + '/emails/leadmagnet',
-  template:   N8N_WEBHOOK_BASE + '/emails/template-schedule'
+  template:   N8N_WEBHOOK_BASE + '/emails/template-schedule',
+  vvcampaign: N8N_WEBHOOK_BASE + '/emails/victoryvisioncampaigns'
 };
 
 let enrollContactId = null;
@@ -2397,6 +2421,11 @@ async function openEnrollModal(contactId) {
   document.getElementById('enrollTemplateStart').value =
     today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   document.getElementById('enrollTemplatePreview').style.display = 'none';
+  // Update VV Campaign summary with the selected deal name
+  const vvSummary = document.getElementById('enrollVvSummary');
+  if (vvSummary && selectedDeal) {
+    vvSummary.innerHTML = `Will use <b>${esc(selectedDeal.deal_name)}</b>'s brief (main prompt, tagline, ICP, landing page URL) as the email composition source. Email 1 fires ~30 sec after enroll; subsequent emails land on the next Tue/Wed/Thu 10am or 1:30pm ET slot.`;
+  }
   document.getElementById('enrollModal').classList.add('active');
 }
 
@@ -2598,6 +2627,16 @@ async function submitEnroll() {
       start_date: startDate.toISOString(),
       template_name: tmpl.template_name || null
     });
+  } else if (wf === 'vvcampaign') {
+    // VV Campaigns workflow uses the deal's main_prompt + landing_page_url as the email brief.
+    // The deal MUST be selected so we can pass vv_campaign_id.
+    if (!selectedDeal || !selectedDeal.deal_id) {
+      showStatus('VV Campaign requires a deal — open a deal first, then enroll from inside it', 'error');
+      return;
+    }
+    body.vv_campaign_id = selectedDeal.deal_id;
+    body.total_emails = parseInt(document.getElementById('enrollVvTotal').value, 10) || 3;
+    body.days_between = parseInt(document.getElementById('enrollVvDays').value, 10) || 2;
   }
 
   // Optimistic UI
