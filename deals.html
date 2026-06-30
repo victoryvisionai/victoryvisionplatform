@@ -12,7 +12,7 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
 
-    /* === Navbar (matches contacts page) === */
+    /* === Navbar === */
     .navbar { background-color: #0A3161; color: white; padding: 15px;
               display: flex; justify-content: space-between; align-items: center; }
     .navbar nav ul { display: flex; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
@@ -31,33 +31,59 @@
 
     /* === Layout === */
     .content { padding: 20px 4px; max-width: 1600px; margin: 0 auto; }
-    .page-header { margin-bottom: 20px; padding: 0 16px; }
-    .page-title { font-size: 2.5rem; font-weight: bold; color: #0A3161; margin-bottom: 0.5rem; }
-    .page-subtitle { font-size: 1.1rem; color: #666; }
+    .page-header { margin-bottom: 16px; padding: 0 16px; }
+    .page-title { font-size: 2.2rem; font-weight: bold; color: #0A3161; margin-bottom: 0.25rem; }
+    .page-subtitle { font-size: 1.05rem; color: #666; margin: 0; }
+
+    /* === Focus strip (NEW) === */
+    .focus-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px; margin-bottom: 16px; }
+    .focus-pill { background: white; border: 1px solid #e0e0e0; border-radius: 20px;
+                  padding: 8px 14px; font-size: 0.85rem; cursor: pointer;
+                  display: flex; align-items: center; gap: 6px; transition: all 0.15s; color: #333; }
+    .focus-pill:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    .focus-pill.active { background: #0A3161; color: white; border-color: #0A3161; }
+    .focus-pill-count { background: #f0f2f5; color: #0A3161; border-radius: 10px;
+                        padding: 2px 8px; font-weight: bold; font-size: 0.75rem; min-width: 18px; text-align: center; }
+    .focus-pill.active .focus-pill-count { background: rgba(255,255,255,0.25); color: white; }
+    .focus-pill.overdue:not(.active) .focus-pill-count { background: #f8d7da; color: #721c24; }
+    .focus-pill.today:not(.active) .focus-pill-count { background: #fff3cd; color: #856404; }
+    .focus-pill.stale:not(.active) .focus-pill-count { background: #f8d7da; color: #721c24; }
+    .focus-pill.awaiting:not(.active) .focus-pill-count { background: #d1ecf1; color: #0c5460; }
 
     .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 20px; margin: 0 16px 20px 16px; }
     .section-header { background: linear-gradient(135deg, #0A3161, #1a4c80); color: white;
                       padding: 15px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0;
-                      display: flex; justify-content: space-between; align-items: center; }
-    .section-header h2 { margin: 0; font-size: 1.2rem; }
+                      display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .section-header h2 { margin: 0; font-size: 1.1rem; min-width: 0; flex: 1;
+                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .section-header > div { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .icon-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+                color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;
+                font-size: 0.85rem; transition: all 0.15s; }
+    .icon-btn:hover { background: rgba(255,255,255,0.25); }
 
     /* === Deal list (top of page) === */
     .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
                   gap: 16px; }
     .deal-card { background: white; border: 2px solid transparent; border-radius: 8px;
                  padding: 16px; cursor: pointer; transition: all 0.2s ease;
-                 box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+                 box-shadow: 0 2px 4px rgba(0,0,0,0.06); min-width: 0; overflow: hidden; }
     .deal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
     .deal-card.selected { border-color: #0A3161; background: #f0f6ff; }
     .deal-card-header { display: flex; justify-content: space-between; align-items: flex-start;
-                        margin-bottom: 8px; }
-    .deal-card-name { font-weight: bold; font-size: 1.05rem; color: #0A3161;
-                      flex: 1; padding-right: 8px; }
-    .deal-card-target { font-weight: bold; color: #28a745; font-size: 1.05rem; white-space: nowrap; }
+                        margin-bottom: 8px; gap: 8px; min-width: 0; }
+    .deal-card-name { font-weight: bold; font-size: 1rem; color: #0A3161;
+                      flex: 1 1 auto; min-width: 0;
+                      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                      overflow: hidden; line-height: 1.25; word-break: break-word; }
+    .deal-card-target { font-weight: bold; color: #28a745; font-size: 0.95rem;
+                        flex: 0 0 auto; max-width: 38%; white-space: nowrap;
+                        overflow: hidden; text-overflow: ellipsis; }
     .deal-card-status { display: inline-block; padding: 3px 10px; border-radius: 12px;
-                        font-size: 0.75rem; font-weight: bold; text-transform: uppercase;
-                        letter-spacing: 0.5px; margin-bottom: 8px; }
+                        font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+                        letter-spacing: 0.5px; margin-bottom: 8px;
+                        max-width: 100%; word-break: break-word; line-height: 1.3; }
     .status-pre-launch { background: #fff3cd; color: #856404; }
     .status-pre-marketing { background: #d1ecf1; color: #0c5460; }
     .status-launched { background: #d4edda; color: #155724; }
@@ -66,49 +92,75 @@
     .status-closed { background: #d6d8db; color: #1b1e21; }
     .status-paused { background: #f8d7da; color: #721c24; }
 
-    .deal-card-meta { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
-    .deal-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-                       font-size: 0.85rem; margin-top: 12px; padding-top: 12px;
+    .deal-card-meta { font-size: 0.82rem; color: #666; margin-bottom: 8px;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card-pricing { display:flex; gap:6px; margin:8px 0; padding:8px;
+                         background:#f3f6fa; border-radius:6px; overflow: hidden; }
+    .deal-card-pricing > div { flex: 1; min-width: 0; }
+    .deal-card-pricing > div + div { border-left: 1px solid #d0d7e2; padding-left: 8px; }
+    .deal-card-pricing .label { font-size:0.65rem; color:#666; text-transform:uppercase;
+                                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card-pricing .amount { font-size:1.05rem; font-weight:600;
+                                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card-pricing .sub { font-size:0.6rem; color:#888;
+                              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px;
+                       font-size: 0.82rem; margin-top: 10px; padding-top: 10px;
                        border-top: 1px solid #eee; }
-    .deal-card-stat-label { color: #666; }
-    .deal-card-stat-value { font-weight: bold; color: #0A3161; }
+    .deal-card-stat-label { color: #666;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card-stat-value { font-weight: bold; color: #0A3161; text-align: right; }
 
     /* === Tabs === */
     .tabs { display: flex; gap: 0; border-bottom: 2px solid #ddd; margin: 0 16px 20px 16px;
-            padding: 0; }
+            padding: 0; overflow-x: auto; }
     .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent;
-           font-weight: 500; color: #666; transition: all 0.2s ease; user-select: none; }
+           font-weight: 500; color: #666; transition: all 0.2s ease; user-select: none;
+           white-space: nowrap; }
     .tab:hover { color: #0A3161; background: #f8f9fa; }
     .tab.active { color: #0A3161; border-bottom-color: #0A3161; font-weight: bold; }
-
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
     /* === Pipeline (kanban) === */
-    .pipeline { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr));
-                gap: 12px; overflow-x: auto; padding-bottom: 16px; }
-    .pipeline-column { background: #f0f2f5; border-radius: 8px; padding: 12px;
-                       min-width: 180px; min-height: 400px; }
-    .pipeline-column-header { font-weight: bold; color: #0A3161; margin-bottom: 12px;
-                              font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;
-                              display: flex; justify-content: space-between; align-items: center; }
+    .pipeline { display: grid; grid-auto-columns: minmax(190px, 1fr); grid-auto-flow: column;
+                gap: 10px; overflow-x: auto; padding-bottom: 16px; }
+    .pipeline-column { background: #f0f2f5; border-radius: 8px; padding: 10px;
+                       min-width: 190px; min-height: 400px; display: flex; flex-direction: column; }
+    .pipeline-column-header { font-weight: bold; color: #0A3161; margin-bottom: 10px;
+                              font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
+                              display: flex; justify-content: space-between; align-items: center;
+                              border-bottom: 3px solid; padding-bottom: 6px; gap: 6px;
+                              min-width: 0; }
+    .pipeline-column-header-label { flex: 1; min-width: 0; overflow: hidden;
+                                    text-overflow: ellipsis; white-space: nowrap; }
     .pipeline-column-count { background: #0A3161; color: white; border-radius: 12px;
-                             padding: 2px 8px; font-size: 0.75rem; }
+                             padding: 2px 8px; font-size: 0.72rem; flex-shrink: 0; }
+    .pipeline-column-value { font-size: 0.7rem; color: #0d6b4d; font-weight: 600;
+                             margin-top: 2px; padding-bottom: 6px;
+                             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pipeline-cards-scroll { flex: 1; overflow-y: auto; max-height: 70vh; padding-right: 2px; }
+
     .pipeline-card { background: white; border-radius: 6px; padding: 10px;
                      margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-                     cursor: move; transition: all 0.15s ease; font-size: 0.85rem; }
+                     cursor: move; transition: all 0.15s ease; font-size: 0.83rem;
+                     position: relative; min-width: 0; overflow: hidden; }
     .pipeline-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
-    .pipeline-card-name { font-weight: bold; color: #0A3161; margin-bottom: 4px; }
-    .pipeline-card-company { color: #666; font-size: 0.8rem; margin-bottom: 6px; }
+    .pipeline-card-name { font-weight: bold; color: #0A3161; margin-bottom: 4px;
+                          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                          padding-right: 18px; }
+    .pipeline-card-company { color: #666; font-size: 0.76rem; margin-bottom: 6px;
+                             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pipeline-card-meta { display: flex; justify-content: space-between; align-items: center;
-                          font-size: 0.75rem; color: #666; }
+                          font-size: 0.72rem; color: #666; gap: 6px; min-width: 0; }
+    .pipeline-card-warm { display: flex; gap: 3px; flex-wrap: wrap; min-width: 0; overflow: hidden; }
     .pipeline-card-score { background: #28a745; color: white; padding: 2px 6px; border-radius: 10px;
-                           font-weight: bold; font-size: 0.7rem; }
+                           font-weight: bold; font-size: 0.68rem; flex-shrink: 0; }
     .pipeline-card-score.low { background: #6c757d; }
     .pipeline-card-score.mid { background: #ffc107; color: #333; }
     .pipeline-card-score.high { background: #28a745; }
-    .pipeline-card-warm { display: flex; gap: 4px; }
-    .warm-badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: bold; }
+    .warm-badge { font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;
+                  white-space: nowrap; }
     .warm-wp { background: #ffeaa7; color: #6e4d00; }
     .warm-cb { background: #74b9ff; color: white; }
     .warm-hv { background: #a29bfe; color: white; }
@@ -117,27 +169,72 @@
     .warm-vt { background: #ff7675; color: white; }
     .warm-cpg { background: #ffeaa7; color: #6e4d00; }
 
+    /* Stale indicator dot (NEW) */
+    .stale-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+                 border-radius: 50%; pointer-events: none; }
+    .stale-dot.red { background: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.2); }
+    .stale-dot.yellow { background: #ffc107; box-shadow: 0 0 0 2px rgba(255,193,7,0.2); }
+
+    /* Expected value pill */
+    .ev-pill { margin-top: 6px; padding: 4px 7px; background: #f0f4f9;
+               border-left: 3px solid #1a3a6e; border-radius: 3px;
+               font-size: 0.7rem; display: flex; gap: 4px; align-items: center;
+               overflow: hidden; min-width: 0; }
+    .ev-pill.high { border-left-color: #0d6b4d; }
+    .ev-pill-label { color: #666; flex-shrink: 0; }
+    .ev-pill-value { font-weight: 700; color: #0d6b4d; flex-shrink: 0; }
+    .ev-pill-calc { color: #999; margin-left: 2px; min-width: 0; overflow: hidden;
+                    text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Quick action buttons on pipeline cards (NEW, hover-reveal) */
+    .pipeline-card-actions { display: flex; gap: 4px; margin-top: 6px;
+                              padding-top: 6px; border-top: 1px solid #f0f0f0;
+                              opacity: 0; transition: opacity 0.15s; }
+    .pipeline-card:hover .pipeline-card-actions { opacity: 1; }
+    .qa-btn { background: #f0f2f5; border: none; padding: 3px 8px; border-radius: 4px;
+              font-size: 0.72rem; cursor: pointer; transition: all 0.15s; flex: 1;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qa-btn:hover { background: #0A3161; color: white; }
+    .qa-btn.advance { background: #d4edda; color: #155724; }
+    .qa-btn.advance:hover { background: #28a745; color: white; }
+
     .pipeline-card.dragging { opacity: 0.5; }
-    .pipeline-column.drag-over { background: #d1ecf1; border: 2px dashed #0c5460; }
+    .pipeline-column.drag-over { background: #d1ecf1; box-shadow: inset 0 0 0 2px #0c5460; }
 
     /* === Targets table === */
     .targets-table { width: 100%; background: white; border-collapse: collapse;
-                     font-size: 0.9rem; }
+                     font-size: 0.85rem; table-layout: fixed; }
     .targets-table thead th { background: #0A3161; color: white; padding: 10px 8px;
-                              text-align: left; font-weight: bold; position: sticky; top: 0; }
-    .targets-table tbody td { padding: 8px; border-bottom: 1px solid #eee; }
+                              text-align: left; font-weight: bold; position: sticky; top: 0;
+                              white-space: nowrap; }
+    .targets-table tbody td { padding: 8px; border-bottom: 1px solid #eee;
+                              overflow: hidden; text-overflow: ellipsis; }
     .targets-table tbody tr:hover { background: #f8f9fa; cursor: pointer; }
     .targets-table .score-cell { text-align: center; font-weight: bold; }
 
     /* === Dashboard KPIs === */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-                gap: 16px; margin-bottom: 24px; }
-    .kpi-tile { background: white; border-radius: 8px; padding: 20px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.08); border-left: 4px solid #0A3161; }
-    .kpi-label { font-size: 0.85rem; color: #666; text-transform: uppercase;
-                 letter-spacing: 0.5px; margin-bottom: 8px; }
-    .kpi-value { font-size: 2rem; font-weight: bold; color: #0A3161; }
-    .kpi-secondary { font-size: 0.9rem; color: #28a745; margin-top: 4px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 12px; margin-bottom: 20px; }
+    .kpi-tile { background: white; border-radius: 8px; padding: 16px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08); border-left: 4px solid #0A3161;
+                min-width: 0; overflow: hidden; }
+    .kpi-label { font-size: 0.78rem; color: #666; text-transform: uppercase;
+                 letter-spacing: 0.5px; margin-bottom: 6px;
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi-value { font-size: clamp(1.4rem, 3.5vw, 1.9rem); font-weight: bold; color: #0A3161;
+                 line-height: 1.1; }
+    .kpi-secondary { font-size: 0.82rem; color: #28a745; margin-top: 4px;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Pipeline value tiles (top of page) */
+    .pwv-tile { color: white; border-radius: 8px; padding: 16px; min-width: 0; overflow: hidden; }
+    .pwv-tile .label { font-size: 0.8rem; opacity: 0.85; text-transform: uppercase;
+                       letter-spacing: 0.5px;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pwv-tile .value { font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 700; margin-top: 6px;
+                       line-height: 1.1; }
+    .pwv-tile .sub { font-size: 0.74rem; opacity: 0.78; margin-top: 4px;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* === Buttons === */
     .btn { background: #0A3161; color: white; border: none; padding: 8px 16px;
@@ -148,7 +245,9 @@
     .btn-secondary:hover { background: #5a6268; }
     .btn-success { background: #28a745; }
     .btn-success:hover { background: #218838; }
-    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+    .btn-danger { background: #dc3545; }
+    .btn-danger:hover { background: #b02a37; }
+    .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
 
     .empty-state { text-align: center; padding: 60px 20px; color: #888; }
     .empty-state h3 { color: #555; margin-bottom: 8px; }
@@ -156,88 +255,236 @@
     /* === Modal === */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
              background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center;
-             align-items: center; padding: 20px; }
+             align-items: flex-start; padding: 20px; overflow-y: auto; }
     .modal.active { display: flex; }
-    .modal-content { background: white; border-radius: 10px; padding: 30px;
-                     max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-content { background: white; border-radius: 10px; padding: 26px;
+                     max-width: 600px; width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; }
     .modal-content h2 { margin-top: 0; color: #0A3161; }
     .modal-close { float: right; background: none; border: none; font-size: 1.5rem;
                    cursor: pointer; color: #888; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #555; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #555;
+                        font-size: 0.88rem; }
     .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
-      font-size: 0.95rem; box-sizing: border-box; }
-    .form-group textarea { resize: vertical; min-height: 80px; }
+      width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 0.92rem; box-sizing: border-box; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
 
     /* === Contact modal (wider, two-column) === */
     .contact-modal-content { max-width: 900px; width: 100%; }
     .contact-modal-header { display: flex; justify-content: space-between; align-items: flex-start;
-                            padding-bottom: 12px; border-bottom: 1px solid #eee; margin-bottom: 16px; }
-    .contact-modal-header h2 { margin: 0; color: #0A3161; font-size: 1.4rem; }
-    .contact-modal-sub { color: #666; font-size: 0.95rem; margin-top: 4px; }
-    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
+                            padding-bottom: 12px; border-bottom: 1px solid #eee; margin-bottom: 16px;
+                            gap: 12px; }
+    .contact-modal-header h2 { margin: 0; color: #0A3161; font-size: 1.3rem;
+                               word-break: break-word; }
+    .contact-modal-header > div:first-child { flex: 1; min-width: 0; }
+    .contact-modal-sub { color: #666; font-size: 0.9rem; margin-top: 4px;
+                         word-break: break-word; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
     .contact-section { background: #f8f9fa; border-radius: 6px; padding: 12px; }
-    .contact-section h3 { margin: 0 0 10px 0; color: #0A3161; font-size: 0.9rem;
+    .contact-section h3 { margin: 0 0 10px 0; color: #0A3161; font-size: 0.85rem;
                           text-transform: uppercase; letter-spacing: 0.5px; }
     .contact-field { display: flex; justify-content: space-between; padding: 4px 0;
-                     font-size: 0.9rem; border-bottom: 1px dashed #e5e5e5; }
+                     font-size: 0.85rem; border-bottom: 1px dashed #e5e5e5; gap: 8px; }
     .contact-field:last-child { border-bottom: none; }
     .contact-field-label { color: #666; flex: 0 0 130px; }
-    .contact-field-value { color: #222; text-align: right; flex: 1; word-break: break-word; }
-    .contact-field-value a { color: #0A3161; text-decoration: none; }
+    .contact-field-value { color: #222; text-align: right; flex: 1; min-width: 0;
+                           word-break: break-word; overflow-wrap: break-word; }
+    .contact-field-value a { color: #0A3161; text-decoration: none; word-break: break-all; }
     .contact-field-value a:hover { text-decoration: underline; }
     .contact-summary { background: #fff; border: 1px solid #eee; border-radius: 6px;
                        padding: 12px; max-height: 180px; overflow-y: auto;
-                       font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
+                       font-size: 0.83rem; line-height: 1.5; white-space: pre-wrap;
+                       word-break: break-word; }
     .contact-journey { background: #fff; border: 1px solid #eee; border-radius: 6px;
                        padding: 8px; max-height: 220px; overflow-y: auto; }
     .journey-entry { border-left: 3px solid #0A3161; padding: 6px 10px; margin-bottom: 6px;
-                     background: #f8f9fa; border-radius: 4px; font-size: 0.82rem; }
-    .journey-ts { color: #888; font-size: 0.75rem; }
+                     background: #f8f9fa; border-radius: 4px; font-size: 0.8rem;
+                     word-break: break-word; }
+    .journey-ts { color: #888; font-size: 0.74rem; }
     .journey-event { font-weight: bold; color: #0A3161; }
     .contact-actions { display: flex; gap: 8px; flex-wrap: wrap;
                        padding-top: 12px; border-top: 1px solid #eee; margin-top: 12px; }
-    .scores-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .score-pill { background: #e9ecef; border-radius: 12px; padding: 2px 8px; font-size: 0.75rem; }
+    .scores-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .score-pill { background: #e9ecef; border-radius: 12px; padding: 2px 8px; font-size: 0.74rem; }
     .score-pill.high { background: #d4edda; color: #155724; }
     .score-pill.mid { background: #fff3cd; color: #856404; }
     .score-pill.low { background: #f8d7da; color: #721c24; }
 
-    /* === Add Contact autocomplete === */
+    /* Add Contact autocomplete */
     .autocomplete-wrap { position: relative; }
     .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0;
                          background: white; border: 1px solid #ddd; border-top: none;
                          border-radius: 0 0 6px 6px; max-height: 280px; overflow-y: auto;
                          z-index: 100; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
     .autocomplete-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-                         font-size: 0.9rem; }
+                         font-size: 0.88rem; }
     .autocomplete-item:hover, .autocomplete-item.highlighted { background: #f0f6ff; }
     .autocomplete-item-name { font-weight: bold; color: #0A3161; }
-    .autocomplete-item-meta { color: #666; font-size: 0.8rem; }
+    .autocomplete-item-meta { color: #666; font-size: 0.78rem; }
     .autocomplete-item.already-in-deal { opacity: 0.5; }
     .autocomplete-item.already-in-deal .autocomplete-item-name::after {
       content: ' · already in deal'; color: #888; font-weight: normal; }
 
+    /* Stage management modal (NEW) */
+    .stage-row { display: grid; grid-template-columns: 30px 1fr 70px 60px 30px 30px;
+                 gap: 8px; align-items: center; padding: 8px;
+                 border: 1px solid #e5e5e5; border-radius: 6px; margin-bottom: 6px;
+                 background: white; }
+    .stage-row.drag-handle-row { background: #f8f9fa; cursor: move; }
+    .stage-row input[type="text"], .stage-row input[type="number"] {
+      padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; }
+    .stage-row input[type="color"] { width: 100%; height: 32px; border: 1px solid #ddd;
+                                     border-radius: 4px; padding: 0; cursor: pointer; }
+    .stage-row .drag-handle { color: #aaa; cursor: grab; text-align: center;
+                              user-select: none; font-size: 1.2rem; }
+    .stage-row .key-label { font-family: monospace; font-size: 0.7rem; color: #888;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stage-row .remove-btn { background: #f8d7da; color: #721c24; border: none;
+                             padding: 4px 8px; border-radius: 4px; cursor: pointer;
+                             font-size: 0.85rem; }
+    .stage-row .remove-btn:hover { background: #dc3545; color: white; }
+    .stage-row.terminal { background: #fffaf0; border-color: #ffc107; }
+    .stage-mgmt-header { display: grid; grid-template-columns: 30px 1fr 70px 60px 30px 30px;
+                         gap: 8px; padding: 0 8px 6px 8px; font-size: 0.72rem;
+                         color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                         font-weight: bold; }
+    .stage-mgmt-footer { display: flex; gap: 8px; justify-content: space-between;
+                         margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .stage-mgmt-modal-content { max-width: 720px; width: 100%; }
+
     /* === Status banner === */
     #statusBanner { position: fixed; top: 20px; right: 20px; padding: 12px 20px;
                     border-radius: 6px; color: white; z-index: 2000; display: none;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 400px; }
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 400px;
+                    word-break: break-word; }
     #statusBanner.success { background: #28a745; }
     #statusBanner.error { background: #dc3545; }
     #statusBanner.info { background: #17a2b8; }
 
-    /* === Loading === */
     .loading { display: inline-block; width: 16px; height: 16px;
                border: 2px solid #f3f3f3; border-top: 2px solid #0A3161;
                border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* === View toggle + Stage filter (NEW) === */
+    .view-controls { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px;
+                     margin-bottom: 12px; align-items: center; }
+    .view-toggle { display: inline-flex; background: #fff; border-radius: 8px;
+                   box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+    .view-toggle button { background: none; border: none; padding: 8px 14px;
+                          cursor: pointer; font-size: 0.85rem; color: #666;
+                          transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+    .view-toggle button.active { background: #0A3161; color: white; }
+    .view-toggle button:not(.active):hover { background: #f0f2f5; }
+    
+    .stage-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+                          flex: 1; }
+    .stage-chip { background: white; border: 1px solid #e0e0e0; border-radius: 14px;
+                  padding: 5px 12px; font-size: 0.78rem; cursor: pointer;
+                  display: inline-flex; align-items: center; gap: 5px;
+                  transition: all 0.15s; user-select: none; }
+    .stage-chip:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .stage-chip.active { color: white; border-color: transparent; font-weight: 600; }
+    .stage-chip-count { background: #f0f2f5; color: #555; border-radius: 8px;
+                        padding: 1px 6px; font-size: 0.7rem; min-width: 18px; text-align: center; }
+    .stage-chip.active .stage-chip-count { background: rgba(255,255,255,0.25); color: white; }
+    
+    /* Deal stage badge (DEAL level) */
+    .deal-stage-badge { display: inline-block; padding: 3px 9px; border-radius: 11px;
+                        font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+                        letter-spacing: 0.5px; color: white; white-space: nowrap; }
+    .ds-soft-touch  { background: #17a2b8; }
+    .ds-pitched     { background: #007bff; }
+    .ds-soft-circle { background: #ffc107; color: #333; }
+    .ds-committed   { background: #28a745; }
+    .ds-signed      { background: #155724; }
+    .ds-lost        { background: #dc3545; }
+    .ds-unknown     { background: #6c757d; }
+    
+    /* Deal score */
+    .deal-score-badge { display: inline-flex; align-items: center; gap: 4px;
+                        padding: 2px 8px; border-radius: 10px; font-weight: bold;
+                        font-size: 0.75rem; white-space: nowrap; }
+    .deal-score-badge.high { background: #d4edda; color: #155724; }
+    .deal-score-badge.mid  { background: #fff3cd; color: #856404; }
+    .deal-score-badge.low  { background: #f8d7da; color: #721c24; }
+    
+    /* Per-deal needs-attention chips on cards */
+    .deal-attention { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+    .deal-attention-chip { font-size: 0.68rem; padding: 2px 6px; border-radius: 8px;
+                           font-weight: 600; white-space: nowrap; }
+    .att-stale { background: #f8d7da; color: #721c24; }
+    .att-await { background: #d1ecf1; color: #0c5460; }
+    .att-overdue { background: #fff3cd; color: #856404; }
+    .att-committed { background: #d4edda; color: #155724; }
+    
+    /* Drag handle */
+    .drag-handle { cursor: grab; color: #aaa; font-size: 1rem; user-select: none;
+                   padding: 0 4px; }
+    .drag-handle:hover { color: #0A3161; }
+    .drag-handle:active { cursor: grabbing; }
+    .deal-card.drag-source, .deal-row.drag-source { opacity: 0.4; }
+    .deal-card.drag-over, .deal-row.drag-over { box-shadow: 0 0 0 3px #28a745; }
+    
+    /* === Deals table view === */
+    .deals-table { width: 100%; background: white; border-collapse: separate;
+                   border-spacing: 0; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
+                   border-radius: 8px; overflow: hidden; }
+    .deals-table thead th { background: #0A3161; color: white; padding: 10px 8px;
+                            text-align: left; font-weight: bold; font-size: 0.78rem;
+                            text-transform: uppercase; letter-spacing: 0.4px; }
+    .deals-table thead th.sortable { cursor: pointer; user-select: none; }
+    .deals-table thead th.sortable:hover { background: #1a4c80; }
+    .deals-table tbody td { padding: 10px 8px; border-bottom: 1px solid #eee;
+                            vertical-align: middle; }
+    .deals-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .deals-table tbody tr:hover { background: #f8f9fa; }
+    .deals-table tbody tr.selected { background: #e7f1ff; }
+    .deals-table .nowrap { white-space: nowrap; }
+    .deals-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .deals-table .deal-name-cell { font-weight: 600; color: #0A3161; max-width: 280px;
+                                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .deals-table .counterparty-cell { color: #555; max-width: 200px;
+                                      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     @media (max-width: 768px) {
-      .pipeline { grid-template-columns: 1fr; }
+      .pipeline { grid-auto-columns: minmax(170px, 90vw); }
       .deals-grid { grid-template-columns: 1fr; }
-      .navbar nav ul { font-size: 0.85rem; }
+      .navbar nav ul { font-size: 0.82rem; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .focus-strip { padding: 0 12px; }
+      .focus-pill { font-size: 0.78rem; padding: 6px 10px; }
+      #pipelineSummaryTiles { grid-template-columns: 1fr !important; }
+      .stage-row, .stage-mgmt-header {
+        grid-template-columns: 24px 1fr 60px 50px 26px 26px;
+        gap: 4px; font-size: 0.78rem;
+      }
+      .deals-table { font-size: 0.78rem; }
+      .deals-table thead th { padding: 8px 4px; font-size: 0.7rem; }
+      .deals-table tbody td { padding: 6px 4px; }
+      .view-controls { padding: 0 8px; }
+      .deals-table .deal-name-cell, .deals-table .counterparty-cell { max-width: 130px; }
     }
+    
+    /* === Enroll in Workflow modal === */
+    .workflow-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
+    .wf-btn { background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 10px 8px; cursor: pointer;
+              transition: all 0.15s; text-align: center; user-select: none; }
+    .wf-btn:hover { border-color: #0A3161; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .wf-btn.active { background: #0A3161; color: white; border-color: #0A3161; }
+    .wf-btn-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .wf-btn-label { font-size: 0.78rem; font-weight: 600; }
+    .wf-btn-desc { font-size: 0.7rem; opacity: 0.75; margin-top: 2px; }
+    
+    .wf-fields { display: none; }
+    .wf-fields.active { display: block; }
+    .wf-summary { background: #f0f8ff; border-left: 3px solid #0A3161; padding: 8px 12px; border-radius: 4px;
+                  font-size: 0.85rem; margin-bottom: 12px; }
+    .wf-bulk-list { max-height: 200px; overflow-y: auto; background: #f8f9fa; border-radius: 6px; padding: 8px;
+                    margin-bottom: 12px; font-size: 0.82rem; }
+    .wf-bulk-item { padding: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+    .wf-bulk-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -276,35 +523,73 @@
 <div class="content">
   <div class="page-header">
     <h1 class="page-title">Deals</h1>
-    <p class="page-subtitle">Manage placement mandates and capital-raise pipelines</p>
+    <p class="page-subtitle">Placement mandates and capital-raise pipelines</p>
+  </div>
+
+  <!-- Today's Focus strip (NEW) -->
+  <div class="focus-strip" id="focusStrip">
+    <button class="focus-pill overdue" data-focus="overdue" onclick="setFocus('overdue')">
+      <span>⏰ Overdue</span>
+      <span class="focus-pill-count" id="focusCountOverdue">0</span>
+    </button>
+    <button class="focus-pill today" data-focus="today" onclick="setFocus('today')">
+      <span>📅 Today</span>
+      <span class="focus-pill-count" id="focusCountToday">0</span>
+    </button>
+    <button class="focus-pill week" data-focus="week" onclick="setFocus('week')">
+      <span>🗓️ This Week</span>
+      <span class="focus-pill-count" id="focusCountWeek">0</span>
+    </button>
+    <button class="focus-pill stale" data-focus="stale" onclick="setFocus('stale')">
+      <span>⚠️ Stale 14d+</span>
+      <span class="focus-pill-count" id="focusCountStale">0</span>
+    </button>
+    <button class="focus-pill awaiting" data-focus="awaiting" onclick="setFocus('awaiting')">
+      <span>📬 Awaiting Reply</span>
+      <span class="focus-pill-count" id="focusCountAwaiting">0</span>
+    </button>
+    <button class="focus-pill" data-focus="all" onclick="setFocus('all')">
+      <span>🔄 Show All</span>
+    </button>
+  </div>
+
+  <!-- View toggle + stage filter (NEW) -->
+  <div class="view-controls">
+    <div class="view-toggle" id="viewToggle">
+      <button class="active" data-view="cards" onclick="setDealView('cards')">▦ Cards</button>
+      <button data-view="table" onclick="setDealView('table')">≡ Table</button>
+    </div>
+    <div class="stage-filter-chips" id="stageFilterChips"></div>
   </div>
 
   <!-- Pipeline Value Summary - 3 tiles -->
   <div class="card" id="pipelineSummary" style="margin-bottom:16px;">
     <div class="section-header">
-      <h2 style="margin:0;">Pipeline Value</h2>
-      <div style="font-size: 0.85rem; color:#666;">Total opportunity · probability-weighted by stage · closed YTD</div>
+      <h2>Pipeline Value</h2>
+      <div style="font-size: 0.78rem; color:rgba(255,255,255,0.85); flex-shrink:1; min-width:0; text-align:right;">
+        Total opportunity · stage-weighted · YTD
+      </div>
     </div>
-    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; padding:12px 0;">
-      <div style="background:linear-gradient(135deg,#1a3a6e 0%,#2c5aa0 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Total Pipeline</div>
-        <div id="kpiTotalPipeline" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Gross deal value × prospects in motion</div>
+    <div id="pipelineSummaryTiles" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; padding:12px 0;">
+      <div class="pwv-tile" style="background:linear-gradient(135deg,#1a3a6e 0%,#2c5aa0 100%);">
+        <div class="label">Total Pipeline</div>
+        <div class="value" id="kpiTotalPipeline">—</div>
+        <div class="sub">Gross deal value × prospects in motion</div>
       </div>
-      <div style="background:linear-gradient(135deg,#0d6b4d 0%,#198754 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Stage-Weighted PWV</div>
-        <div id="kpiWeightedPwv" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">What you're likely to book</div>
+      <div class="pwv-tile" style="background:linear-gradient(135deg,#0d6b4d 0%,#198754 100%);">
+        <div class="label">Stage-Weighted PWV</div>
+        <div class="value" id="kpiWeightedPwv">—</div>
+        <div class="sub">What you're likely to book</div>
       </div>
-      <div style="background:linear-gradient(135deg,#5a3e8c 0%,#7e57c2 100%); color:white; border-radius:8px; padding:18px;">
-        <div style="font-size:0.85rem; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">Closed YTD</div>
-        <div id="kpiClosedYtd" style="font-size:2.2rem; font-weight:700; margin-top:6px;">—</div>
-        <div style="font-size:0.8rem; opacity:0.75; margin-top:4px;">Customers with client_won_date set</div>
+      <div class="pwv-tile" style="background:linear-gradient(135deg,#5a3e8c 0%,#7e57c2 100%);">
+        <div class="label">Closed YTD</div>
+        <div class="value" id="kpiClosedYtd">—</div>
+        <div class="sub">Customers with client_won_date set</div>
       </div>
     </div>
   </div>
 
-  <!-- Top: list of all deals as cards -->
+  <!-- Top: list of all deals as cards or table -->
   <div class="card">
     <div class="section-header">
       <h2>Active Deals (<span id="dealCount">0</span>)</h2>
@@ -315,16 +600,38 @@
     <div id="dealsList" class="deals-grid">
       <div class="empty-state"><div class="loading"></div> Loading deals...</div>
     </div>
+    <div id="dealsTableContainer" style="display:none; overflow-x:auto;">
+      <table class="deals-table" id="dealsTable">
+        <thead>
+          <tr>
+            <th style="width:30px;"></th>
+            <th class="sortable" onclick="sortDealsTable('deal_name')">Deal ↕</th>
+            <th class="sortable" onclick="sortDealsTable('deal_stage')">Stage ↕</th>
+            <th class="sortable num" onclick="sortDealsTable('score')">Score ↕</th>
+            <th>Counterparty</th>
+            <th class="sortable num" onclick="sortDealsTable('pwv_usd')">PWV ↕</th>
+            <th class="sortable num" onclick="sortDealsTable('total_prospects')">Pros ↕</th>
+            <th class="num">Stale</th>
+            <th class="num">Await</th>
+            <th class="num">Comm</th>
+            <th class="sortable nowrap" onclick="sortDealsTable('days_active')">Day ↕</th>
+            <th class="nowrap">Next Action</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dealsTableBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Selected deal detail -->
   <div id="dealDetail" style="display: none;">
-    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <h2 id="selectedDealName" style="color: #0A3161; margin: 0;">—</h2>
-        <p id="selectedDealMeta" style="color: #666; margin: 4px 0 0 0;">—</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <div style="min-width:0; flex:1;">
+        <h2 id="selectedDealName" style="color: #0A3161; margin: 0; word-break: break-word;">—</h2>
+        <p id="selectedDealMeta" style="color: #666; margin: 4px 0 0 0; font-size: 0.92rem;">—</p>
       </div>
-      <div>
+      <div style="flex-shrink:0;">
         <button class="btn btn-sm" onclick="editDealMeta()">Edit Deal</button>
       </div>
     </div>
@@ -336,7 +643,6 @@
       <div class="tab" data-tab="activity">Activity</div>
     </div>
 
-    <!-- DASHBOARD TAB -->
     <div class="tab-content active" id="tab-dashboard">
       <div class="card">
         <div class="kpi-grid" id="kpiGrid"></div>
@@ -344,21 +650,20 @@
       </div>
     </div>
 
-    <!-- PIPELINE TAB -->
     <div class="tab-content" id="tab-pipeline">
       <div class="card">
         <div class="section-header">
-          <h2>Pipeline (drag cards to move stages · click a card for details)</h2>
-          <div style="font-size: 0.85rem;">
+          <h2 id="pipelineHeader">Pipeline · drag cards or use → button to advance</h2>
+          <div>
+            <button class="icon-btn" onclick="openStageMgmtModal()" title="Configure stages">⚙️ Stages</button>
             <button class="btn btn-sm btn-success" onclick="openAddContactModal()">+ Add Contact</button>
-            <button class="btn btn-sm btn-secondary" onclick="renderPipeline()">Refresh</button>
+            <button class="btn btn-sm btn-secondary" onclick="renderPipeline()">↻</button>
           </div>
         </div>
         <div class="pipeline" id="pipelineBoard"></div>
       </div>
     </div>
 
-    <!-- TARGETS TAB -->
     <div class="tab-content" id="tab-targets">
       <div class="card">
         <div class="section-header">
@@ -388,7 +693,6 @@
       </div>
     </div>
 
-    <!-- ACTIVITY TAB -->
     <div class="tab-content" id="tab-activity">
       <div class="card">
         <div class="section-header">
@@ -451,8 +755,65 @@
   <div class="modal-content">
     <button class="modal-close" onclick="closeEditDealModal()">×</button>
     <h2>Edit Deal</h2>
+
+    <!-- LIVE PWV CALCULATOR -->
+    <div style="background:#f8f9fa; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.85rem;">
+      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <div><strong>Gross:</strong> <span id="liveGross">$0</span> <span style="color:#888;font-size:0.78rem;">(size × take%)</span></div>
+        <div><strong>PWV:</strong> <span id="livePwv" style="color:#0d6b4d; font-weight:bold;">$0</span> <span style="color:#888;font-size:0.78rem;">(gross × close%)</span></div>
+      </div>
+    </div>
+
     <div class="form-group">
-      <label>Status</label>
+      <label>Deal Stage</label>
+      <select id="editDealStage" onchange="recalcLivePwv()">
+        <option value="soft-touch">Soft Touch — initial outreach</option>
+        <option value="pitched">Pitched — formal proposal sent</option>
+        <option value="soft-circle">Soft Circle — verbal interest, negotiating</option>
+        <option value="committed">Committed — engagement letter sent</option>
+        <option value="signed">Signed — engagement letter countersigned, work underway</option>
+        <option value="lost">Lost — deal will not close</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Score (0-100)</label>
+      <input type="number" id="editDealScore" min="0" max="100" placeholder="50"/>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>Deal Size (USD)</label>
+        <input type="number" id="editDealSize" placeholder="0" oninput="recalcLivePwv()"/>
+      </div>
+      <div class="form-group">
+        <label>Take Rate %</label>
+        <input type="number" id="editDealTakeRate" step="0.1" placeholder="2" oninput="recalcLivePwv()"/>
+      </div>
+      <div class="form-group">
+        <label>Close Prob %</label>
+        <input type="number" id="editDealCloseProb" min="0" max="100" placeholder="50" oninput="recalcLivePwv()"/>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>Counterparty Name</label>
+        <input type="text" id="editDealCounterpartyName" placeholder="e.g. Frank Turner"/>
+      </div>
+      <div class="form-group">
+        <label>Counterparty Company</label>
+        <input type="text" id="editDealCounterpartyCompany" placeholder="e.g. Mepco"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Mandate / Goal Description</label>
+      <textarea id="editDealMandate" rows="3" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;" placeholder="Describe the mandate, target investors, conversion model..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Status (operational)</label>
       <select id="editDealStatus">
         <option value="pre-launch">Pre-Launch</option>
         <option value="pre-marketing">Pre-Marketing</option>
@@ -461,26 +822,227 @@
         <option value="final-close">Final Close</option>
         <option value="closed">Closed</option>
         <option value="paused">Paused</option>
+        <option value="archived">Archived (hidden)</option>
       </select>
     </div>
+
     <div class="form-group">
-      <label>Campaign Target</label>
-      <input type="text" id="editDealTarget"/>
+      <label>Campaign Target (display label)</label>
+      <input type="text" id="editDealTarget" placeholder="e.g. $200M raise"/>
     </div>
-    <div class="form-group">
-      <label>Co-Advisor</label>
-      <input type="text" id="editDealCoAdvisor"/>
-    </div>
-    <div class="form-group">
-      <label>Target Close Date</label>
-      <input type="date" id="editDealCloseDate"/>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>Co-Advisor</label>
+        <input type="text" id="editDealCoAdvisor"/>
+      </div>
+      <div class="form-group">
+        <label>Target Close Date</label>
+        <input type="date" id="editDealCloseDate"/>
+      </div>
     </div>
     <div class="form-group">
       <label>Soft-Circle Amount (USD)</label>
       <input type="number" id="editDealSoftCircle" placeholder="0"/>
     </div>
+    <div class="form-group">
+      <label>Next Action</label>
+      <input type="text" id="editDealNextAction" placeholder="e.g. Push Jay for countersign"/>
+    </div>
+    <div class="form-group">
+      <label>Next Action Due</label>
+      <input type="date" id="editDealNextActionDue"/>
+    </div>
     <button class="btn btn-success" onclick="saveDealMeta()">Save</button>
     <button class="btn btn-secondary" onclick="closeEditDealModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ENROLL IN WORKFLOW MODAL (NEW) -->
+<!-- ============================================================ -->
+<div class="modal" id="enrollModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeEnrollModal()">×</button>
+    <h2>Enroll in VV Campaign</h2>
+    <div class="wf-summary" id="enrollSummary">No contact selected</div>
+
+    <label style="font-weight:600; font-size:0.85rem; color:#555;">1. Pick a workflow</label>
+    <div class="workflow-picker" id="workflowPicker">
+      <div class="wf-btn" data-wf="nurture" onclick="selectEnrollWorkflow('nurture')">
+        <span class="wf-btn-icon">🌱</span>
+        <div class="wf-btn-label">Nurture</div>
+        <div class="wf-btn-desc">Weekly research-grounded dispatch, no ask</div>
+      </div>
+      <div class="wf-btn" data-wf="followup" onclick="selectEnrollWorkflow('followup')">
+        <span class="wf-btn-icon">↩️</span>
+        <div class="wf-btn-label">Follow Up</div>
+        <div class="wf-btn-desc">Smart bump on a previously sent email</div>
+      </div>
+      <div class="wf-btn" data-wf="meeting" onclick="selectEnrollWorkflow('meeting')">
+        <span class="wf-btn-icon">📅</span>
+        <div class="wf-btn-label">Meeting Request</div>
+        <div class="wf-btn-desc">Direct ask with calendar link</div>
+      </div>
+      <div class="wf-btn" data-wf="newsletter" onclick="selectEnrollWorkflow('newsletter')">
+        <span class="wf-btn-icon">📰</span>
+        <div class="wf-btn-label">Newsletter</div>
+        <div class="wf-btn-desc">Subscribe + deliver a saved newsletter page</div>
+      </div>
+      <div class="wf-btn" data-wf="leadmagnet" onclick="selectEnrollWorkflow('leadmagnet')">
+        <span class="wf-btn-icon">🧲</span>
+        <div class="wf-btn-label">Lead Magnet</div>
+        <div class="wf-btn-desc">Send a lead magnet + drip sequence</div>
+      </div>
+      <div class="wf-btn" data-wf="template" onclick="selectEnrollWorkflow('template')">
+        <span class="wf-btn-icon">📋</span>
+        <div class="wf-btn-label">Saved Template</div>
+        <div class="wf-btn-desc">A/B drip from a template you built</div>
+      </div>
+    </div>
+
+    <!-- Nurture-specific fields -->
+    <div class="wf-fields" id="wf-fields-nurture">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Sequence parameters</label>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:6px;">
+        <div class="form-group">
+          <label>Total emails</label>
+          <input type="number" id="enrollNurtureTotal" value="12" min="1" max="52"/>
+        </div>
+        <div class="form-group">
+          <label>Days between</label>
+          <input type="number" id="enrollNurtureDays" value="7" min="1" max="30"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow Up fields -->
+    <div class="wf-fields" id="wf-fields-followup">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Follow-up parameters</label>
+      <div class="form-group" style="margin-top:6px;">
+        <label>Total follow-ups (default 3)</label>
+        <input type="number" id="enrollFollowupTotal" value="3" min="1" max="10"/>
+      </div>
+      <div class="form-group">
+        <label>Days between (default 5)</label>
+        <input type="number" id="enrollFollowupDays" value="5" min="1" max="30"/>
+      </div>
+      <div class="wf-summary" style="background:#fff8e1; border-left-color:#f59e0b;">
+        Pulls the most recent platform-outbound email for this contact, then bumps it on the cadence above.
+      </div>
+    </div>
+
+    <!-- Meeting Request fields -->
+    <div class="wf-fields" id="wf-fields-meeting">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Meeting request</label>
+      <div class="wf-summary" style="background:#e8f5e9; border-left-color:#28a745;">
+        Sends a direct ask with the calendar link from your <a href="settings__10_.html" target="_blank">Settings</a>. Single send (not a sequence).
+      </div>
+    </div>
+
+    <!-- Newsletter fields -->
+    <div class="wf-fields" id="wf-fields-newsletter">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Pick a newsletter page</label>
+      <div class="form-group" style="margin-top:6px;">
+        <select id="enrollNewsletterPageId">
+          <option value="">— Loading saved pages... —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Lead Magnet fields -->
+    <div class="wf-fields" id="wf-fields-leadmagnet">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Pick a lead magnet</label>
+      <div class="form-group" style="margin-top:6px;">
+        <select id="enrollLeadMagnetPageId">
+          <option value="">— Loading saved lead magnets... —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sequence length (total drip emails after delivery)</label>
+        <input type="number" id="enrollLMTotal" value="4" min="1" max="12"/>
+      </div>
+    </div>
+
+    <!-- Saved Template fields -->
+    <div class="wf-fields" id="wf-fields-template">
+      <label style="font-weight:600; font-size:0.85rem; color:#555;">2. Pick a saved template</label>
+      <div class="form-group" style="margin-top:6px;">
+        <select id="enrollTemplateIdx" onchange="onEnrollTemplateChange()">
+          <option value="">— Loading templates... —</option>
+        </select>
+      </div>
+      <div id="enrollTemplatePreview" style="background:#f8f9fa; border-radius:6px; padding:10px; font-size:0.82rem; max-height:180px; overflow-y:auto; margin-bottom:10px; display:none;"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="form-group">
+          <label>Start date</label>
+          <input type="date" id="enrollTemplateStart"/>
+        </div>
+        <div class="form-group">
+          <label>Days between sends</label>
+          <input type="number" id="enrollTemplateDays" value="2" min="1" max="30"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="enrollTemplateAiTime" checked/>
+          <span>Let AI pick the best send slot (Tue/Wed/Thu 10am or 1:30pm ET)</span>
+        </label>
+      </div>
+      <div class="wf-summary" style="background:#fff8e1; border-left-color:#f59e0b;">
+        Templates support <code>&lt;&lt;first_name&gt;&gt;</code>, <code>&lt;&lt;company&gt;&gt;</code>, <code>&lt;&lt;title&gt;&gt;</code> merge tokens. Follow-ups auto-pause if the contact replies.
+      </div>
+    </div>
+
+    <!-- Universal: custom description -->
+    <div class="wf-fields active" id="wf-fields-common">
+      <div class="form-group">
+        <label>Custom direction for the AI (optional)</label>
+        <textarea id="enrollCustomDesc" rows="3" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;" placeholder="e.g. 'Reference their interest in CRE Fund III. Don't mention Mepco — different angle.'"></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="enrollLinkToDeal" checked/>
+          <span>Tag this enrollment to the current deal (logs to customer_journey)</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+      <button class="btn btn-secondary" onclick="closeEnrollModal()">Cancel</button>
+      <button class="btn btn-success" id="enrollSubmitBtn" onclick="submitEnroll()" disabled>Enroll</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STAGE MANAGEMENT MODAL (NEW) -->
+<!-- ============================================================ -->
+<div class="modal" id="stageMgmtModal">
+  <div class="modal-content stage-mgmt-modal-content">
+    <button class="modal-close" onclick="closeStageMgmtModal()">×</button>
+    <h2>Configure Pipeline Stages</h2>
+    <p style="color: #666; font-size: 0.88rem;">
+      Rename labels, change colors, adjust probability multipliers (used for PWV math), or mark stages as terminal (no further movement).
+      <strong>Stage keys cannot be changed</strong> — they are referenced by tags on every contact already in your CRM. Only display labels change.
+    </p>
+    <div class="stage-mgmt-header">
+      <span>Order</span>
+      <span>Label · Key</span>
+      <span>Color</span>
+      <span>Multi %</span>
+      <span>End?</span>
+      <span></span>
+    </div>
+    <div id="stageMgmtList"></div>
+    <div class="stage-mgmt-footer">
+      <div>
+        <button class="btn btn-sm btn-danger" onclick="resetStagesToDefaults()">Reset to defaults</button>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-secondary" onclick="closeStageMgmtModal()">Cancel</button>
+        <button class="btn btn-sm btn-success" onclick="saveStageConfigs()">Save changes</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -498,7 +1060,6 @@
     </div>
 
     <div class="contact-grid">
-      <!-- Left: Identity + Deal context -->
       <div>
         <div class="contact-section">
           <h3>Contact</h3>
@@ -512,24 +1073,15 @@
         <div class="contact-section" style="margin-top: 12px;">
           <h3>Deal Context</h3>
           <div class="contact-field"><span class="contact-field-label">Stage</span><span class="contact-field-value">
-            <select id="cmStage" onchange="changeContactStage()" style="padding: 4px; border-radius: 4px;">
-              <option value="not-contacted">Not Contacted</option>
-              <option value="soft-touch">Soft Touch</option>
-              <option value="pitched">Pitched</option>
-              <option value="soft-circle">Soft Circle</option>
-              <option value="committed">Committed</option>
-              <option value="closed">Closed</option>
-              <option value="declined">Declined</option>
-            </select></span></div>
+            <select id="cmStage" onchange="changeContactStage()" style="padding: 4px; border-radius: 4px;"></select></span></div>
           <div class="contact-field"><span class="contact-field-label">Score (this deal)</span><span class="contact-field-value">
             <input type="number" id="cmScore" min="0" max="100" style="width: 70px; padding: 4px; border-radius: 4px;"/>
             <button class="btn btn-sm" onclick="saveContactScore()" style="margin-left: 4px;">Save</button></span></div>
           <div class="contact-field"><span class="contact-field-label">All Scores</span><span class="contact-field-value scores-row" id="cmAllScores">—</span></div>
-          <div class="contact-field"><span class="contact-field-label">Tags</span><span class="contact-field-value" id="cmTags" style="font-size: 0.78rem;">—</span></div>
+          <div class="contact-field"><span class="contact-field-label">Tags</span><span class="contact-field-value" id="cmTags" style="font-size: 0.76rem;">—</span></div>
         </div>
       </div>
 
-      <!-- Right: Engagement metrics + activity -->
       <div>
         <div class="contact-section">
           <h3>Engagement</h3>
@@ -545,15 +1097,12 @@
       </div>
     </div>
 
-    <!-- Profile summary -->
-    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0;">Profile</h3>
+    <h3 style="color: #0A3161; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0;">Profile</h3>
     <div class="contact-summary" id="cmSummary">—</div>
 
-    <!-- Customer journey -->
-    <h3 style="color: #0A3161; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0;">Activity</h3>
+    <h3 style="color: #0A3161; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0;">Activity</h3>
     <div class="contact-journey" id="cmJourney">—</div>
 
-    <!-- Add note -->
     <div style="margin-top: 12px;">
       <textarea id="cmNoteInput" placeholder="Add a note (logs to customer_journey)" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; min-height: 50px; font-family: inherit; box-sizing: border-box;"></textarea>
       <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
@@ -561,13 +1110,14 @@
       </div>
     </div>
 
-    <!-- Action footer -->
     <div class="contact-actions">
-      <button class="btn btn-sm btn-secondary" onclick="enrichContact()" title="Run Apollo/Hunter enrichment via existing n8n webhook">Enrich</button>
-      <button class="btn btn-sm btn-secondary" onclick="enrollWarmOutreach()" title="Enroll in warm outreach sequence">Warm Outreach</button>
-      <button class="btn btn-sm btn-secondary" onclick="openInContacts()">Edit in Contacts page →</button>
+      <button class="btn btn-sm" onclick="quickEmailContact()" title="Open Gmail compose with this contact">✉️ Email</button>
+      <button class="btn btn-sm" onclick="quickLogCall()" title="Log a call attempt to journey">📞 Log Call</button>
+      <button class="btn btn-sm btn-secondary" onclick="enrichContact()">Enrich</button>
+      <button class="btn btn-sm btn-secondary" onclick="enrollWarmOutreach()">Warm Outreach</button>
+      <button class="btn btn-sm btn-secondary" onclick="openInContacts()">Edit in Contacts →</button>
       <div style="flex: 1;"></div>
-      <button class="btn btn-sm" style="background: #dc3545;" onclick="removeFromDeal()">Mark No-Fit (remove from deal)</button>
+      <button class="btn btn-sm btn-danger" onclick="removeFromDeal()">Mark No-Fit</button>
     </div>
   </div>
 </div>
@@ -579,7 +1129,7 @@
   <div class="modal-content">
     <button class="modal-close" onclick="closeAddContactModal()">×</button>
     <h2>Add Contact to <span id="acDealName">Deal</span></h2>
-    <p style="color: #666; font-size: 0.9rem;">Search existing CRM contacts. To add brand-new contacts not yet in the CRM, upload them via the <a href="contacts">Contacts page</a> first.</p>
+    <p style="color: #666; font-size: 0.88rem;">Search existing CRM contacts. To add brand-new contacts not yet in the CRM, upload them via the <a href="contacts">Contacts page</a> first.</p>
     <div class="form-group autocomplete-wrap">
       <label>Search by name or company</label>
       <input type="text" id="acSearch" placeholder="Start typing a name or company..." autocomplete="off" oninput="onAddContactSearch()"/>
@@ -587,13 +1137,7 @@
     </div>
     <div class="form-group">
       <label>Initial stage in this deal</label>
-      <select id="acStage">
-        <option value="not-contacted">Not Contacted (default)</option>
-        <option value="soft-touch">Soft Touch</option>
-        <option value="pitched">Pitched</option>
-        <option value="soft-circle">Soft Circle</option>
-        <option value="committed">Committed</option>
-      </select>
+      <select id="acStage"></select>
     </div>
     <div class="form-group">
       <label>Initial score (optional, 0-100)</label>
@@ -610,7 +1154,7 @@
 
 <script>
 // ============================================================
-// Supabase configuration (matches contacts page exactly)
+// Supabase configuration
 // ============================================================
 const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
@@ -621,34 +1165,121 @@ const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 // ============================================================
 let CUSTOMER_ID = null;
 let authToken = null;
-let allDeals = [];           // from deals_dashboard view
+let allDeals = [];
 let selectedDealId = null;
 let selectedDeal = null;
-let dealTargets = [];        // all contacts tagged for current deal
+let dealTargets = [];
 let targetsSortField = 'score';
 let targetsSortDir = 'desc';
+let currentFocus = 'all';
 
-const STAGES = [
-  { key: 'not-contacted', label: 'Not Contacted', color: '#6c757d' },
-  { key: 'soft-touch',    label: 'Soft Touch',    color: '#17a2b8' },
-  { key: 'pitched',       label: 'Pitched',       color: '#007bff' },
-  { key: 'soft-circle',   label: 'Soft Circle',   color: '#ffc107' },
-  { key: 'committed',     label: 'Committed',     color: '#28a745' },
-  { key: 'closed',        label: 'Closed',        color: '#155724' },
-  { key: 'declined',      label: 'Declined',      color: '#dc3545' },
+// NEW: deals list view state
+let currentDealView = 'cards';           // 'cards' or 'table'
+let currentStageFilter = 'all';          // 'all' or specific deal-stage key
+let dealsTableSortField = null;          // when set, overrides sort_order
+let dealsTableSortDir = 'desc';
+let perDealAggregates = {};              // { slug: {stale, awaiting, overdue, committed, last_activity} }
+
+// DEAL stages (different from contact-within-deal stages)
+const DEAL_STAGES = [
+  { key: 'soft-touch',   label: 'Soft Touch',   color: '#17a2b8', position: 1 },
+  { key: 'pitched',      label: 'Pitched',      color: '#007bff', position: 2 },
+  { key: 'soft-circle',  label: 'Soft Circle',  color: '#ffc107', position: 3 },
+  { key: 'committed',    label: 'Committed',    color: '#28a745', position: 4 },
+  { key: 'signed',       label: 'Signed',       color: '#155724', position: 5 },
+  { key: 'lost',         label: 'Lost',         color: '#dc3545', position: 6 },
 ];
 
-// Stage probability multipliers — applied to client_ann_est to compute expected value per prospect.
-// not-contacted 5%, soft-touch 10%, pitched 25%, soft-circle 40%, committed 60%, closed 100%, declined 0%.
-const STAGE_MULTIPLIERS = {
-  'not-contacted': 0.05,
-  'soft-touch':    0.10,
-  'pitched':       0.25,
-  'soft-circle':   0.40,
-  'committed':     0.60,
-  'closed':        1.00,
-  'declined':      0.00
-};
+function getDealStageMeta(stageKey) {
+  return DEAL_STAGES.find(s => s.key === stageKey) || { key: 'unknown', label: 'Unknown', color: '#6c757d' };
+}
+
+// Defensive helper: customer_journey is a jsonb column that may be returned as
+// null, a JSON string (when supabase-js doesn't auto-parse), or an array.
+// Always returns a (possibly empty) array so callers can safely .forEach/.slice/.spread.
+function safeJourney(c) {
+  if (!c) return [];
+  let j = c.customer_journey;
+  if (typeof j === 'string') {
+    try { j = JSON.parse(j); } catch (e) { return []; }
+  }
+  return Array.isArray(j) ? j : [];
+}
+
+// ============================================================
+// STAGES — loaded from localStorage; falls back to defaults.
+// Stage KEYS stay stable (referenced by every contact's tags + every n8n workflow).
+// Only label/color/multiplier_pct/is_terminal/position are user-editable.
+// ============================================================
+const DEFAULT_STAGES = [
+  { key: 'not-contacted', label: 'Not Contacted', color: '#6c757d', position: 1, multiplier_pct: 5,   is_terminal: false, is_active: true },
+  { key: 'soft-touch',    label: 'Soft Touch',    color: '#17a2b8', position: 2, multiplier_pct: 10,  is_terminal: false, is_active: true },
+  { key: 'pitched',       label: 'Pitched',       color: '#007bff', position: 3, multiplier_pct: 25,  is_terminal: false, is_active: true },
+  { key: 'soft-circle',   label: 'Soft Circle',   color: '#ffc107', position: 4, multiplier_pct: 40,  is_terminal: false, is_active: true },
+  { key: 'committed',     label: 'Committed',     color: '#28a745', position: 5, multiplier_pct: 60,  is_terminal: false, is_active: true },
+  { key: 'closed',        label: 'Closed',        color: '#155724', position: 6, multiplier_pct: 100, is_terminal: true,  is_active: true },
+  { key: 'declined',      label: 'Declined',      color: '#dc3545', position: 7, multiplier_pct: 0,   is_terminal: true,  is_active: true },
+];
+
+let STAGES = [];
+
+function localStorageKey() {
+  return 'vv_deal_stages_' + (CUSTOMER_ID || 'anon');
+}
+
+function loadStages() {
+  try {
+    const raw = localStorage.getItem(localStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Merge with defaults to handle any newly added default keys not in localStorage
+        const userByKey = {};
+        parsed.forEach(s => { userByKey[s.key] = s; });
+        const merged = [...parsed];
+        DEFAULT_STAGES.forEach(d => { if (!userByKey[d.key]) merged.push(d); });
+        STAGES = merged.filter(s => s.is_active !== false).sort((a,b) => (a.position||0) - (b.position||0));
+        return;
+      }
+    }
+  } catch(e) { console.warn('Failed to load stages from localStorage', e); }
+  STAGES = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+}
+
+function saveStagesToLocalStorage(stagesArr) {
+  try {
+    localStorage.setItem(localStorageKey(), JSON.stringify(stagesArr));
+    return true;
+  } catch(e) {
+    showStatus('Failed to save stages: ' + e.message, 'error');
+    return false;
+  }
+}
+
+function getStageMultiplier(stageKey) {
+  const s = STAGES.find(x => x.key === stageKey);
+  return s ? (s.multiplier_pct / 100) : 0.05;
+}
+
+function getStageLabel(stageKey) {
+  const s = STAGES.find(x => x.key === stageKey);
+  return s ? s.label : stageKey;
+}
+
+function getStageColor(stageKey) {
+  const s = STAGES.find(x => x.key === stageKey);
+  return s ? s.color : '#6c757d';
+}
+
+// Refresh dropdowns wherever stages are listed
+function refreshStageDropdowns() {
+  const stagesHtml = STAGES.map(s => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
+  const cmStage = document.getElementById('cmStage');
+  if (cmStage) cmStage.innerHTML = stagesHtml;
+  const acStage = document.getElementById('acStage');
+  if (acStage) acStage.innerHTML = `<option value="not-contacted">Not Contacted (default)</option>` + 
+    STAGES.filter(s => s.key !== 'not-contacted').map(s => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
+}
 
 // Parse client_ann_est which is stored as text on contacts; strip $, commas, whitespace.
 function parseAnnEst(val) {
@@ -658,22 +1289,11 @@ function parseAnnEst(val) {
   return isFinite(n) ? n : 0;
 }
 
-function getStageMultiplier(stage) {
-  return STAGE_MULTIPLIERS[stage] ?? 0.05;
-}
-
-// ============================================================
-// Utility: derive deal slug from deal name (must match SQL view)
-// "Provenance Consumer - $10M" -> "provenance-consumer"
-// ============================================================
 function dealSlug(dealName) {
   const beforeDash = dealName.split(' - ')[0];
   return beforeDash.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// ============================================================
-// Status banner
-// ============================================================
 function showStatus(message, type = 'info') {
   const banner = document.getElementById('statusBanner');
   banner.className = type;
@@ -682,8 +1302,46 @@ function showStatus(message, type = 'info') {
   setTimeout(() => { banner.style.display = 'none'; }, 4000);
 }
 
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function formatMoney(n) {
+  if (!n || isNaN(n)) return '0';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return String(Math.round(n));
+}
+
+function daysBetween(start, end) {
+  if (!end) return '—';
+  const diff = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
+  return Math.round(diff);
+}
+
+// Compute "stale" status for a contact: days since last touch
+function staleStatusForContact(c) {
+  const lastTouches = [c.last_emailed_date, c.last_opened_date, c.last_responded, c.last_called, c.meeting_date].filter(Boolean);
+  if (lastTouches.length === 0) return null;
+  const latest = lastTouches.map(t => new Date(t)).sort((a,b) => b - a)[0];
+  if (isNaN(latest.getTime())) return null;
+  const days = Math.floor((Date.now() - latest.getTime()) / 86400000);
+  if (days >= 14) return 'red';
+  if (days >= 7) return 'yellow';
+  return null;
+}
+
+// Is awaiting reply: last_emailed_date > last_responded (we emailed, they haven't replied)
+function isAwaitingReply(c) {
+  if (!c.last_emailed_date) return false;
+  if (!c.last_responded) return true;
+  return new Date(c.last_emailed_date) > new Date(c.last_responded);
+}
+
 // ============================================================
-// Auth (same pattern as contacts page)
+// Auth
 // ============================================================
 async function checkAuthentication() {
   try {
@@ -707,11 +1365,31 @@ function redirectToLogin() {
 // ============================================================
 // Load deals from the SQL view
 // ============================================================
+// Narrow column list — extract specific small meta fields as aliased extracts so we
+// don't drag the full `meta` jsonb (which can be 14KB+ per deal). Adds deal_stage, score,
+// sort_order, next_action, next_action_due, counterparty_name from meta.
+const DEALS_LIST_COLUMNS = [
+  'deal_id', 'cus_id', 'deal_name', 'campaign_target', 'status', 'goal_description',
+  'co_advisor', 'days_active', 'target_close_date', 'created_at', 'last_updated',
+  'gross_value_usd', 'pwv_usd', 'take_rate_pct', 'base_close_prob_pct', 'soft_circle_amount_usd',
+  'total_prospects', 'soft_touch_count', 'pitched_count', 'soft_circle_count',
+  'committed_count', 'closed_count', 'declined_count', 'no_fit_count', 'broker_dealer',
+  'deal_tag_prefix',
+  'deal_stage:meta->>deal_stage',
+  'score:meta->>score',
+  'sort_order:meta->>sort_order',
+  'next_action:meta->>next_action',
+  'next_action_due:meta->>next_action_due',
+  'counterparty_name:meta->>counterparty_name',
+  'counterparty_company:meta->>counterparty_company'
+].join(',');
+
 async function loadDeals() {
   const { data, error } = await supabaseClient
     .from('deals_dashboard')
-    .select('*')
+    .select(DEALS_LIST_COLUMNS)
     .eq('cus_id', CUSTOMER_ID)
+    .neq('status', 'archived')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -720,92 +1398,427 @@ async function loadDeals() {
     return;
   }
 
-  allDeals = data || [];
+  // Coerce text-extracted meta fields into proper types and ensure defaults
+  allDeals = (data || []).map(d => ({
+    ...d,
+    deal_stage: d.deal_stage || mapStatusToDealStage(d.status),
+    score: d.score != null ? parseInt(d.score, 10) : null,
+    sort_order: d.sort_order != null ? parseInt(d.sort_order, 10) : 9999,
+  }));
+
+  // Sort deals by sort_order (manual reorder), tie-break by created_at desc
+  allDeals.sort((a, b) => {
+    const ao = a.sort_order ?? 9999;
+    const bo = b.sort_order ?? 9999;
+    if (ao !== bo) return ao - bo;
+    return (b.created_at || '').localeCompare(a.created_at || '');
+  });
+
+  await loadAllDealContacts(); // for per-deal aggregates
+  renderDealsList();
+}
+
+// Map old `status` field to a sensible deal_stage when meta.deal_stage isn't set yet
+function mapStatusToDealStage(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'pre-launch': return 'soft-touch';
+    case 'pre-marketing': return 'pitched';
+    case 'launched': return 'committed';
+    case 'soft-circle': return 'soft-circle';
+    case 'final-close': return 'committed';
+    case 'closed': return 'signed';
+    case 'paused': return 'soft-touch';
+    case 'struggling': return 'pitched';
+    default: return 'soft-touch';
+  }
+}
+
+// Load all contacts with ANY deal: tag, narrow column list. Groups them by deal-slug
+// to compute per-deal needs-attention counts.
+async function loadAllDealContacts() {
+  const { data, error } = await supabaseClient
+    .from('contacts')
+    .select('id, name, tags, last_emailed_date, last_opened_date, last_responded, last_called, meeting_date, customer_journey')
+    .eq('cus_id', CUSTOMER_ID)
+    .ilike('tags', '%deal:%');
+
+  if (error) {
+    console.error('Load deal contacts aggregate error:', error);
+    perDealAggregates = {};
+    return;
+  }
+
+  // Group contacts by every deal-slug they appear in
+  const bySlug = {};
+  (data || []).forEach(c => {
+    const tagStr = (c.tags || '').toLowerCase();
+    // Find every deal:<slug> base tag (slug = lowercase letters/digits/hyphens)
+    const matches = tagStr.matchAll(/deal:([a-z0-9-]+)(?=,|\s|$|:)/g);
+    const slugsInContact = new Set();
+    for (const m of matches) {
+      // Skip stage suffixes (matched as separate deal:<slug>:<stage>) since /(?=,|\s|$|:)/ stops before :
+      slugsInContact.add(m[1]);
+    }
+    // Skip slugs where contact is marked no-fit
+    slugsInContact.forEach(slug => {
+      if (new RegExp(`\\bdeal:${slug}:no-fit\\b`).test(tagStr)) return;
+      if (!bySlug[slug]) bySlug[slug] = [];
+      bySlug[slug].push(c);
+    });
+  });
+
+  // Compute per-slug aggregates
+  perDealAggregates = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  Object.entries(bySlug).forEach(([slug, contacts]) => {
+    const agg = { stale: 0, awaiting: 0, overdue: 0, committed: 0, last_activity: null };
+    contacts.forEach(c => {
+      // Stale calculation
+      const touches = [c.last_emailed_date, c.last_opened_date, c.last_responded, c.last_called, c.meeting_date].filter(Boolean);
+      if (touches.length > 0) {
+        const latest = touches.map(t => new Date(t)).sort((a,b) => b - a)[0];
+        if (!isNaN(latest.getTime())) {
+          const days = Math.floor((Date.now() - latest.getTime()) / 86400000);
+          if (days >= 14) agg.stale++;
+          if (!agg.last_activity || latest > new Date(agg.last_activity)) agg.last_activity = latest.toISOString();
+        }
+      }
+      // Awaiting reply
+      if (c.last_emailed_date && (!c.last_responded || new Date(c.last_emailed_date) > new Date(c.last_responded))) {
+        agg.awaiting++;
+      }
+      // Committed stage
+      if ((c.tags || '').toLowerCase().includes(`deal:${slug}:committed`)) {
+        agg.committed++;
+      }
+      // Overdue actions from journey (defensive: customer_journey may be null, string, or array)
+      let journey = c.customer_journey;
+      if (typeof journey === 'string') {
+        try { journey = JSON.parse(journey); } catch (e) { journey = []; }
+      }
+      if (!Array.isArray(journey)) journey = [];
+      journey.forEach(ev => {
+        if (ev && ev.due && ev.deal === slug) {
+          const due = new Date(ev.due);
+          if (!isNaN(due.getTime()) && due < today) agg.overdue++;
+        }
+      });
+    });
+    perDealAggregates[slug] = agg;
+  });
+}
+
+function aggForDeal(deal) {
+  const slug = dealSlug(deal.deal_name);
+  return perDealAggregates[slug] || { stale: 0, awaiting: 0, overdue: 0, committed: 0, last_activity: null };
+}
+
+// Filter for current stage chip selection
+function dealsForCurrentFilter() {
+  if (currentStageFilter === 'all') return allDeals;
+  return allDeals.filter(d => (d.deal_stage || mapStatusToDealStage(d.status)) === currentStageFilter);
+}
+
+function renderStageFilterChips() {
+  const counts = { all: allDeals.length };
+  DEAL_STAGES.forEach(s => { counts[s.key] = 0; });
+  allDeals.forEach(d => {
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    if (counts[stage] != null) counts[stage]++;
+  });
+
+  const chips = [`<div class="stage-chip ${currentStageFilter==='all'?'active':''}" 
+                       style="${currentStageFilter==='all'?'background:#0A3161;':''}"
+                       onclick="setStageFilter('all')">
+                    All <span class="stage-chip-count">${counts.all}</span>
+                  </div>`];
+
+  DEAL_STAGES.forEach(s => {
+    const active = currentStageFilter === s.key;
+    chips.push(`<div class="stage-chip ${active?'active':''}"
+                     style="${active?`background:${s.color};`:''}"
+                     onclick="setStageFilter('${s.key}')">
+                  ${esc(s.label)} <span class="stage-chip-count">${counts[s.key] || 0}</span>
+                </div>`);
+  });
+
+  document.getElementById('stageFilterChips').innerHTML = chips.join('');
+}
+
+function setStageFilter(stage) {
+  currentStageFilter = stage;
+  renderStageFilterChips();
+  renderDealsList();
+}
+
+function setDealView(view) {
+  currentDealView = view;
+  document.querySelectorAll('#viewToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
   renderDealsList();
 }
 
 function renderDealsList() {
-  const container = document.getElementById('dealsList');
-  document.getElementById('dealCount').textContent = allDeals.length;
+  renderStageFilterChips();
+  const filtered = dealsForCurrentFilter();
+  document.getElementById('dealCount').textContent = filtered.length;
 
-  if (allDeals.length === 0) {
-    container.innerHTML = '<div class="empty-state"><h3>No deals yet</h3><p>Click "+ New Deal" to create your first placement mandate.</p></div>';
+  const gridEl = document.getElementById('dealsList');
+  const tableContainer = document.getElementById('dealsTableContainer');
+
+  if (currentDealView === 'cards') {
+    tableContainer.style.display = 'none';
+    gridEl.style.display = 'grid';
+    renderDealsCards(filtered);
+  } else {
+    gridEl.style.display = 'none';
+    tableContainer.style.display = 'block';
+    renderDealsTable(filtered);
+  }
+
+  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
+}
+
+function renderDealsCards(filtered) {
+  const container = document.getElementById('dealsList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><h3>No deals match this filter</h3><p>Try "All" or another stage.</p></div>';
     return;
   }
 
-  container.innerHTML = allDeals.map(d => {
+  container.innerHTML = filtered.map(d => {
     const statusClass = 'status-' + (d.status || 'pre-launch').replace(/_/g, '-');
-    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo mandate';
+    const advisorLine = d.co_advisor ? `Co-Advisor: ${esc(d.co_advisor)}` : 'Solo';
     const daysLine = d.target_close_date
       ? `Day ${d.days_active}/${daysBetween(d.created_at, d.target_close_date)}`
       : `Day ${d.days_active}`;
 
-    // Deal-level pricing (from campaigns.meta — exposed by deals_dashboard view)
     const grossValue = Number(d.gross_value_usd || 0);
     const pwv = Number(d.pwv_usd || 0);
     const takeRate = Number(d.take_rate_pct || 0);
     const closeProb = Number(d.base_close_prob_pct || 0);
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    const stageMeta = getDealStageMeta(stage);
+    const score = d.score;
+    const scoreClass = score == null ? 'low' : (score >= 70 ? 'high' : (score >= 40 ? 'mid' : 'low'));
+
+    const agg = aggForDeal(d);
+    const attentionChips = [];
+    if (agg.overdue > 0) attentionChips.push(`<span class="deal-attention-chip att-overdue">⏰ ${agg.overdue} overdue</span>`);
+    if (agg.stale > 0) attentionChips.push(`<span class="deal-attention-chip att-stale">⚠️ ${agg.stale} stale</span>`);
+    if (agg.awaiting > 0) attentionChips.push(`<span class="deal-attention-chip att-await">📬 ${agg.awaiting} awaiting</span>`);
+    if (agg.committed > 0) attentionChips.push(`<span class="deal-attention-chip att-committed">✓ ${agg.committed} committed</span>`);
 
     return `
-      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" onclick="selectDeal('${d.deal_id}')">
+      <div class="deal-card ${selectedDealId === d.deal_id ? 'selected' : ''}" 
+           data-deal-id="${esc(d.deal_id)}"
+           draggable="true"
+           ondragstart="handleDealDragStart(event, '${esc(d.deal_id)}')"
+           ondragover="handleDealDragOver(event)"
+           ondragleave="handleDealDragLeave(event)"
+           ondrop="handleDealDrop(event, '${esc(d.deal_id)}')"
+           ondragend="handleDealDragEnd(event)"
+           onclick="selectDeal('${esc(d.deal_id)}')">
         <div class="deal-card-header">
-          <div class="deal-card-name">${esc(d.deal_name)}</div>
+          <div style="display:flex; gap:6px; align-items:center; flex:1; min-width:0;">
+            <span class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">⋮⋮</span>
+            <div class="deal-card-name">${esc(d.deal_name)}</div>
+          </div>
           <div class="deal-card-target">${esc(d.campaign_target || '—')}</div>
         </div>
-        <div class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+          <span class="deal-stage-badge ds-${stage}">${esc(stageMeta.label)}</span>
+          ${score != null ? `<span class="deal-score-badge ${scoreClass}">★ ${score}</span>` : ''}
+          <span class="deal-card-status ${statusClass}">${esc(d.status || 'pre-launch')}</span>
+        </div>
+        ${d.counterparty_name ? `<div class="deal-card-meta"><strong>${esc(d.counterparty_name)}</strong>${d.counterparty_company ? ' · '+esc(d.counterparty_company) : ''}</div>` : ''}
         <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
+        ${attentionChips.length > 0 ? `<div class="deal-attention">${attentionChips.join('')}</div>` : ''}
         ${grossValue > 0 ? `
-        <div style="display:flex; gap:6px; margin:8px 0; padding:8px; background:#f3f6fa; border-radius:6px;">
-          <div style="flex:1;">
-            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">Gross</div>
-            <div style="font-size:1.1rem; font-weight:600; color:#1a3a6e;">$${formatMoney(grossValue)}</div>
-            <div style="font-size:0.65rem; color:#888;">${takeRate}% × deal size</div>
+        <div class="deal-card-pricing">
+          <div>
+            <div class="label">Gross</div>
+            <div class="amount" style="color:#1a3a6e;">$${formatMoney(grossValue)}</div>
+            <div class="sub">${takeRate}% × deal size</div>
           </div>
-          <div style="flex:1; border-left:1px solid #d0d7e2; padding-left:8px;">
-            <div style="font-size:0.7rem; color:#666; text-transform:uppercase;">PWV</div>
-            <div style="font-size:1.1rem; font-weight:600; color:#0d6b4d;">$${formatMoney(pwv)}</div>
-            <div style="font-size:0.65rem; color:#888;">@ ${closeProb}% close</div>
+          <div>
+            <div class="label">PWV</div>
+            <div class="amount" style="color:#0d6b4d;">$${formatMoney(pwv)}</div>
+            <div class="sub">@ ${closeProb}% close</div>
           </div>
+        </div>` : ''}
+        ${d.next_action ? `<div style="font-size:0.78rem; color:#0c5460; background:#f0f8ff; padding:6px 8px; border-radius:4px; margin-top:6px;">
+          <strong>Next:</strong> ${esc(d.next_action)}${d.next_action_due ? ` <span style="color:#888;">(due ${esc(d.next_action_due)})</span>` : ''}
         </div>` : ''}
         <div class="deal-card-stats">
           <div class="deal-card-stat-label">Prospects</div>
-          <div class="deal-card-stat-value">${d.total_prospects}</div>
+          <div class="deal-card-stat-value">${d.total_prospects || 0}</div>
           <div class="deal-card-stat-label">Soft Touch</div>
           <div class="deal-card-stat-value">${d.soft_touch_count || 0}</div>
           <div class="deal-card-stat-label">Pitched</div>
-          <div class="deal-card-stat-value">${d.pitched_count}</div>
+          <div class="deal-card-stat-value">${d.pitched_count || 0}</div>
           <div class="deal-card-stat-label">Soft Circle</div>
           <div class="deal-card-stat-value">${d.soft_circle_count || 0}</div>
           <div class="deal-card-stat-label">Committed</div>
-          <div class="deal-card-stat-value">${d.committed_count}</div>
+          <div class="deal-card-stat-value">${d.committed_count || 0}</div>
         </div>
       </div>
     `;
   }).join('');
-
-  // Refresh the 3-tile pipeline summary header whenever deals list re-renders
-  if (typeof updatePipelineSummary === 'function') updatePipelineSummary();
 }
 
-function daysBetween(start, end) {
-  if (!end) return '—';
-  const diff = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
-  return Math.round(diff);
+function renderDealsTable(filtered) {
+  const tbody = document.getElementById('dealsTableBody');
+  
+  // Apply table sort if active (overrides sort_order)
+  let display = [...filtered];
+  if (dealsTableSortField) {
+    display.sort((a, b) => {
+      let av = a[dealsTableSortField];
+      let bv = b[dealsTableSortField];
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (typeof av === 'number' || typeof bv === 'number') {
+        const an = Number(av) || 0, bn = Number(bv) || 0;
+        return dealsTableSortDir === 'asc' ? an - bn : bn - an;
+      }
+      return dealsTableSortDir === 'asc' 
+        ? String(av).localeCompare(String(bv)) 
+        : String(bv).localeCompare(String(av));
+    });
+  }
+  
+  if (display.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:30px; color:#888;">No deals match this filter</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = display.map(d => {
+    const stage = d.deal_stage || mapStatusToDealStage(d.status);
+    const stageMeta = getDealStageMeta(stage);
+    const score = d.score;
+    const scoreClass = score == null ? 'low' : (score >= 70 ? 'high' : (score >= 40 ? 'mid' : 'low'));
+    const agg = aggForDeal(d);
+    const pwv = Number(d.pwv_usd || 0);
+    
+    return `
+      <tr class="deal-row ${selectedDealId === d.deal_id ? 'selected' : ''}"
+          data-deal-id="${esc(d.deal_id)}"
+          draggable="true"
+          ondragstart="handleDealDragStart(event, '${esc(d.deal_id)}')"
+          ondragover="handleDealDragOver(event)"
+          ondragleave="handleDealDragLeave(event)"
+          ondrop="handleDealDrop(event, '${esc(d.deal_id)}')"
+          ondragend="handleDealDragEnd(event)"
+          onclick="selectDeal('${esc(d.deal_id)}')">
+        <td><span class="drag-handle" onclick="event.stopPropagation()" title="Drag to reorder">⋮⋮</span></td>
+        <td class="deal-name-cell" title="${esc(d.deal_name)}">${esc(d.deal_name)}</td>
+        <td><span class="deal-stage-badge ds-${stage}">${esc(stageMeta.label)}</span></td>
+        <td class="num">${score != null ? `<span class="deal-score-badge ${scoreClass}">${score}</span>` : '—'}</td>
+        <td class="counterparty-cell" title="${esc(d.counterparty_name || '')}">${esc(d.counterparty_name || '—')}</td>
+        <td class="num nowrap">$${formatMoney(pwv)}</td>
+        <td class="num">${d.total_prospects || 0}</td>
+        <td class="num">${agg.stale > 0 ? `<strong style="color:#dc3545;">${agg.stale}</strong>` : '—'}</td>
+        <td class="num">${agg.awaiting > 0 ? `<strong style="color:#0c5460;">${agg.awaiting}</strong>` : '—'}</td>
+        <td class="num">${agg.committed > 0 ? `<strong style="color:#155724;">${agg.committed}</strong>` : '—'}</td>
+        <td class="nowrap">${d.days_active}${d.target_close_date ? `/${daysBetween(d.created_at, d.target_close_date)}` : ''}</td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(d.next_action || '')}">
+          ${esc(d.next_action || '—')}
+          ${d.next_action_due ? `<div style="font-size:0.7rem; color:#888;">${esc(d.next_action_due)}</div>` : ''}
+        </td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+          <button class="btn btn-sm" onclick="event.stopPropagation(); selectDeal('${esc(d.deal_id)}'); setTimeout(editDealMeta, 100);">Edit</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
-function formatMoney(n) {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
-  return String(n);
+function sortDealsTable(field) {
+  if (dealsTableSortField === field) {
+    dealsTableSortDir = dealsTableSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    dealsTableSortField = field;
+    dealsTableSortDir = (field === 'score' || field === 'pwv_usd' || field === 'total_prospects') ? 'desc' : 'asc';
+  }
+  renderDealsList();
 }
 
 // ============================================================
-// Pipeline value summary - sums across all deals
-// Total Pipeline = sum of deal gross_value_usd across active deals (status != closed/declined)
-// Stage-Weighted PWV = sum of deal pwv_usd (already deal-level prob-weighted) — represents what we expect to book
-// Closed YTD = sum of deal gross_value_usd where status = 'closed'
+// Drag-to-reorder deals
 // ============================================================
+let dealDragSourceId = null;
+function handleDealDragStart(e, dealId) {
+  dealDragSourceId = dealId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('drag-source');
+}
+function handleDealDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+function handleDealDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function handleDealDragEnd(e) { 
+  e.currentTarget.classList.remove('drag-source');
+  document.querySelectorAll('.deal-card.drag-over, .deal-row.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+async function handleDealDrop(e, targetDealId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dealDragSourceId || dealDragSourceId === targetDealId) return;
+  await reorderDeals(dealDragSourceId, targetDealId);
+  dealDragSourceId = null;
+}
+
+async function reorderDeals(sourceId, targetId) {
+  // Compute new sort_order by inserting source BEFORE target in the current display order
+  const displayDeals = dealsForCurrentFilter();
+  const srcIdx = displayDeals.findIndex(d => d.deal_id === sourceId);
+  const tgtIdx = displayDeals.findIndex(d => d.deal_id === targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  
+  // Build new order by removing source then inserting at target position
+  const reordered = [...displayDeals];
+  const [moved] = reordered.splice(srcIdx, 1);
+  const insertAt = srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx;
+  reordered.splice(insertAt, 0, moved);
+  
+  // Assign new sort_order based on new positions. Update each deal's meta.sort_order.
+  // We need to preserve other meta fields, so fetch full meta for each deal we're updating.
+  showStatus('Reordering...', 'info');
+  
+  const updates = [];
+  for (let i = 0; i < reordered.length; i++) {
+    const d = reordered[i];
+    const newOrder = i + 1;
+    if (d.sort_order !== newOrder) {
+      updates.push({ id: d.deal_id, sort_order: newOrder });
+      d.sort_order = newOrder;
+    }
+  }
+  
+  // Apply updates via PostgreSQL jsonb_set in batch (one query)
+  // We can't easily do this with supabase-js .update for jsonb subkeys without re-fetching meta.
+  // Simpler approach: do parallel updates.
+  const promises = updates.map(async u => {
+    // Fetch existing meta
+    const { data: existing, error: fe } = await supabaseClient
+      .from('campaigns').select('meta').eq('id', u.id).single();
+    if (fe || !existing) return;
+    const newMeta = Object.assign({}, existing.meta || {}, { sort_order: u.sort_order });
+    return supabaseClient.from('campaigns').update({ meta: newMeta }).eq('id', u.id);
+  });
+  
+  await Promise.all(promises);
+  
+  // Update local state
+  allDeals.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999));
+  renderDealsList();
+  showStatus(`Reordered ${updates.length} deals`, 'success');
+}
+
 function updatePipelineSummary() {
   if (!Array.isArray(allDeals)) return;
   let totalPipeline = 0;
@@ -824,7 +1837,6 @@ function updatePipelineSummary() {
       totalPipeline += gross;
       weightedPwv += pwv;
     }
-    // Also add per-prospect closed value (in case some deals have signed clients without the deal itself being marked closed)
     closedYtd += closedVal;
   });
 
@@ -834,11 +1846,6 @@ function updatePipelineSummary() {
   if (elTotal) elTotal.textContent = '$' + formatMoney(totalPipeline);
   if (elPwv) elPwv.textContent = '$' + formatMoney(weightedPwv);
   if (elClosed) elClosed.textContent = '$' + formatMoney(closedYtd);
-}
-
-function esc(s) {
-  if (s == null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ============================================================
@@ -855,15 +1862,13 @@ async function selectDeal(dealId) {
   document.getElementById('selectedDealMeta').textContent =
     `${selectedDeal.campaign_target || ''} · ${selectedDeal.status || ''} · ${selectedDeal.co_advisor ? 'Co-advisor: ' + selectedDeal.co_advisor : 'Solo mandate'} · Day ${selectedDeal.days_active}${selectedDeal.target_close_date ? '/' + daysBetween(selectedDeal.created_at, selectedDeal.target_close_date) : ''}`;
 
-  // Load all targets for this deal
   await loadDealTargets();
-  // Render whichever tab is active
+  updateFocusCounts();
   renderDashboard();
   renderPipeline();
   renderTargets();
   renderActivity();
 
-  // Scroll into view
   document.getElementById('dealDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -871,7 +1876,7 @@ async function loadDealTargets() {
   const slug = dealSlug(selectedDeal.deal_name);
   const { data, error } = await supabaseClient
     .from('contacts')
-    .select('id, name, first_name, title, company, industry, location, tags, scores, linkedin, email, phone_number, personal_summary, company_summary, last_emailed_date, last_opened_date, last_clicked_date, last_responded, last_called, meeting_date, number_emails_sent, num_emails_opened, num_links_clicked, number_call_attempts, customer_journey')
+    .select('id, name, first_name, title, company, industry, location, tags, scores, linkedin, email, phone_number, personal_summary, company_summary, last_emailed_date, last_opened_date, last_clicked_date, last_responded, last_called, meeting_date, number_emails_sent, num_emails_opened, num_links_clicked, number_call_attempts, customer_journey, client_ann_est')
     .eq('cus_id', CUSTOMER_ID)
     .ilike('tags', `%deal:${slug}%`);
 
@@ -881,17 +1886,15 @@ async function loadDealTargets() {
     dealTargets = [];
     return;
   }
-  // Filter out contacts marked as no-fit for this deal — they should not reappear.
-  // (Match: tag is exactly `deal:<slug>:no-fit` somewhere in tags string.)
   const noFitRe = new RegExp(`\\bdeal:${slug}:no-fit\\b`);
   const filtered = (data || []).filter(c => !noFitRe.test(c.tags || ''));
 
-  // Annotate each target with its deal-specific stage (from tags)
   dealTargets = filtered.map(c => {
     const tagsStr = c.tags || '';
-    // Extract a non-no-fit stage if any
     const stageMatch = tagsStr.match(new RegExp(`deal:${slug}:([a-z-]+)`));
-    const stage = stageMatch ? stageMatch[1] : 'not-contacted';
+    let stage = stageMatch ? stageMatch[1] : 'not-contacted';
+    // Make sure the stage still exists in the user's configured STAGES; if not, fallback to not-contacted
+    if (!STAGES.some(s => s.key === stage)) stage = 'not-contacted';
     const score = c.scores && c.scores[slug] != null ? c.scores[slug] : null;
     return { ...c, _stage: stage, _score: score };
   });
@@ -911,31 +1914,102 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
+// FOCUS STRIP (NEW)
+// ============================================================
+function updateFocusCounts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+
+  let overdue = 0, today_count = 0, week = 0, stale = 0, awaiting = 0;
+
+  dealTargets.forEach(c => {
+    if (staleStatusForContact(c) === 'red') stale++;
+    if (isAwaitingReply(c)) awaiting++;
+
+    // Look at customer_journey for any pending "next_action_due" entries
+    // Defensive: customer_journey may be null, a JSON string, or an array
+    let journey = c.customer_journey;
+    if (typeof journey === 'string') {
+      try { journey = JSON.parse(journey); } catch (e) { journey = []; }
+    }
+    if (!Array.isArray(journey)) journey = [];
+    journey.forEach(ev => {
+      if (ev && ev.due) {
+        const due = new Date(ev.due);
+        if (isNaN(due.getTime())) return;
+        if (due < today) overdue++;
+        else if (due.getTime() === today.getTime()) today_count++;
+        else if (due <= in7) week++;
+      }
+    });
+  });
+
+  document.getElementById('focusCountOverdue').textContent = overdue;
+  document.getElementById('focusCountToday').textContent = today_count;
+  document.getElementById('focusCountWeek').textContent = week;
+  document.getElementById('focusCountStale').textContent = stale;
+  document.getElementById('focusCountAwaiting').textContent = awaiting;
+}
+
+function setFocus(focus) {
+  currentFocus = focus;
+  document.querySelectorAll('.focus-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.focus === focus);
+  });
+  renderPipeline();
+  // Auto-switch to pipeline tab so the filter is visible
+  if (focus !== 'all') {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const pipelineTab = document.querySelector('.tab[data-tab="pipeline"]');
+    if (pipelineTab) {
+      pipelineTab.classList.add('active');
+      document.getElementById('tab-pipeline').classList.add('active');
+    }
+  }
+}
+
+function passesFocus(c) {
+  if (currentFocus === 'all') return true;
+  if (currentFocus === 'stale') return staleStatusForContact(c) === 'red';
+  if (currentFocus === 'awaiting') return isAwaitingReply(c);
+  // overdue/today/week look at journey.due entries
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+  const journey = safeJourney(c);
+  for (const ev of journey) {
+    if (!ev.due) continue;
+    const due = new Date(ev.due);
+    if (isNaN(due.getTime())) continue;
+    if (currentFocus === 'overdue' && due < today) return true;
+    if (currentFocus === 'today' && due.getTime() === today.getTime()) return true;
+    if (currentFocus === 'week' && due >= today && due <= in7) return true;
+  }
+  return false;
+}
+
+// ============================================================
 // DASHBOARD TAB
 // ============================================================
 function renderDashboard() {
   if (!selectedDeal) return;
+  // Count per stage (dynamic)
+  const stageCounts = {};
+  STAGES.forEach(s => { stageCounts[s.key] = 0; });
+  dealTargets.forEach(t => { 
+    if (stageCounts[t._stage] != null) stageCounts[t._stage]++; 
+  });
 
-  const kpis = [
-    { label: 'Total Prospects', value: selectedDeal.total_prospects || 0 },
-    { label: 'Soft Touch', value: selectedDeal.soft_touch_count || 0 },
-    { label: 'Pitched', value: selectedDeal.pitched_count || 0 },
-    { label: 'Soft-Circle', value: selectedDeal.soft_circle_count || 0,
-      secondary: '$' + formatMoney(selectedDeal.soft_circle_amount_usd || 0) },
-    { label: 'Committed', value: selectedDeal.committed_count || 0 },
-    { label: 'Closed', value: selectedDeal.closed_count || 0 },
-    { label: 'Declined', value: selectedDeal.declined_count || 0 },
-  ];
-
-  // Add days/timeline KPI
+  const kpis = [];
   if (selectedDeal.target_close_date) {
     const daysRemaining = daysBetween(new Date().toISOString(), selectedDeal.target_close_date);
-    kpis.unshift({
-      label: 'Days to Close',
-      value: daysRemaining,
-      secondary: `target ${selectedDeal.target_close_date}`
-    });
+    kpis.push({ label: 'Days to Close', value: daysRemaining, secondary: `target ${selectedDeal.target_close_date}` });
   }
+  kpis.push({ label: 'Total Prospects', value: dealTargets.length });
+  STAGES.forEach(s => {
+    if (s.key === 'not-contacted') return;
+    kpis.push({ label: s.label, value: stageCounts[s.key] });
+  });
 
   document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
     <div class="kpi-tile">
@@ -945,17 +2019,25 @@ function renderDashboard() {
     </div>
   `).join('');
 
-  // Narrative block
-  const slug = dealSlug(selectedDeal.deal_name);
+  // Narrative
   const top3 = [...dealTargets]
     .filter(t => t._score != null)
     .sort((a, b) => (b._score || 0) - (a._score || 0))
     .slice(0, 3);
 
   const warmCounts = countWarmAngles(dealTargets);
+  const staleCount = dealTargets.filter(c => staleStatusForContact(c) === 'red').length;
+  const awaitingCount = dealTargets.filter(c => isAwaitingReply(c)).length;
+
   document.getElementById('dealNarrative').innerHTML = `
+    <h3 style="color:#0A3161;">What needs attention now</h3>
+    <p style="line-height: 1.7;">
+      <strong style="color:#dc3545;">${staleCount}</strong> contact${staleCount===1?'':'s'} stale 14+ days ·
+      <strong style="color:#0c5460;">${awaitingCount}</strong> awaiting reply ·
+      <strong style="color:#0A3161;">${stageCounts['committed']||0}</strong> committed waiting on close
+    </p>
     <h3 style="color:#0A3161;">Pipeline Composition</h3>
-    <p><strong>Warm-angle coverage:</strong>
+    <p style="line-height: 1.7;"><strong>Warm-angle coverage:</strong>
       West Point: ${warmCounts.wp} ·
       Columbia: ${warmCounts.cb} ·
       Harvard: ${warmCounts.hv} ·
@@ -971,7 +2053,7 @@ function renderDashboard() {
     }
     ${selectedDeal.goal_description ? `
       <h3 style="color:#0A3161;">Mandate</h3>
-      <p style="white-space: pre-wrap;">${esc(selectedDeal.goal_description)}</p>
+      <p style="white-space: pre-wrap; word-break: break-word;">${esc(selectedDeal.goal_description)}</p>
     ` : ''}
   `;
 }
@@ -991,22 +2073,25 @@ function countWarmAngles(targets) {
 }
 
 // ============================================================
-// PIPELINE TAB (kanban with drag-drop)
+// PIPELINE TAB (kanban with drag-drop) — dynamic STAGES from localStorage
 // ============================================================
 function renderPipeline() {
   if (!selectedDeal) return;
   const slug = dealSlug(selectedDeal.deal_name);
   const board = document.getElementById('pipelineBoard');
 
+  // Apply focus filter
+  const visibleTargets = dealTargets.filter(passesFocus);
+
   const grouped = {};
   STAGES.forEach(s => { grouped[s.key] = []; });
-  dealTargets.forEach(t => {
+  visibleTargets.forEach(t => {
     const stage = t._stage || 'not-contacted';
     if (!grouped[stage]) grouped[stage] = [];
     grouped[stage].push(t);
   });
 
-  // Sort each stage column by score (highest first); contacts with no score sink to bottom
+  // Sort each column by score desc (null at bottom)
   Object.keys(grouped).forEach(stageKey => {
     grouped[stageKey].sort((a, b) => {
       const av = a._score, bv = b._score;
@@ -1017,24 +2102,50 @@ function renderPipeline() {
     });
   });
 
+  // Aggregate column value (sum of EV)
+  function columnValue(cards) {
+    let total = 0;
+    cards.forEach(c => {
+      const ann = parseAnnEst(c.client_ann_est);
+      const mult = getStageMultiplier(c._stage || 'not-contacted');
+      total += ann * mult;
+    });
+    return total;
+  }
+
   board.innerHTML = STAGES.map(stage => {
     const cards = grouped[stage.key] || [];
+    const colValue = columnValue(cards);
     return `
-      <div class="pipeline-column" data-stage="${stage.key}"
+      <div class="pipeline-column" data-stage="${esc(stage.key)}"
            ondragover="handleDragOver(event)"
            ondragleave="handleDragLeave(event)"
-           ondrop="handleDrop(event, '${stage.key}')">
-        <div class="pipeline-column-header">
-          <span>${stage.label}</span>
+           ondrop="handleDrop(event, '${esc(stage.key)}')">
+        <div class="pipeline-column-header" style="border-bottom-color:${esc(stage.color)};">
+          <span class="pipeline-column-header-label" title="${esc(stage.label)}">${esc(stage.label)}</span>
           <span class="pipeline-column-count">${cards.length}</span>
         </div>
-        ${cards.map(c => renderPipelineCard(c)).join('')}
+        ${colValue > 0 ? `<div class="pipeline-column-value">$${formatMoney(colValue)} EV</div>` : ''}
+        <div class="pipeline-cards-scroll">
+          ${cards.map(c => renderPipelineCard(c, stage)).join('')}
+        </div>
       </div>
     `;
   }).join('');
+
+  // Update pipeline header label
+  const headerEl = document.getElementById('pipelineHeader');
+  if (headerEl) {
+    if (currentFocus === 'all') {
+      headerEl.textContent = 'Pipeline · drag cards or use → button to advance';
+    } else {
+      const focusLabels = {overdue:'Overdue', today:'Today', week:'This Week', stale:'Stale 14d+', awaiting:'Awaiting Reply'};
+      headerEl.textContent = `Pipeline · filtered: ${focusLabels[currentFocus] || currentFocus} (${visibleTargets.length} of ${dealTargets.length})`;
+    }
+  }
 }
 
-function renderPipelineCard(c) {
+function renderPipelineCard(c, stage) {
   const scoreClass = c._score == null ? 'low' : (c._score >= 70 ? 'high' : (c._score >= 50 ? 'mid' : 'low'));
   const tags = (c.tags || '').toLowerCase();
   const warmBadges = [];
@@ -1046,32 +2157,57 @@ function renderPipelineCard(c) {
   if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
   if (tags.includes('cpg') || tags.includes('consumer')) warmBadges.push('<span class="warm-badge warm-cpg">CPG</span>');
 
-  // Expected value per prospect: client_ann_est × stage multiplier
   const annEst = parseAnnEst(c.client_ann_est);
-  const stage = c._stage || 'not-contacted';
-  const mult = getStageMultiplier(stage);
+  const mult = getStageMultiplier(c._stage || 'not-contacted');
   const expectedVal = annEst * mult;
   const valueDisplay = annEst > 0
-    ? `<div style="margin-top:6px; padding:5px 7px; background:#f0f4f9; border-left:3px solid ${expectedVal >= 50000 ? '#0d6b4d' : '#1a3a6e'}; border-radius:3px; font-size:0.72rem;">
-         <span style="color:#666;">EV:</span> <span style="font-weight:700; color:#0d6b4d;">$${formatMoney(expectedVal)}</span>
-         <span style="color:#999; margin-left:4px;">($${formatMoney(annEst)} × ${Math.round(mult*100)}%)</span>
+    ? `<div class="ev-pill ${expectedVal >= 50000 ? 'high' : ''}">
+         <span class="ev-pill-label">EV:</span>
+         <span class="ev-pill-value">$${formatMoney(expectedVal)}</span>
+         <span class="ev-pill-calc">$${formatMoney(annEst)} × ${Math.round(mult*100)}%</span>
        </div>`
     : '';
 
+  const staleDot = staleStatusForContact(c);
+  const staleDotEl = staleDot ? `<div class="stale-dot ${staleDot}" title="${staleDot==='red'?'Stale 14d+':'Stale 7-14d'}"></div>` : '';
+
+  // Quick actions — only show if stage is not terminal
+  const isTerminal = stage && stage.is_terminal;
+  const canAdvance = !isTerminal;
+  const nextStageKey = canAdvance ? getNextStageKey(c._stage) : null;
+
+  const actionsHtml = !isTerminal ? `
+    <div class="pipeline-card-actions">
+      ${c.email && c.email !== 'N/A' ? `<button class="qa-btn" onclick="event.stopPropagation(); quickEmailFromCard('${esc(c.id)}')" title="Email">✉️</button>` : ''}
+      <button class="qa-btn" onclick="event.stopPropagation(); quickLogCallFromCard('${esc(c.id)}')" title="Log call">📞</button>
+      <button class="qa-btn" onclick="event.stopPropagation(); openEnrollModal('${esc(c.id)}')" title="Enroll in VV Campaign">⚡</button>
+      ${nextStageKey ? `<button class="qa-btn advance" onclick="event.stopPropagation(); moveContactToStage('${esc(c.id)}', '${esc(nextStageKey)}')" title="Advance to ${esc(getStageLabel(nextStageKey))}">→ ${esc(getStageLabel(nextStageKey))}</button>` : ''}
+    </div>
+  ` : '';
+
   return `
-    <div class="pipeline-card" draggable="true" data-contact-id="${c.id}"
-         ondragstart="handleDragStart(event, '${c.id}')"
+    <div class="pipeline-card" draggable="true" data-contact-id="${esc(c.id)}"
+         ondragstart="handleDragStart(event, '${esc(c.id)}')"
          onmousedown="handleCardMouseDown(event)"
-         onclick="handleCardClick(event, '${c.id}')">
-      <div class="pipeline-card-name">${esc(c.name)}</div>
-      <div class="pipeline-card-company">${esc(c.company || '')}</div>
+         onclick="handleCardClick(event, '${esc(c.id)}')">
+      ${staleDotEl}
+      <div class="pipeline-card-name" title="${esc(c.name)}">${esc(c.name)}</div>
+      <div class="pipeline-card-company" title="${esc(c.company || '')}">${esc(c.company || '')}</div>
       <div class="pipeline-card-meta">
         <div class="pipeline-card-warm">${warmBadges.join('')}</div>
         ${c._score != null ? `<div class="pipeline-card-score ${scoreClass}">${c._score}</div>` : ''}
       </div>
       ${valueDisplay}
+      ${actionsHtml}
     </div>
   `;
+}
+
+function getNextStageKey(currentKey) {
+  const nonTerminal = STAGES.filter(s => !s.is_terminal).sort((a,b) => a.position - b.position);
+  const idx = nonTerminal.findIndex(s => s.key === currentKey);
+  if (idx >= 0 && idx < nonTerminal.length - 1) return nonTerminal[idx + 1].key;
+  return null;
 }
 
 let cardMouseDownPos = null;
@@ -1079,13 +2215,11 @@ function handleCardMouseDown(e) {
   cardMouseDownPos = { x: e.clientX, y: e.clientY };
 }
 function handleCardClick(e, contactId) {
-  // Distinguish click from drag: if the mouse moved more than a few px between mousedown
-  // and click, treat as drag and skip opening the modal.
   if (cardMouseDownPos) {
     const dx = Math.abs(e.clientX - cardMouseDownPos.x);
     const dy = Math.abs(e.clientY - cardMouseDownPos.y);
     cardMouseDownPos = null;
-    if (dx > 5 || dy > 5) return; // was a drag
+    if (dx > 5 || dy > 5) return;
   }
   openContactModal(contactId);
 }
@@ -1106,7 +2240,6 @@ async function handleDrop(e, newStage) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
   if (!dragSource) return;
-
   await moveContactToStage(dragSource, newStage);
   dragSource = null;
 }
@@ -1116,10 +2249,9 @@ async function moveContactToStage(contactId, newStage) {
   const contact = dealTargets.find(t => t.id === contactId);
   if (!contact) return;
 
-  // Build new tags: remove any existing "deal:<slug>:<oldstage>" and add new
   const currentTags = (contact.tags || '').split(/,\s*/).filter(Boolean);
   const baseTagPattern = new RegExp(`^deal:${slug}(:.+)?$`);
-  let baseTag = `deal:${slug}`; // preserve the base tag for the deal
+  let baseTag = `deal:${slug}`;
   const filteredTags = currentTags.filter(t => !baseTagPattern.test(t));
   filteredTags.push(baseTag);
   if (newStage !== 'not-contacted') {
@@ -1127,7 +2259,6 @@ async function moveContactToStage(contactId, newStage) {
   }
   const newTagsStr = filteredTags.join(', ');
 
-  // Append journey event
   const journeyEntry = {
     ts: new Date().toISOString(),
     event: 'deal_stage_changed',
@@ -1135,7 +2266,7 @@ async function moveContactToStage(contactId, newStage) {
     from: contact._stage,
     to: newStage
   };
-  const existingJourney = contact.customer_journey || [];
+  const existingJourney = safeJourney(contact);
   const newJourney = [...existingJourney, journeyEntry];
 
   const { error } = await supabaseClient
@@ -1149,18 +2280,374 @@ async function moveContactToStage(contactId, newStage) {
     return;
   }
 
-  // Update local state and re-render
   contact._stage = newStage;
   contact.tags = newTagsStr;
   contact.customer_journey = newJourney;
   renderPipeline();
-  showStatus(`Moved ${contact.name} to ${newStage}`, 'success');
+  showStatus(`Moved ${contact.name} → ${getStageLabel(newStage)}`, 'success');
 
-  // Refresh aggregates (dashboard counts)
   await loadDeals();
-  // selectedDeal updated by loadDeals -> renderDealsList
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
   renderDashboard();
+  updateFocusCounts();
+}
+
+// ============================================================
+// Quick actions: email, log call, advance
+// ============================================================
+async function quickEmailFromCard(contactId) {
+  const c = dealTargets.find(t => t.id === contactId);
+  if (!c) return;
+  if (!c.email || c.email === 'N/A') {
+    showStatus('No email on file for this contact', 'error');
+    return;
+  }
+  const subject = encodeURIComponent(`${selectedDeal.deal_name} — quick note`);
+  const body = encodeURIComponent(`Hi ${c.first_name || c.name.split(' ')[0]},\n\n`);
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email)}&su=${subject}&body=${body}`, '_blank');
+
+  // Log to journey
+  const slug = dealSlug(selectedDeal.deal_name);
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'quick_email_opened',
+    deal: slug,
+    note: 'Opened Gmail compose from Deals page quick action'
+  };
+  const newJourney = [...safeJourney(c), journeyEntry];
+  await supabaseClient.from('contacts').update({ customer_journey: newJourney }).eq('id', contactId);
+  c.customer_journey = newJourney;
+}
+
+async function quickLogCallFromCard(contactId) {
+  const c = dealTargets.find(t => t.id === contactId);
+  if (!c) return;
+  const note = prompt(`Log a call attempt to ${c.name}:\n\n(Optional: notes from the call)`);
+  if (note === null) return;
+
+  const slug = dealSlug(selectedDeal.deal_name);
+  const journeyEntry = {
+    ts: new Date().toISOString(),
+    event: 'call_attempted',
+    deal: slug,
+    note: note || 'Call logged via quick action'
+  };
+  const newJourney = [...safeJourney(c), journeyEntry];
+  const newAttempts = (c.number_call_attempts || 0) + 1;
+  const today = new Date().toISOString().split('T')[0];
+
+  const { error } = await supabaseClient.from('contacts').update({
+    customer_journey: newJourney,
+    number_call_attempts: newAttempts,
+    last_called: today
+  }).eq('id', contactId);
+
+  if (error) { showStatus('Failed to log call: ' + error.message, 'error'); return; }
+  c.customer_journey = newJourney;
+  c.number_call_attempts = newAttempts;
+  c.last_called = today;
+  showStatus(`Logged call attempt for ${c.name}`, 'success');
+  renderPipeline();
+  updateFocusCounts();
+}
+
+// ============================================================
+// ENROLL IN VV CAMPAIGN / WORKFLOW
+// ============================================================
+const N8N_WEBHOOK_BASE = 'https://victoryvision.app.n8n.cloud/webhook';
+const WORKFLOW_ENDPOINTS = {
+  nurture:    N8N_WEBHOOK_BASE + '/emails/nurture',
+  followup:   N8N_WEBHOOK_BASE + '/emails/followup',
+  meeting:    N8N_WEBHOOK_BASE + '/emails/meeting',
+  newsletter: N8N_WEBHOOK_BASE + '/emails/newsletter',
+  leadmagnet: N8N_WEBHOOK_BASE + '/emails/leadmagnet',
+  template:   N8N_WEBHOOK_BASE + '/emails/template-schedule'
+};
+
+let enrollContactId = null;
+let enrollSelectedWorkflow = null;
+let enrollMagnetPages = null;     // cached
+let enrollNewsletterPages = null; // cached
+let enrollTemplates = null;       // cached from users.email_templates
+
+async function openEnrollModal(contactId) {
+  enrollContactId = contactId;
+  enrollSelectedWorkflow = null;
+
+  // Reset visual state
+  document.querySelectorAll('#workflowPicker .wf-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.wf-fields').forEach(f => {
+    if (f.id !== 'wf-fields-common') f.classList.remove('active');
+  });
+  document.getElementById('enrollSubmitBtn').disabled = true;
+  document.getElementById('enrollCustomDesc').value = '';
+
+  const c = dealTargets.find(t => t.id === contactId);
+  const cname = c ? c.name : contactId;
+  const cemail = c ? c.email : '—';
+  document.getElementById('enrollSummary').innerHTML =
+    `<strong>${esc(cname)}</strong> &lt;${esc(cemail || '—')}&gt;` +
+    (selectedDeal ? ` · <span style="color:#666;">deal: ${esc(selectedDeal.deal_name)}</span>` : '');
+
+  // Preload pages for newsletter / lead magnet dropdowns AND templates (one fetch each, cached)
+  loadEnrollPages();
+  loadEnrollTemplates();
+  // Default the template start date to today (local YYYY-MM-DD)
+  const today = new Date();
+  document.getElementById('enrollTemplateStart').value =
+    today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  document.getElementById('enrollTemplatePreview').style.display = 'none';
+  document.getElementById('enrollModal').classList.add('active');
+}
+
+function closeEnrollModal() {
+  document.getElementById('enrollModal').classList.remove('active');
+  enrollContactId = null;
+  enrollSelectedWorkflow = null;
+}
+
+function selectEnrollWorkflow(wf) {
+  enrollSelectedWorkflow = wf;
+  document.querySelectorAll('#workflowPicker .wf-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.wf === wf);
+  });
+  // Show only the fields for the chosen workflow (plus the common section)
+  document.querySelectorAll('.wf-fields').forEach(f => {
+    if (f.id === 'wf-fields-common') return;
+    f.classList.toggle('active', f.id === 'wf-fields-' + wf);
+  });
+  document.getElementById('enrollSubmitBtn').disabled = false;
+}
+
+async function loadEnrollPages() {
+  if (enrollMagnetPages && enrollNewsletterPages) return; // already loaded
+  try {
+    const { data, error } = await supabaseClient
+      .from('pages')
+      .select('id, name, page_type, "URL", slug')
+      .eq('customer_id', CUSTOMER_ID)
+      .in('page_type', ['lead_magnet', 'newsletter']);
+    if (error) throw error;
+
+    enrollMagnetPages = (data || []).filter(p => p.page_type === 'lead_magnet');
+    enrollNewsletterPages = (data || []).filter(p => p.page_type === 'newsletter');
+
+    // Render dropdowns
+    const lmSel = document.getElementById('enrollLeadMagnetPageId');
+    if (enrollMagnetPages.length === 0) {
+      lmSel.innerHTML = '<option value="">— No saved lead magnets yet — visit Pages to create one —</option>';
+    } else {
+      lmSel.innerHTML = '<option value="">— Pick a lead magnet —</option>' +
+        enrollMagnetPages.map(p => `<option value="${esc(p.id)}" data-url="${esc(p.URL || '')}">${esc(p.name || 'Untitled')}</option>`).join('');
+    }
+
+    const nlSel = document.getElementById('enrollNewsletterPageId');
+    if (enrollNewsletterPages.length === 0) {
+      nlSel.innerHTML = '<option value="">— No saved newsletter pages yet — visit Pages to create one —</option>';
+    } else {
+      nlSel.innerHTML = '<option value="">— Pick a newsletter page —</option>' +
+        enrollNewsletterPages.map(p => `<option value="${esc(p.id)}" data-url="${esc(p.URL || '')}">${esc(p.name || 'Untitled')}</option>`).join('');
+    }
+  } catch (e) {
+    console.error('Failed to load pages for enroll modal:', e);
+  }
+}
+
+async function loadEnrollTemplates() {
+  if (enrollTemplates !== null) {
+    renderEnrollTemplateDropdown();
+    return;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from('users')
+      .select('email_templates')
+      .eq('email', CUSTOMER_ID)
+      .single();
+    if (error) throw error;
+    enrollTemplates = Array.isArray(data?.email_templates) ? data.email_templates : [];
+    renderEnrollTemplateDropdown();
+  } catch (e) {
+    console.error('Failed to load email_templates:', e);
+    enrollTemplates = [];
+    const sel = document.getElementById('enrollTemplateIdx');
+    if (sel) sel.innerHTML = '<option value="">— Failed to load templates: ' + esc(e.message || 'unknown') + ' —</option>';
+  }
+}
+
+function renderEnrollTemplateDropdown() {
+  const sel = document.getElementById('enrollTemplateIdx');
+  if (!sel) return;
+  if (!enrollTemplates || enrollTemplates.length === 0) {
+    sel.innerHTML = '<option value="">— No saved templates yet — create one on the Messages page —</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Pick a template —</option>' +
+    enrollTemplates.map((t, i) => {
+      const name = t.template_name || t.name || ('Template ' + (i + 1));
+      const count = Array.isArray(t.emails) ? t.emails.length : 0;
+      const saved = t.saved_at ? ' · saved ' + new Date(t.saved_at).toLocaleDateString() : '';
+      return `<option value="${i}">${esc(name)} (${count} email${count === 1 ? '' : 's'})${esc(saved)}</option>`;
+    }).join('');
+}
+
+function onEnrollTemplateChange() {
+  const sel = document.getElementById('enrollTemplateIdx');
+  const previewEl = document.getElementById('enrollTemplatePreview');
+  const idx = sel.value === '' ? -1 : parseInt(sel.value, 10);
+  if (idx < 0 || !enrollTemplates || !enrollTemplates[idx]) {
+    previewEl.style.display = 'none';
+    previewEl.innerHTML = '';
+    return;
+  }
+  const tmpl = enrollTemplates[idx];
+  const emails = Array.isArray(tmpl.emails) ? tmpl.emails : [];
+  const sorted = [...emails].sort((a, b) => (parseInt(a.sequence_number) || 0) - (parseInt(b.sequence_number) || 0));
+  previewEl.innerHTML = '<strong style="color:#0A3161;">Preview — ' + esc(tmpl.template_name || 'Template') + '</strong>' +
+    sorted.map((em, i) => {
+      const seq = em.sequence_number || em.email_number || (i + 1);
+      const variation = em.variation ? ` <span style="color:#888;">(${esc(em.variation)})</span>` : '';
+      const subject = em.subject || '(no subject)';
+      const body = (em.body || '').slice(0, 180).replace(/\n/g, ' ');
+      return `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #eee;">
+        <div style="font-weight:600;">#${esc(seq)}${variation} — ${esc(subject)}</div>
+        <div style="color:#666; font-size:0.78rem; margin-top:2px;">${esc(body)}${(em.body || '').length > 180 ? '...' : ''}</div>
+      </div>`;
+    }).join('');
+  previewEl.style.display = 'block';
+}
+
+async function submitEnroll() {
+  if (!enrollContactId || !enrollSelectedWorkflow) return;
+  const c = dealTargets.find(t => t.id === enrollContactId);
+  if (!c) { showStatus('Contact not found', 'error'); return; }
+
+  const wf = enrollSelectedWorkflow;
+  const url = WORKFLOW_ENDPOINTS[wf];
+  const slug = selectedDeal ? dealSlug(selectedDeal.deal_name) : null;
+  const linkToDeal = document.getElementById('enrollLinkToDeal').checked;
+
+  // Build body per workflow type
+  const body = {
+    customer_id: CUSTOMER_ID,
+    contact_id: c.id,
+    email: c.email,
+    name: c.name,
+    contacts: [{ id: c.id, email: c.email, name: c.name }],
+    vv_campaign_id: linkToDeal && selectedDeal ? selectedDeal.deal_id : null,
+    custom_description: document.getElementById('enrollCustomDesc').value.trim() || null,
+    deal_slug: linkToDeal && slug ? slug : null,
+    deal_stage: linkToDeal && c._stage ? c._stage : null
+  };
+
+  if (wf === 'nurture') {
+    body.total_emails = parseInt(document.getElementById('enrollNurtureTotal').value, 10) || 12;
+    body.days_between = parseInt(document.getElementById('enrollNurtureDays').value, 10) || 7;
+  } else if (wf === 'followup') {
+    body.total_emails = parseInt(document.getElementById('enrollFollowupTotal').value, 10) || 3;
+    body.days_between = parseInt(document.getElementById('enrollFollowupDays').value, 10) || 5;
+  } else if (wf === 'meeting') {
+    body.total_emails = 1;
+  } else if (wf === 'newsletter') {
+    const sel = document.getElementById('enrollNewsletterPageId');
+    const pageId = sel.value;
+    if (!pageId) { showStatus('Pick a newsletter page first', 'error'); return; }
+    const opt = sel.options[sel.selectedIndex];
+    body.newsletter_page_id = pageId;
+    body.newsletter_url = opt.getAttribute('data-url') || null;
+    body.total_emails = 4; // default drip after subscribe
+    body.days_between = 7;
+  } else if (wf === 'leadmagnet') {
+    const sel = document.getElementById('enrollLeadMagnetPageId');
+    const pageId = sel.value;
+    if (!pageId) { showStatus('Pick a lead magnet first', 'error'); return; }
+    const opt = sel.options[sel.selectedIndex];
+    body.lead_magnet_page_id = pageId;
+    body.lead_magnet_url = opt.getAttribute('data-url') || null;
+    body.total_emails = parseInt(document.getElementById('enrollLMTotal').value, 10) || 4;
+    body.days_between = 5;
+  } else if (wf === 'template') {
+    // Template Schedule expects a different body shape than the AI workflows.
+    // Required: customer_id, contact_ids[], emails[]. Plus days_between, campaign_name, ai_choose_time, start_date.
+    const sel = document.getElementById('enrollTemplateIdx');
+    const idx = sel.value === '' ? -1 : parseInt(sel.value, 10);
+    if (idx < 0 || !enrollTemplates || !enrollTemplates[idx]) {
+      showStatus('Pick a template first', 'error'); return;
+    }
+    const tmpl = enrollTemplates[idx];
+    const emails = Array.isArray(tmpl.emails) ? tmpl.emails : [];
+    if (emails.length === 0) {
+      showStatus('That template has no emails saved', 'error'); return;
+    }
+    // Normalize emails: workflow expects subject, body, sequence_number per item
+    const normalizedEmails = emails.map((em, i) => ({
+      subject: em.subject || '(no subject)',
+      body: em.body || '',
+      sequence_number: parseInt(em.sequence_number) || parseInt(em.email_number) || (i + 1),
+      variation: em.variation || null
+    }));
+    const startDateStr = document.getElementById('enrollTemplateStart').value;
+    const startDate = startDateStr ? new Date(startDateStr + 'T09:00:00') : new Date();
+    // Rebuild body explicitly — Template Schedule uses contact_ids[] not contact_id
+    Object.assign(body, {
+      contact_ids: [c.id],
+      emails: normalizedEmails,
+      days_between: parseInt(document.getElementById('enrollTemplateDays').value, 10) || 2,
+      campaign_name: tmpl.template_name || 'Saved Template',
+      ai_choose_time: document.getElementById('enrollTemplateAiTime').checked,
+      start_date: startDate.toISOString(),
+      template_name: tmpl.template_name || null
+    });
+  }
+
+  // Optimistic UI
+  const btn = document.getElementById('enrollSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Enrolling...';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      mode: 'cors'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const result = await res.json().catch(() => ({}));
+
+    // Log to customer_journey
+    if (linkToDeal && slug) {
+      const journeyEntry = {
+        ts: new Date().toISOString(),
+        event: 'workflow_enrolled',
+        deal: slug,
+        campaign: wf,
+        total_emails: body.total_emails || 1,
+        rationale: `Enrolled in ${wf} via Deals page${body.custom_description ? ': ' + body.custom_description : ''}`
+      };
+      const newJourney = [...safeJourney(c), journeyEntry];
+      await supabaseClient.from('contacts').update({ customer_journey: newJourney }).eq('id', c.id);
+      c.customer_journey = newJourney;
+    }
+
+    showStatus(`Enrolled ${c.name} in ${wf} workflow`, 'success');
+    closeEnrollModal();
+    renderActivity();
+  } catch (e) {
+    console.error('Enroll failed:', e);
+    showStatus('Enroll failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enroll';
+  }
+}
+
+async function quickEmailContact() {
+  if (currentContact) await quickEmailFromCard(currentContact.id);
+}
+async function quickLogCall() {
+  if (currentContact) {
+    await quickLogCallFromCard(currentContact.id);
+    if (currentContact) openContactModal(currentContact.id);
+  }
 }
 
 // ============================================================
@@ -1195,18 +2682,19 @@ function renderTargets() {
     if (tags.includes('veteran')) warmBadges.push('<span class="warm-badge warm-vt">VT</span>');
 
     return `
-      <tr onclick="openContactModal('${t.id}')" style="cursor: pointer;">
+      <tr onclick="openContactModal('${esc(t.id)}')" style="cursor: pointer;">
         <td><strong>${esc(t.name || '')}</strong></td>
         <td>${esc(t.company || '')}</td>
         <td>${esc(t.title || '')}</td>
         <td>${esc(t.location || '')}</td>
         <td class="score-cell">${t._score != null ? t._score : '—'}</td>
         <td>${warmBadges.join(' ')}</td>
-        <td>${esc(t._stage || 'not-contacted')}</td>
+        <td>${esc(getStageLabel(t._stage || 'not-contacted'))}</td>
         <td>${esc(t.last_emailed_date || '—')}</td>
         <td onclick="event.stopPropagation()">
           ${t.linkedin ? `<a href="${esc(t.linkedin)}" target="_blank" class="btn btn-sm" onclick="event.stopPropagation()">LI</a>` : ''}
-          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); advanceStage('${t.id}')">→</button>
+          <button class="btn btn-sm" onclick="event.stopPropagation(); openEnrollModal('${esc(t.id)}')" title="Enroll in VV Campaign">⚡</button>
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); advanceStage('${esc(t.id)}')">→</button>
         </td>
       </tr>
     `;
@@ -1226,9 +2714,12 @@ function sortTargets(field) {
 async function advanceStage(contactId) {
   const contact = dealTargets.find(t => t.id === contactId);
   if (!contact) return;
-  const currentIdx = STAGES.findIndex(s => s.key === (contact._stage || 'not-contacted'));
-  if (currentIdx < 0 || currentIdx >= STAGES.length - 1) return;
-  await moveContactToStage(contactId, STAGES[currentIdx + 1].key);
+  const next = getNextStageKey(contact._stage || 'not-contacted');
+  if (!next) {
+    showStatus('Already at the last non-terminal stage', 'info');
+    return;
+  }
+  await moveContactToStage(contactId, next);
   renderTargets();
 }
 
@@ -1239,7 +2730,7 @@ function downloadTargetsCSV() {
   }
   const headers = ['Name','Company','Title','Location','Score','Stage','LinkedIn','Email','Tags'];
   const rows = dealTargets.map(t => [
-    t.name, t.company, t.title, t.location, t._score, t._stage, t.linkedin, t.email, t.tags
+    t.name, t.company, t.title, t.location, t._score, getStageLabel(t._stage), t.linkedin, t.email, t.tags
   ]);
   const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${(v || '').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -1256,10 +2747,9 @@ function downloadTargetsCSV() {
 // ============================================================
 function renderActivity() {
   if (!selectedDeal) return;
-  // Collect all journey events from all targets, sort by ts desc
   const events = [];
   dealTargets.forEach(t => {
-    (t.customer_journey || []).forEach(ev => {
+    safeJourney(t).forEach(ev => {
       events.push({ ...ev, contact_name: t.name });
     });
   });
@@ -1273,18 +2763,18 @@ function renderActivity() {
   document.getElementById('activityFeed').innerHTML = events.slice(0, 100).map(ev => {
     const tsDate = ev.ts ? new Date(ev.ts).toLocaleString() : '—';
     return `
-      <div style="border-left: 3px solid #0A3161; padding: 8px 12px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px;">
-        <div style="font-size: 0.8rem; color: #666;">${tsDate}</div>
+      <div style="border-left: 3px solid #0A3161; padding: 8px 12px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px; word-break: break-word;">
+        <div style="font-size: 0.78rem; color: #666;">${tsDate}</div>
         <div><strong>${esc(ev.contact_name)}</strong> — <span style="color: #0A3161;">${esc(ev.event || 'event')}</span></div>
-        ${ev.note ? `<div style="font-size: 0.85rem; color: #555; margin-top: 4px;">${esc(ev.note)}</div>` : ''}
-        ${ev.from && ev.to ? `<div style="font-size: 0.85rem; color: #555;">${esc(ev.from)} → ${esc(ev.to)}</div>` : ''}
+        ${ev.note ? `<div style="font-size: 0.82rem; color: #555; margin-top: 4px;">${esc(ev.note)}</div>` : ''}
+        ${ev.from && ev.to ? `<div style="font-size: 0.82rem; color: #555;">${esc(getStageLabel(ev.from))} → ${esc(getStageLabel(ev.to))}</div>` : ''}
       </div>
     `;
   }).join('');
 }
 
 // ============================================================
-// NEW DEAL modal
+// NEW DEAL / EDIT DEAL modals
 // ============================================================
 function openNewDealModal() {
   document.getElementById('newDealName').value = '';
@@ -1296,17 +2786,11 @@ function openNewDealModal() {
   document.getElementById('newDealCloseDate').value = '';
   document.getElementById('newDealModal').classList.add('active');
 }
-
-function closeNewDealModal() {
-  document.getElementById('newDealModal').classList.remove('active');
-}
+function closeNewDealModal() { document.getElementById('newDealModal').classList.remove('active'); }
 
 async function createNewDeal() {
   const name = document.getElementById('newDealName').value.trim();
-  if (!name) {
-    showStatus('Deal Name is required', 'error');
-    return;
-  }
+  if (!name) { showStatus('Deal Name is required', 'error'); return; }
   const meta = {};
   const coAdv = document.getElementById('newDealCoAdvisor').value.trim();
   if (coAdv) meta.co_advisor = coAdv;
@@ -1327,32 +2811,55 @@ async function createNewDeal() {
   };
 
   const { data, error } = await supabaseClient.from('campaigns').insert(payload).select();
-  if (error) {
-    showStatus('Failed to create deal: ' + error.message, 'error');
-    console.error(error);
-    return;
-  }
+  if (error) { showStatus('Failed to create deal: ' + error.message, 'error'); console.error(error); return; }
   closeNewDealModal();
   showStatus('Deal created', 'success');
   await loadDeals();
 }
 
-// ============================================================
-// EDIT DEAL modal
-// ============================================================
-function editDealMeta() {
+async function editDealMeta() {
   if (!selectedDeal) return;
+  // Fetch full meta on demand (the deals list query omits meta to avoid PostgREST timeout on 20+ deals)
+  if (!selectedDeal.meta) {
+    const { data, error } = await supabaseClient
+      .from('campaigns')
+      .select('meta, goal_description')
+      .eq('id', selectedDeal.deal_id)
+      .single();
+    if (error) { showStatus('Failed to load deal meta: ' + error.message, 'error'); return; }
+    selectedDeal.meta = data ? data.meta : {};
+    selectedDeal._goal_description = data ? data.goal_description : '';
+  }
+  const m = selectedDeal.meta || {};
+  document.getElementById('editDealStage').value = m.deal_stage || mapStatusToDealStage(selectedDeal.status);
+  document.getElementById('editDealScore').value = m.score != null ? m.score : (selectedDeal.score || '');
+  document.getElementById('editDealSize').value = m.deal_size_usd != null ? m.deal_size_usd : '';
+  document.getElementById('editDealTakeRate').value = m.take_rate_pct != null ? m.take_rate_pct : '';
+  document.getElementById('editDealCloseProb').value = m.base_close_prob_pct != null ? m.base_close_prob_pct : '';
+  document.getElementById('editDealCounterpartyName').value = m.counterparty_name || '';
+  document.getElementById('editDealCounterpartyCompany').value = m.counterparty_company || '';
+  document.getElementById('editDealMandate').value = selectedDeal._goal_description || selectedDeal.goal_description || '';
   document.getElementById('editDealStatus').value = selectedDeal.status || 'pre-launch';
   document.getElementById('editDealTarget').value = selectedDeal.campaign_target || '';
   document.getElementById('editDealCoAdvisor').value = selectedDeal.co_advisor || '';
   document.getElementById('editDealCloseDate').value = selectedDeal.target_close_date || '';
   document.getElementById('editDealSoftCircle').value = selectedDeal.soft_circle_amount_usd || 0;
+  document.getElementById('editDealNextAction').value = m.next_action || selectedDeal.next_action || '';
+  document.getElementById('editDealNextActionDue').value = m.next_action_due || selectedDeal.next_action_due || '';
+  recalcLivePwv();
   document.getElementById('editDealModal').classList.add('active');
 }
 
-function closeEditDealModal() {
-  document.getElementById('editDealModal').classList.remove('active');
+function recalcLivePwv() {
+  const size = parseFloat(document.getElementById('editDealSize').value) || 0;
+  const take = parseFloat(document.getElementById('editDealTakeRate').value) || 0;
+  const close = parseFloat(document.getElementById('editDealCloseProb').value) || 0;
+  const gross = size * take / 100;
+  const pwv = gross * close / 100;
+  document.getElementById('liveGross').textContent = '$' + formatMoney(gross);
+  document.getElementById('livePwv').textContent = '$' + formatMoney(pwv);
 }
+function closeEditDealModal() { document.getElementById('editDealModal').classList.remove('active'); }
 
 async function saveDealMeta() {
   if (!selectedDeal) return;
@@ -1360,70 +2867,167 @@ async function saveDealMeta() {
   updatedMeta.co_advisor = document.getElementById('editDealCoAdvisor').value.trim() || null;
   updatedMeta.target_close_date = document.getElementById('editDealCloseDate').value || null;
   updatedMeta.soft_circle_amount_usd = parseInt(document.getElementById('editDealSoftCircle').value, 10) || 0;
+  
+  // Stage + score
+  updatedMeta.deal_stage = document.getElementById('editDealStage').value;
+  const scoreInput = document.getElementById('editDealScore').value;
+  updatedMeta.score = scoreInput === '' ? null : Math.max(0, Math.min(100, parseInt(scoreInput, 10) || 0));
+  
+  // PWV math fields — deal_size_usd, take_rate_pct, base_close_prob_pct
+  const sizeRaw = document.getElementById('editDealSize').value;
+  const takeRaw = document.getElementById('editDealTakeRate').value;
+  const closeRaw = document.getElementById('editDealCloseProb').value;
+  if (sizeRaw !== '') updatedMeta.deal_size_usd = parseFloat(sizeRaw) || 0;
+  if (takeRaw !== '') updatedMeta.take_rate_pct = parseFloat(takeRaw) || 0;
+  if (closeRaw !== '') updatedMeta.base_close_prob_pct = parseFloat(closeRaw) || 0;
+  // Pre-compute gross + pwv so the view shows them even without recomputing
+  const size = updatedMeta.deal_size_usd || 0;
+  const take = updatedMeta.take_rate_pct || 0;
+  const close = updatedMeta.base_close_prob_pct || 0;
+  updatedMeta.gross_value_usd = Math.round(size * take / 100);
+  updatedMeta.pwv_usd = Math.round(size * take / 100 * close / 100);
+
+  // Counterparty
+  updatedMeta.counterparty_name = document.getElementById('editDealCounterpartyName').value.trim() || null;
+  updatedMeta.counterparty_company = document.getElementById('editDealCounterpartyCompany').value.trim() || null;
+  
+  // Next action
+  const nextAction = document.getElementById('editDealNextAction').value.trim();
+  updatedMeta.next_action = nextAction || null;
+  const nextDue = document.getElementById('editDealNextActionDue').value;
+  updatedMeta.next_action_due = nextDue || null;
+
+  const goalDescription = document.getElementById('editDealMandate').value.trim();
 
   const { error } = await supabaseClient
     .from('campaigns')
     .update({
       status: document.getElementById('editDealStatus').value,
       campaign_target: document.getElementById('editDealTarget').value.trim() || null,
+      goal_description: goalDescription || null,
       meta: updatedMeta,
       last_updated: new Date().toISOString()
     })
     .eq('id', selectedDeal.deal_id);
 
-  if (error) {
-    showStatus('Failed to save: ' + error.message, 'error');
-    return;
-  }
+  if (error) { showStatus('Failed to save: ' + error.message, 'error'); return; }
   closeEditDealModal();
   showStatus('Deal updated', 'success');
   await loadDeals();
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
-  renderDashboard();
+  if (selectedDeal) {
+    renderDashboard();
+    document.getElementById('selectedDealName').textContent = selectedDeal.deal_name;
+    document.getElementById('selectedDealMeta').textContent =
+      `${selectedDeal.campaign_target || ''} · ${selectedDeal.status || ''} · ${selectedDeal.co_advisor ? 'Co-advisor: ' + selectedDeal.co_advisor : 'Solo mandate'} · Day ${selectedDeal.days_active}${selectedDeal.target_close_date ? '/' + daysBetween(selectedDeal.created_at, selectedDeal.target_close_date) : ''}`;
+  }
 }
 
 // ============================================================
-// INIT
+// STAGE MANAGEMENT MODAL (NEW) — backed by localStorage only
+// Stage KEYS stay stable; only label/color/multiplier/is_terminal/position change.
 // ============================================================
-async function init() {
-  try {
-    const isAuthenticated = await checkAuthentication();
-    if (!isAuthenticated) {
-      redirectToLogin();
+let workingStages = []; // copy used inside the modal
+
+function openStageMgmtModal() {
+  // Clone current STAGES into working copy
+  workingStages = JSON.parse(JSON.stringify(STAGES));
+  renderStageMgmtList();
+  document.getElementById('stageMgmtModal').classList.add('active');
+}
+
+function closeStageMgmtModal() {
+  document.getElementById('stageMgmtModal').classList.remove('active');
+  workingStages = [];
+}
+
+function renderStageMgmtList() {
+  const list = document.getElementById('stageMgmtList');
+  const sorted = [...workingStages].sort((a,b) => (a.position||0) - (b.position||0));
+  list.innerHTML = sorted.map((s, idx) => `
+    <div class="stage-row ${s.is_terminal ? 'terminal' : ''}" data-key="${esc(s.key)}">
+      <div class="drag-handle">⋮⋮</div>
+      <div>
+        <input type="text" value="${esc(s.label)}" 
+               onchange="updateWorkingStage('${esc(s.key)}', 'label', this.value)" 
+               style="width: 100%; margin-bottom: 2px;"/>
+        <div class="key-label" title="${esc(s.key)}">key: ${esc(s.key)}</div>
+      </div>
+      <input type="color" value="${esc(s.color)}" 
+             onchange="updateWorkingStage('${esc(s.key)}', 'color', this.value)"/>
+      <input type="number" min="0" max="100" value="${s.multiplier_pct}" 
+             onchange="updateWorkingStage('${esc(s.key)}', 'multiplier_pct', parseInt(this.value,10))" 
+             title="Probability multiplier (0-100). Used for PWV math."/>
+      <input type="checkbox" ${s.is_terminal ? 'checked' : ''}
+             onchange="updateWorkingStage('${esc(s.key)}', 'is_terminal', this.checked)" 
+             title="Terminal stages (no further movement) like Closed/Declined"/>
+      <button class="remove-btn" onclick="hideStageFromConfig('${esc(s.key)}')" 
+              title="Hide this stage from the pipeline view (contacts with this tag remain tagged in CRM)">×</button>
+    </div>
+  `).join('');
+}
+
+function updateWorkingStage(key, field, value) {
+  const stage = workingStages.find(s => s.key === key);
+  if (!stage) return;
+  stage[field] = value;
+  if (field === 'is_terminal') renderStageMgmtList();
+}
+
+function hideStageFromConfig(key) {
+  const stage = workingStages.find(s => s.key === key);
+  if (!stage) return;
+  if (!confirm(`Hide "${stage.label}" from your pipeline view?\n\nThis is a UI-only change. Contacts in this stage stay tagged in your CRM (the tag pattern deal:<slug>:${key} continues to work for every n8n workflow), but the column will no longer show on this page.\n\nYou can restore it via "Reset to defaults".`)) return;
+  stage.is_active = false;
+  workingStages = workingStages.filter(s => s.is_active !== false);
+  // Re-number positions
+  workingStages.sort((a,b) => (a.position||0) - (b.position||0));
+  workingStages.forEach((s, idx) => { s.position = idx + 1; });
+  renderStageMgmtList();
+}
+
+function resetStagesToDefaults() {
+  if (!confirm('Reset stage labels, colors, and multipliers to defaults?\n\nThis only affects display in this browser. No CRM data changes.')) return;
+  workingStages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+  renderStageMgmtList();
+}
+
+function saveStageConfigs() {
+  // Validate
+  const labels = workingStages.map(s => (s.label || '').trim()).filter(Boolean);
+  if (labels.length !== workingStages.length) {
+    showStatus('Every stage needs a label', 'error');
+    return;
+  }
+  const dupLabels = labels.filter((l, i) => labels.indexOf(l) !== i);
+  if (dupLabels.length) {
+    showStatus('Duplicate stage label: ' + dupLabels[0], 'error');
+    return;
+  }
+  for (const s of workingStages) {
+    if (s.multiplier_pct < 0 || s.multiplier_pct > 100 || isNaN(s.multiplier_pct)) {
+      showStatus(`Multiplier for "${s.label}" must be 0-100`, 'error');
       return;
     }
-    await loadDeals();
-  } catch (e) {
-    console.error('Init error:', e);
-    showStatus('Failed to initialize. Please refresh.', 'error');
+  }
+  // Save
+  if (!saveStagesToLocalStorage(workingStages)) return;
+  STAGES = workingStages.filter(s => s.is_active !== false).sort((a,b) => (a.position||0) - (b.position||0));
+  refreshStageDropdowns();
+  closeStageMgmtModal();
+  showStatus('Stages updated', 'success');
+  // Re-render everything that uses STAGES
+  if (selectedDeal) {
+    renderPipeline();
+    renderDashboard();
+    renderTargets();
   }
 }
 
-// Session validation every 5 min (same as contacts page)
-setInterval(async () => {
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) redirectToLogin();
-    else authToken = session.access_token;
-  } catch (e) { console.error(e); }
-}, 300000);
-
-document.addEventListener('visibilitychange', async () => {
-  if (!document.hidden) {
-    try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) redirectToLogin();
-      else authToken = session.access_token;
-    } catch (e) { console.error(e); }
-  }
-});
-
 // ============================================================
-// CONTACT DETAIL MODAL — open, populate, edit stage/score/note
+// CONTACT DETAIL MODAL
 // ============================================================
-let currentContact = null;  // contact row currently open in the modal
-
-// Existing n8n webhooks we'll reuse (same as contacts.html)
+let currentContact = null;
 const N8N_ENDPOINTS = {
   enrichContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich',
   enrollWarmOutreach: 'https://victoryvision.app.n8n.cloud/webhook/outreach/friends'
@@ -1438,12 +3042,10 @@ async function openContactModal(contactId) {
   const c = currentContact;
   const tags = c.tags || '';
 
-  // Header
   document.getElementById('cmName').textContent = c.name || '—';
   document.getElementById('cmTitleCompany').textContent =
     [c.title, c.company].filter(Boolean).join(' · ') || '—';
 
-  // Contact links (clickable when populated)
   const liEl = document.getElementById('cmLinkedIn');
   if (c.linkedin && c.linkedin.trim()) {
     liEl.innerHTML = `<a href="${esc(c.linkedin)}" target="_blank">${esc(c.linkedin.replace(/^https?:\/\//, ''))}</a>`;
@@ -1455,7 +3057,6 @@ async function openContactModal(contactId) {
   } else { emEl.textContent = '—'; }
 
   const phEl = document.getElementById('cmPhone');
-  // contacts table has phone_number (used in contacts page) — but our query selects 'phone' alias is none; we use c.phone_number
   const phone = c.phone_number || c.phone || '';
   if (phone && phone !== 'N/A' && phone.trim()) {
     phEl.innerHTML = `<a href="tel:${esc(phone)}">${esc(phone)}</a>`;
@@ -1464,12 +3065,12 @@ async function openContactModal(contactId) {
   document.getElementById('cmLocation').textContent = c.location || '—';
   document.getElementById('cmIndustry').textContent = c.industry || '—';
 
-  // Deal context
+  // Stage dropdown (dynamic from STAGES)
+  refreshStageDropdowns();
   document.getElementById('cmStage').value = c._stage || 'not-contacted';
   document.getElementById('cmScore').value = c._score != null ? c._score : '';
   document.getElementById('cmTags').textContent = tags || '—';
 
-  // All scores across deals
   const scoresContainer = document.getElementById('cmAllScores');
   if (c.scores && Object.keys(c.scores).length > 0) {
     scoresContainer.innerHTML = Object.entries(c.scores)
@@ -1482,7 +3083,6 @@ async function openContactModal(contactId) {
     scoresContainer.textContent = '—';
   }
 
-  // Engagement metrics
   document.getElementById('cmEmailsSent').textContent = c.number_emails_sent || 0;
   document.getElementById('cmOpens').textContent = c.num_emails_opened || 0;
   document.getElementById('cmClicks').textContent = c.num_links_clicked || 0;
@@ -1492,11 +3092,9 @@ async function openContactModal(contactId) {
   document.getElementById('cmCallAttempts').textContent = c.number_call_attempts || 0;
   document.getElementById('cmLastCalled').textContent = c.last_called || '—';
 
-  // Profile summary
   document.getElementById('cmSummary').textContent = c.personal_summary || '—';
 
-  // Customer journey (reverse chrono)
-  const journey = (c.customer_journey || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+  const journey = safeJourney(c).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
   if (journey.length === 0) {
     document.getElementById('cmJourney').innerHTML = '<p style="color: #888; margin: 0; font-size: 0.85rem;">No activity logged yet.</p>';
   } else {
@@ -1505,7 +3103,7 @@ async function openContactModal(contactId) {
       const details = [];
       if (ev.rationale) details.push(esc(ev.rationale));
       if (ev.note) details.push(esc(ev.note));
-      if (ev.from && ev.to) details.push(`${esc(ev.from)} → ${esc(ev.to)}`);
+      if (ev.from && ev.to) details.push(`${esc(getStageLabel(ev.from))} → ${esc(getStageLabel(ev.to))}`);
       if (ev.score != null) details.push(`score: ${esc(ev.score)}`);
       if (ev.old != null && ev.new != null) details.push(`${esc(ev.old)} → ${esc(ev.new)}`);
       return `
@@ -1517,9 +3115,7 @@ async function openContactModal(contactId) {
     }).join('');
   }
 
-  // Clear note input
   document.getElementById('cmNoteInput').value = '';
-
   document.getElementById('contactModal').classList.add('active');
 }
 
@@ -1528,13 +3124,11 @@ function closeContactModal() {
   currentContact = null;
 }
 
-// Stage change from the modal dropdown — reuses the existing moveContactToStage
 async function changeContactStage() {
   if (!currentContact) return;
   const newStage = document.getElementById('cmStage').value;
   if (newStage === currentContact._stage) return;
   await moveContactToStage(currentContact.id, newStage);
-  // Refresh modal state from the now-mutated currentContact
   const updated = dealTargets.find(t => t.id === currentContact.id);
   if (updated) {
     currentContact = updated;
@@ -1542,7 +3136,6 @@ async function changeContactStage() {
   }
 }
 
-// Save score change
 async function saveContactScore() {
   if (!currentContact) return;
   const slug = dealSlug(selectedDeal.deal_name);
@@ -1563,7 +3156,7 @@ async function saveContactScore() {
     new: newScore,
     rationale: 'Manual edit from Deals page contact modal'
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ scores: newScores, customer_journey: newJourney })
@@ -1577,11 +3170,9 @@ async function saveContactScore() {
   showStatus(`Score updated: ${oldScore ?? '—'} → ${newScore}`, 'success');
   renderPipeline();
   renderTargets();
-  // Refresh modal in place
   openContactModal(currentContact.id);
 }
 
-// Add a note (appends to customer_journey)
 async function saveContactNote() {
   if (!currentContact) return;
   const noteText = document.getElementById('cmNoteInput').value.trim();
@@ -1594,7 +3185,7 @@ async function saveContactNote() {
     deal: slug,
     note: noteText
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ customer_journey: newJourney })
@@ -1605,17 +3196,14 @@ async function saveContactNote() {
   currentContact.customer_journey = newJourney;
   showStatus('Note added', 'success');
   document.getElementById('cmNoteInput').value = '';
-  openContactModal(currentContact.id);  // refresh in place
+  openContactModal(currentContact.id);
 }
 
-// Remove from deal — marks as "no-fit" so contact won't come back to pipeline
-// Strategy: tag with deal:<slug>:declined + permanent deal:<slug>:no-fit flag
 async function removeFromDeal() {
   if (!currentContact) return;
   if (!confirm(`Mark ${currentContact.name} as a no-fit for "${selectedDeal.deal_name}" and remove from pipeline?\n\nContact stays in CRM but won't appear in this deal again.`)) return;
 
   const slug = dealSlug(selectedDeal.deal_name);
-  // Strip any existing deal:<slug> and deal:<slug>:<stage> tags, then add deal:<slug>:no-fit
   const currentTags = (currentContact.tags || '').split(/,\s*/).filter(Boolean);
   const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
   const filtered = currentTags.filter(t => !baseRe.test(t));
@@ -1629,7 +3217,7 @@ async function removeFromDeal() {
     from: currentContact._stage || 'not-contacted',
     rationale: 'Marked no-fit from Deals page — will not return to pipeline.'
   };
-  const newJourney = [...(currentContact.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(currentContact), journeyEntry];
 
   const { error } = await supabaseClient.from('contacts')
     .update({ tags: newTagsStr, customer_journey: newJourney })
@@ -1639,16 +3227,15 @@ async function removeFromDeal() {
 
   showStatus(`Removed ${currentContact.name} as no-fit`, 'success');
   closeContactModal();
-  // Refresh the deal's target list (which filters by deal:<slug> base tag — no-fit doesn't match)
   await loadDealTargets();
   renderPipeline();
   renderTargets();
   renderDashboard();
+  updateFocusCounts();
   await loadDeals();
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
 }
 
-// Reuse existing n8n webhooks: enrich + warm outreach
 async function enrichContact() {
   if (!currentContact) return;
   showStatus('Enriching contact via Apollo/Hunter...', 'info');
@@ -1682,18 +3269,18 @@ async function enrollWarmOutreach() {
 }
 
 function openInContacts() {
-  // Open the contacts page; the user can search by name/linkedin once there
   window.open('contacts', '_blank');
 }
 
 // ============================================================
-// ADD CONTACT TO DEAL — autocomplete search of existing CRM
+// ADD CONTACT TO DEAL
 // ============================================================
-let allCrmContacts = [];   // cached list of all contacts for the tenant
+let allCrmContacts = [];
 let acSelectedContact = null;
 
 async function openAddContactModal() {
   if (!selectedDeal) return;
+  refreshStageDropdowns();
   document.getElementById('acDealName').textContent = selectedDeal.deal_name;
   document.getElementById('acSearch').value = '';
   document.getElementById('acStage').value = 'not-contacted';
@@ -1703,17 +3290,13 @@ async function openAddContactModal() {
   document.getElementById('acAddBtn').disabled = true;
   acSelectedContact = null;
 
-  // Lazy-load CRM contacts (cache for the session)
   if (allCrmContacts.length === 0) {
     showStatus('Loading CRM contacts...', 'info');
     const { data, error } = await supabaseClient.from('contacts')
       .select('id, name, first_name, title, company, location, tags, scores, linkedin')
       .eq('cus_id', CUSTOMER_ID)
       .order('name', { ascending: true });
-    if (error) {
-      showStatus('Failed to load CRM contacts: ' + error.message, 'error');
-      return;
-    }
+    if (error) { showStatus('Failed to load CRM contacts: ' + error.message, 'error'); return; }
     allCrmContacts = data || [];
   }
   document.getElementById('addContactModal').classList.add('active');
@@ -1728,16 +3311,8 @@ function closeAddContactModal() {
 function onAddContactSearch() {
   const q = document.getElementById('acSearch').value.trim().toLowerCase();
   const resultsEl = document.getElementById('acResults');
-  if (q.length < 2) {
-    resultsEl.style.display = 'none';
-    return;
-  }
-  const slug = dealSlug(selectedDeal.deal_name);
-  const dealTagBase = `deal:${slug}`;
-  // Existing-in-deal set (so we can dim them)
+  if (q.length < 2) { resultsEl.style.display = 'none'; return; }
   const inDealIds = new Set(dealTargets.map(t => t.id));
-
-  // Match name or company, case-insensitive
   const matches = allCrmContacts.filter(c => {
     const nm = (c.name || '').toLowerCase();
     const co = (c.company || '').toLowerCase();
@@ -1754,7 +3329,7 @@ function onAddContactSearch() {
     const inDeal = inDealIds.has(c.id);
     return `
       <div class="autocomplete-item ${inDeal ? 'already-in-deal' : ''}"
-           ${inDeal ? '' : `onclick="pickAddContact('${c.id}')"`}>
+           ${inDeal ? '' : `onclick="pickAddContact('${esc(c.id)}')"`}>
         <div class="autocomplete-item-name">${esc(c.name || '—')}</div>
         <div class="autocomplete-item-meta">${esc([c.title, c.company, c.location].filter(Boolean).join(' · ') || '')}</div>
       </div>`;
@@ -1779,14 +3354,12 @@ async function addContactToDeal() {
   const score = scoreInput === '' ? null : parseInt(scoreInput, 10);
   const rationale = document.getElementById('acRationale').value.trim() || 'Manually added from Deals page';
 
-  // Refetch the canonical row to be safe (autocomplete cache may be stale)
   const { data: fetched, error: fetchErr } = await supabaseClient.from('contacts')
     .select('id, tags, scores, customer_journey')
     .eq('id', acSelectedContact.id)
     .single();
   if (fetchErr) { showStatus('Failed to load contact: ' + fetchErr.message, 'error'); return; }
 
-  // Build new tags
   const currentTags = (fetched.tags || '').split(/,\s*/).filter(Boolean);
   const baseRe = new RegExp(`^deal:${slug}(:.+)?$`);
   const filtered = currentTags.filter(t => !baseRe.test(t));
@@ -1796,11 +3369,9 @@ async function addContactToDeal() {
   }
   const newTagsStr = filtered.join(', ');
 
-  // Build new scores (merge)
   const newScores = Object.assign({}, fetched.scores || {});
   if (score != null && !isNaN(score)) newScores[slug] = score;
 
-  // Append journey entry
   const journeyEntry = {
     ts: new Date().toISOString(),
     event: 'added_to_deal',
@@ -1809,7 +3380,7 @@ async function addContactToDeal() {
     score: score,
     rationale: rationale
   };
-  const newJourney = [...(fetched.customer_journey || []), journeyEntry];
+  const newJourney = [...safeJourney(fetched), journeyEntry];
 
   const { error: updErr } = await supabaseClient.from('contacts')
     .update({ tags: newTagsStr, scores: newScores, customer_journey: newJourney })
@@ -1822,9 +3393,45 @@ async function addContactToDeal() {
   renderPipeline();
   renderTargets();
   renderDashboard();
+  updateFocusCounts();
   await loadDeals();
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
 }
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  try {
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) { redirectToLogin(); return; }
+    loadStages();
+    refreshStageDropdowns();
+    await loadDeals();
+  } catch (e) {
+    console.error('Init error:', e);
+    showStatus('Failed to initialize. Please refresh.', 'error');
+  }
+}
+
+// Session validation every 5 min
+setInterval(async () => {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) redirectToLogin();
+    else authToken = session.access_token;
+  } catch (e) { console.error(e); }
+}, 300000);
+
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden) {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) redirectToLogin();
+      else authToken = session.access_token;
+    } catch (e) { console.error(e); }
+  }
+});
 
 // Globals exposed for inline handlers
 window.selectDeal = selectDeal;
@@ -1842,6 +3449,7 @@ window.handleDragOver = handleDragOver;
 window.handleDragLeave = handleDragLeave;
 window.handleDrop = handleDrop;
 window.renderPipeline = renderPipeline;
+window.moveContactToStage = moveContactToStage;
 window.openContactModal = openContactModal;
 window.closeContactModal = closeContactModal;
 window.changeContactStage = changeContactStage;
@@ -1858,6 +3466,32 @@ window.pickAddContact = pickAddContact;
 window.addContactToDeal = addContactToDeal;
 window.handleCardMouseDown = handleCardMouseDown;
 window.handleCardClick = handleCardClick;
+window.setFocus = setFocus;
+window.quickEmailFromCard = quickEmailFromCard;
+window.quickLogCallFromCard = quickLogCallFromCard;
+window.quickEmailContact = quickEmailContact;
+window.quickLogCall = quickLogCall;
+window.openStageMgmtModal = openStageMgmtModal;
+window.closeStageMgmtModal = closeStageMgmtModal;
+window.updateWorkingStage = updateWorkingStage;
+window.hideStageFromConfig = hideStageFromConfig;
+window.resetStagesToDefaults = resetStagesToDefaults;
+window.saveStageConfigs = saveStageConfigs;
+// NEW: deals list view controls
+window.setDealView = setDealView;
+window.setStageFilter = setStageFilter;
+window.sortDealsTable = sortDealsTable;
+window.handleDealDragStart = handleDealDragStart;
+window.handleDealDragOver = handleDealDragOver;
+window.handleDealDragLeave = handleDealDragLeave;
+window.handleDealDragEnd = handleDealDragEnd;
+window.handleDealDrop = handleDealDrop;
+window.recalcLivePwv = recalcLivePwv;
+window.openEnrollModal = openEnrollModal;
+window.closeEnrollModal = closeEnrollModal;
+window.selectEnrollWorkflow = selectEnrollWorkflow;
+window.submitEnroll = submitEnroll;
+window.onEnrollTemplateChange = onEnrollTemplateChange;
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
