@@ -2301,22 +2301,45 @@ function renderJourneyTimeline(contact) {
   if (!container) return;
 
   // Prefer v2 jsonb field; fall back to legacy text if v2 is empty.
-  let events = [];
+  let raw = [];
   if (Array.isArray(contact.customer_journey)) {
-    events = contact.customer_journey;
+    raw = contact.customer_journey;
   } else if (typeof contact.customer_journey === 'string' && contact.customer_journey.trim()) {
-    try { events = JSON.parse(contact.customer_journey); } catch (e) { events = []; }
+    try { raw = JSON.parse(contact.customer_journey); } catch (e) { raw = []; }
   }
+  if (!Array.isArray(raw)) raw = [];
+
+  // Normalize mixed/legacy event shapes into one schema
+  const norm = raw.map(e => {
+    e = e || {};
+    const d = e.data || {};
+    const type = e.type || e.event_type || e.event || '';
+    let summary = e.summary || d.subject || e.note || e.description || e.title || '';
+    if (summary === '(no subject)') summary = '';
+    const ts = e.ts || e.timestamp || e.date || e.created_at || e.sent_at || '';
+    const actor = e.actor || e.direction || '';
+    const campaign = e.campaign || d.campaign || '';
+    const preview = d.body_preview || d.preview || '';
+    return { type, summary, ts, actor, campaign, preview };
+  })
+  // Drop noise: events with no type AND no summary/preview (the null-content email dupes)
+  .filter(e => (e.type && e.type.trim()) || (e.summary && e.summary.trim()) || (e.preview && e.preview.trim()));
+
+  // Dedupe: same type + summary within the same minute → keep one
+  const seen = new Set();
+  const events = [];
+  for (const e of norm) {
+    const minute = e.ts ? new Date(e.ts).toISOString().slice(0, 16) : '';
+    const key = (e.type || '') + '|' + (e.summary || '').trim().toLowerCase() + '|' + minute;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    events.push(e);
+  }
+  // Newest first
+  events.sort((a, b) => (new Date(b.ts || 0)) - (new Date(a.ts || 0)));
 
   if (events.length === 0) {
-    const legacy = (contact.customer_journey || '').trim();
-    if (legacy) {
-      container.innerHTML = '<div style="color:#6c757d;font-style:italic;padding:8px;white-space:pre-wrap;">' +
-        escapeHtmlForTimeline(legacy) +
-        '<div style="margin-top:6px;font-size:11px;color:#999;">[legacy text — no v2 events yet]</div></div>';
-    } else {
-      container.innerHTML = '<p style="color:#6c757d;font-style:italic;padding:8px 0;margin:0;">No touchpoints yet.</p>';
-    }
+    container.innerHTML = '<p style="color:#6c757d;font-style:italic;padding:8px 0;margin:0;">No touchpoints yet.</p>';
     return;
   }
 
@@ -2347,7 +2370,8 @@ function renderJourneyTimeline(contact) {
     const campaign = e.campaign
       ? '<span style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px;color:#666;margin-left:6px;">' + escapeHtmlForTimeline(e.campaign) + '</span>'
       : '';
-    const typeLabel = String(e.type || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const typeLabel = String(e.type || 'Activity').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const bodyLine = (e.summary || e.preview || '').trim();
 
     return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">' +
       '<div style="flex:0 0 24px;font-size:16px;line-height:1.2;">' + icon + '</div>' +
@@ -2355,11 +2379,10 @@ function renderJourneyTimeline(contact) {
         '<div style="font-size:12px;color:' + color + ';font-weight:600;">' +
           escapeHtmlForTimeline(typeLabel) + campaign +
         '</div>' +
-        '<div style="font-size:13px;color:#222;margin-top:2px;word-wrap:break-word;">' +
-          escapeHtmlForTimeline(e.summary || '') +
-        '</div>' +
+        (bodyLine ? '<div style="font-size:13px;color:#222;margin-top:2px;word-wrap:break-word;">' +
+          escapeHtmlForTimeline(bodyLine) + '</div>' : '') +
         '<div style="font-size:11px;color:#999;margin-top:3px;">' +
-          dateStr + (timeStr ? ' · ' + timeStr : '') + ' · ' + escapeHtmlForTimeline(e.actor || '') +
+          dateStr + (timeStr ? ' · ' + timeStr : '') + (e.actor ? ' · ' + escapeHtmlForTimeline(e.actor) : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -3153,36 +3176,33 @@ function editContact(contactId) {
   // Reset and populate form
   form.reset();
   
-  // Populate all fields
-  document.getElementById('name').value = contact.name || '';
-  document.getElementById('email').value = contact.email || '';
-  document.getElementById('title').value = contact.title || '';
-  document.getElementById('company').value = contact.company || '';
-  document.getElementById('domain').value = contact.domain || '';
-  document.getElementById('phone_number').value = contact.phone_number || '';
-  document.getElementById('linkedin').value = contact.linkedin || '';
-  document.getElementById('industry').value = contact.industry || '';
-  document.getElementById('city').value = contact.city || '';
-  document.getElementById('annual_revenue').value = contact.annual_revenue || '';
-  document.getElementById('employee_count').value = contact.employee_count || '';
-  document.getElementById('client_won_date').value = contact.client_won_date 
-  ? contact.client_won_date.split('T')[0] 
-  : '';
-  document.getElementById('last_opened_date').value = contact.last_opened_date || '';
-  document.getElementById('last_called').value = contact.last_called || '';
+  // Populate all fields (null-safe: a missing field can't crash the edit modal anymore)
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+  setVal('name', contact.name);
+  setVal('email', contact.email);
+  setVal('title', contact.title);
+  setVal('company', contact.company);
+  setVal('domain', contact.domain);
+  setVal('phone_number', contact.phone_number);
+  setVal('linkedin', contact.linkedin);
+  setVal('industry', contact.industry);
+  setVal('city', contact.city);
+  setVal('annual_revenue', contact.annual_revenue);
+  setVal('employee_count', contact.employee_count);
+  setVal('client_won_date', contact.client_won_date ? String(contact.client_won_date).split('T')[0] : '');
+  setVal('last_opened_date', contact.last_opened_date);
+  setVal('last_called', contact.last_called);
   renderJourneyTimeline(contact);
-  document.getElementById('personal_summary').value = contact.personal_summary || '';
-  document.getElementById('company_summary').value = contact.company_summary || '';
-  // document.getElementById('created').value = contact.created || ''; // ❌ REMOVE THIS LINE  
-  document.getElementById('personal_priorities').value = contact.personal_priorities || '';
-  document.getElementById('company_priorities').value = contact.company_priorities || '';
-  document.getElementById('tags').value = contact.tags || '';
-if (document.getElementById('client_ann_est')) {
-  document.getElementById('client_ann_est').value = contact.client_ann_est || '';
-}
-  document.getElementById('campaign').value = contact.campaign || '';
-  document.getElementById('aiemail').checked = contact.aiemail || false;
-  document.getElementById('newsletter').checked = contact.newsletter || false;
+  setVal('personal_summary', contact.personal_summary);
+  setVal('company_summary', contact.company_summary);
+  setVal('personal_priorities', contact.personal_priorities);
+  setVal('company_priorities', contact.company_priorities);
+  setVal('tags', contact.tags);
+  setVal('client_ann_est', contact.client_ann_est);
+  setVal('campaign', contact.campaign);
+  setChk('aiemail', contact.aiemail);
+  setChk('newsletter', contact.newsletter);
   
   // Set EDIT mode
   document.querySelector('#addContactModal .modal-header h2').textContent = '✏️ Edit Contact';
