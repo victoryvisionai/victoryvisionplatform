@@ -544,7 +544,7 @@ let masterTag = 'all';           // current master tag filter
 let timeWindow = 30;             // days
 let customFromDate = null, customToDate = null;
 let allContacts = [], allEmails = [], allSMS = [], allCalls = [];
-let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [], allAds = [];
+let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [], allAds = [], allVictories = [];
 let userAifeedback = null;       // from users.aifeedback jsonb
 let chatHistory = [];            // local conversation for context
 
@@ -698,6 +698,8 @@ async function loadAllData() {
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(15),
     sb.from('ads').select('id, platform, status, impressions, clicks, conversions, spend, meetings_booked, new_customers, conversion_revenue, campaign_name, created_at')
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
+    sb.from('victories').select('id, customer_id, created_at, estimated_annual_revenue, company_won, contact_converted, contact_id')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
   ]);
 
   allContacts = tasks[0].status==='fulfilled' ? (tasks[0].value.data || []) : [];
@@ -710,6 +712,7 @@ async function loadAllData() {
   allPages    = tasks[7].status==='fulfilled' ? (tasks[7].value.data || []) : [];
   allPlans    = tasks[8].status==='fulfilled' ? (tasks[8].value.data || []) : [];
   allAds      = tasks[9].status==='fulfilled' ? (tasks[9].value.data || []) : [];
+  allVictories = tasks[10].status==='fulfilled' ? (tasks[10].value.data || []) : [];
 
   console.log('Loaded:', { contacts: allContacts.length, emails: allEmails.length, sms: allSMS.length,
     calls: allCalls.length, meetings: allMeetings.length, deals: allDeals.length, plans: allPlans.length });
@@ -766,8 +769,11 @@ function callsInScope() {
 
 function meetingsInScope() {
   const ids = emailContactIds();
+  const { start } = getWindow();
   return allMeetings.filter(m => {
-    if (!inWindow(m.start_at)) return false;
+    // meetings can be scheduled in the future — count anything from window start onward
+    const d = m.start_at ? new Date(m.start_at) : null;
+    if (!d || d < start) return false;
     if (masterTag === 'all') return true;
     if (!m.attendees_emails) return false;
     const emails = String(m.attendees_emails).toLowerCase().split(/[,\s]+/);
@@ -797,7 +803,9 @@ function renderFunnel() {
   // Conversion: deal stage tags
   const committed = scoped.filter(c => (c.tags || '').toLowerCase().includes(':committed')).length;
   const softCircle = scoped.filter(c => (c.tags || '').toLowerCase().includes(':soft-circle')).length;
-  const wins = scoped.filter(c => c.client_won_date && inWindow(c.client_won_date)).length;
+  const contactWins = scoped.filter(c => c.client_won_date && inWindow(c.client_won_date)).length;
+  const victoryWins = allVictories.filter(v => inWindow(v.created_at)).length;
+  const wins = contactWins + victoryWins;
 
   document.getElementById('funnelLabel').textContent = `${tagLabel()} · ${windowLabel()}`;
   document.getElementById('funnel').innerHTML = `
