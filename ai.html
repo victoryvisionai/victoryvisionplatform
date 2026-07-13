@@ -6,6 +6,7 @@
 <title>Victory Vision AI SDR — Performance & Plans</title>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f8fafc; color:#333; min-height:100vh; }
@@ -36,6 +37,12 @@
                        margin-bottom:6px; opacity:0.85; font-weight:600; }
   .focus-field select, .focus-field input { width:100%; padding:9px 12px; border:none; border-radius:6px;
                                               font-size:14px; background:white; color:#0A3161; font-family:inherit; }
+  .analytics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+  .analytics-box { border:1.5px solid #e5e7eb; border-radius:8px; padding:14px; background:white; display:flex; flex-direction:column; }
+  .analytics-box h4 { margin:0 0 8px; font-size:14px; color:#0A3161; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .analytics-box select { font-size:12px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; background:#f9fafb; color:#374151; cursor:pointer; }
+  .analytics-canvas-wrap { position:relative; height:210px; }
+  .analytics-empty { color:#9ca3af; font-size:13px; text-align:center; padding:70px 10px; }
   .time-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
   .time-pill { padding:6px 14px; background:rgba(255,255,255,0.15); border:1.5px solid transparent;
                border-radius:18px; color:white; cursor:pointer; font-size:13px; font-weight:500;
@@ -437,6 +444,15 @@
     </div>
   </div>
 
+  <!-- FUNNEL ANALYTICS (charts, respects master tag + time window) -->
+  <div class="card">
+    <h2><span>📊 Funnel Analytics — <span id="analyticsLabel">Everything · 30d</span></span></h2>
+    <p style="color:#64748b;font-size:13px;margin-bottom:14px;">
+      Every chart respects the master tag and time window above. Pick a chart type per section.
+    </p>
+    <div class="analytics-grid" id="analyticsGrid"></div>
+  </div>
+
   <!-- INSIGHTS & LEARNINGS (surfaces existing analysis fields) -->
   <div class="card">
     <h2>
@@ -510,7 +526,7 @@ let masterTag = 'all';           // current master tag filter
 let timeWindow = 30;             // days
 let customFromDate = null, customToDate = null;
 let allContacts = [], allEmails = [], allSMS = [], allCalls = [];
-let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [];
+let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [], allAds = [];
 let userAifeedback = null;       // from users.aifeedback jsonb
 let chatHistory = [];            // local conversation for context
 
@@ -662,6 +678,8 @@ async function loadAllData() {
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(50),
     sb.from('plans').select('id, plan, customer_id, description, status, start, "end", credits, estimate_conversions, actual_conversions, lessons_learned, created_at, plan_id')
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(15),
+    sb.from('ads').select('id, platform, status, impressions, clicks, conversions, spend, meetings_booked, new_customers, conversion_revenue, campaign_name, created_at')
+      .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
   ]);
 
   allContacts = tasks[0].status==='fulfilled' ? (tasks[0].value.data || []) : [];
@@ -673,6 +691,7 @@ async function loadAllData() {
   allDeals    = tasks[6].status==='fulfilled' ? (tasks[6].value.data || []) : [];
   allPages    = tasks[7].status==='fulfilled' ? (tasks[7].value.data || []) : [];
   allPlans    = tasks[8].status==='fulfilled' ? (tasks[8].value.data || []) : [];
+  allAds      = tasks[9].status==='fulfilled' ? (tasks[9].value.data || []) : [];
 
   console.log('Loaded:', { contacts: allContacts.length, emails: allEmails.length, sms: allSMS.length,
     calls: allCalls.length, meetings: allMeetings.length, deals: allDeals.length, plans: allPlans.length });
@@ -1317,21 +1336,40 @@ async function savePlanDescription(id, desc) {
   toast('Description saved', 'success');
 }
 
-function markActionComplete(planId, idx) {
+// Race-safe single-action persist via patch_plan_action RPC (merges patch into
+// the action whose action_id matches). Falls back to whole-array save if the
+// action has no action_id. Returns true on success.
+async function patchAction(planId, action, patch) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return false;
+  const aid = action && action.action_id;
+  if (aid) {
+    const { data, error } = await sb.rpc('patch_plan_action',
+      { p_plan_id: planId, p_action_id: aid, p_patch: patch });
+    if (error) { toast('Save failed: ' + error.message, 'error'); return false; }
+    if (Array.isArray(data)) plan.plan = data;   // keep local copy in sync with DB
+    return true;
+  }
+  // No action_id — apply patch locally then whole-array save
+  Object.assign(action, patch);
+  return savePlanActions(planId);
+}
+
+async function markActionComplete(planId, idx) {
   const plan = allPlans.find(p => p.id === planId);
   if (!plan) return;
   const actions = safeJSON(plan.plan);
   if (!actions[idx]) return;
   const note = prompt('Completion note (optional):', '');
-  actions[idx].status = 'completed';
-  if (note) actions[idx].completion_note = note;
-  actions[idx].completed_at = new Date().toISOString();
+  const patch = { status: 'completed', completed_at: new Date().toISOString() };
+  if (note) patch.completion_note = note;
+  Object.assign(actions[idx], patch);
   plan.plan = actions;
   document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
-  savePlanActions(planId);
+  if (await patchAction(planId, actions[idx], patch)) toast('Action marked done', 'success');
 }
 
-function editAction(planId, idx) {
+async function editAction(planId, idx) {
   const plan = allPlans.find(p => p.id === planId);
   if (!plan) return;
   const actions = safeJSON(plan.plan);
@@ -1340,10 +1378,12 @@ function editAction(planId, idx) {
   if (newText === null) return;
   actions[idx].action = newText;
   plan.plan = actions;
-  document.getElementById('atext-' + planId + '-' + idx).textContent = newText;
+  const el = document.getElementById('atext-' + planId + '-' + idx);
+  if (el) el.textContent = newText;
+  if (await patchAction(planId, actions[idx], { action: newText })) toast('Action saved', 'success');
 }
 
-function removeActionLocal(planId, idx) {
+async function removeActionLocal(planId, idx) {
   if (!confirm('Remove this action?')) return;
   const plan = allPlans.find(p => p.id === planId);
   if (!plan) return;
@@ -1351,9 +1391,10 @@ function removeActionLocal(planId, idx) {
   actions.splice(idx, 1);
   plan.plan = actions;
   document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
+  await savePlanActions(planId);   // structural change → whole-array save
 }
 
-function addAction(planId) {
+async function addAction(planId) {
   const plan = allPlans.find(p => p.id === planId);
   if (!plan) return;
   const txt = prompt('New action description:');
@@ -1367,14 +1408,16 @@ function addAction(planId) {
   });
   plan.plan = actions;
   document.getElementById('actionsList-' + planId).innerHTML = actions.map((a, i) => renderAction(planId, a, i)).join('');
+  await savePlanActions(planId);   // structural change → whole-array save
 }
 
 async function savePlanActions(planId) {
   const plan = allPlans.find(p => p.id === planId);
-  if (!plan) return;
+  if (!plan) return false;
   const { error } = await sb.from('plans').update({ plan: plan.plan }).eq('id', planId);
-  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  if (error) { toast('Save failed: ' + error.message, 'error'); return false; }
   toast('Plan saved', 'success');
+  return true;
 }
 
 async function executePlan(id) {
@@ -1513,10 +1556,264 @@ async function loadPlans() {
   renderPlans();
 }
 
+// ─── FUNNEL ANALYTICS (Chart.js) ───────────────────────
+// Every section reuses the existing *InScope helpers + getWindow(), so all
+// charts honor the master tag and the time window automatically.
+const chartInstances = {};            // canvasId -> Chart
+const chartChoice = {};               // sectionKey -> selected chart type
+const VV_COLORS = ['#0A3161','#1a4a8a','#4facfe','#43e97b','#f59e0b','#ef4444','#a855f7','#14b8a6','#f093fb','#94a3b8'];
+
+// Bucket an array of {date} into N daily/weekly labels across the window.
+function bucketByDay(items, dateFn) {
+  const { start, end } = getWindow();
+  const days = Math.max(1, Math.round((end - start) / 86400000));
+  const weekly = days > 92;           // switch to weekly buckets on long windows
+  const step = weekly ? 7 : 1;
+  const buckets = [];
+  for (let t = new Date(start); t <= end; t.setDate(t.getDate() + step)) {
+    buckets.push({ label: new Date(t), count: 0, sum: 0 });
+  }
+  items.forEach(it => {
+    const d = dateFn(it); if (!d) return;
+    const dt = new Date(d); if (isNaN(dt)) return;
+    const idx = Math.min(buckets.length - 1, Math.floor((dt - start) / (step * 86400000)));
+    if (idx >= 0) buckets[idx].count++;
+  });
+  const fmt = weekly
+    ? d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return { labels: buckets.map(b => fmt(b.label)), counts: buckets.map(b => b.count) };
+}
+
+function drawChart(canvasId, cfg) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); delete chartInstances[canvasId]; }
+  chartInstances[canvasId] = new Chart(el.getContext('2d'), cfg);
+}
+
+// Section definitions: key, title, chart-type options, and a builder per type.
+function analyticsSections() {
+  const scoped = filterContacts();
+  const emails = emailsInScope();
+  const sms = smsInScope();
+  const calls = callsInScope();
+  const meets = meetingsInScope();
+  const newContacts = contactsInScope();
+
+  return [
+    // 1. CONTACTS — how leads enter over time / by stage
+    { key:'contacts', title:'Contacts', types:['New over time','By stage','By tag'],
+      build(type){
+        if (type==='By stage'){
+          const stages={Lead:0,'Soft-circle':0,Committed:0,Won:0};
+          scoped.forEach(c=>{const t=(c.tags||'').toLowerCase();
+            if(c.client_won_date)stages.Won++;
+            else if(t.includes(':committed'))stages.Committed++;
+            else if(t.includes(':soft-circle'))stages['Soft-circle']++;
+            else stages.Lead++;});
+          return barCfg(Object.keys(stages),Object.values(stages),'Contacts');
+        }
+        if (type==='By tag'){
+          const counts={};
+          scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();
+            if(t&&!t.startsWith('deal:')&&t.length>2)counts[t]=(counts[t]||0)+1;}));
+          const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+          return doughnutCfg(top.map(x=>x[0]),top.map(x=>x[1]));
+        }
+        const b=bucketByDay(newContacts,c=>c.created);
+        return lineCfg(b.labels,b.counts,'New contacts');
+      }},
+    // 2. PIPELINE — deal value by stage / count by stage
+    { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage'],
+      build(type){
+        const deals=allDeals.filter(d=>d.type==='deal');
+        if (type==='Count by stage'){
+          const st={};
+          deals.forEach(d=>{const s=((d.meta&&d.meta.stage)||d.status||'open');st[s]=(st[s]||0)+1;});
+          return barCfg(Object.keys(st),Object.values(st),'Deals');
+        }
+        const named=deals.map(d=>{const m=d.meta||{};
+          const pwv=parseFloat(m.pwv_usd)||(parseFloat(m.deal_size_usd)||0)*(parseFloat(m.take_rate_pct)||0)/100*(parseFloat(m.base_close_prob_pct)||0)/100;
+          return{name:d.name||'Deal',v:pwv};}).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8);
+        return barCfg(named.map(x=>x.name),named.map(x=>Math.round(x.v)),'Weighted value ($)');
+      }},
+    // 3. CALLS — volume over time / by outcome
+    { key:'calls', title:'Calls', types:['Over time','By outcome'],
+      build(type){
+        if (type==='By outcome'){
+          const o={};calls.forEach(c=>{const k=c.outcome||'unknown';o[k]=(o[k]||0)+1;});
+          return barCfg(Object.keys(o),Object.values(o),'Calls');
+        }
+        const b=bucketByDay(calls,c=>c.created_at);
+        return lineCfg(b.labels,b.counts,'Calls');
+      }},
+    // 4. EMAILS — sent over time / engagement funnel
+    { key:'emails', title:'Emails', types:['Sent over time','Engagement funnel'],
+      build(type){
+        if (type==='Engagement funnel'){
+          const opens=emails.filter(e=>e.opened_at||e.opens>0).length;
+          const clicks=emails.filter(e=>e.clicked_at||e.clicks>0).length;
+          const replies=emails.filter(e=>e.replied_at).length;
+          return barCfg(['Sent','Opened','Clicked','Replied'],[emails.length,opens,clicks,replies],'Emails');
+        }
+        const b=bucketByDay(emails,e=>e.sent_at);
+        return lineCfg(b.labels,b.counts,'Emails sent');
+      }},
+    // 5. CAMPAIGNS — reply rate / volume by campaign
+    { key:'campaigns', title:'Campaigns', types:['Reply rate','Volume'],
+      build(type){
+        const stats={};
+        emails.forEach(e=>{const c=e.campaign||'Direct';if(!stats[c])stats[c]={sent:0,rep:0};
+          stats[c].sent++;if(e.replied_at)stats[c].rep++;});
+        const rows=Object.entries(stats).filter(([k,v])=>v.sent>=3).slice(0,8);
+        if (type==='Reply rate'){
+          const r=rows.map(([k,v])=>({k,pct:v.rep*100/v.sent})).sort((a,b)=>b.pct-a.pct);
+          return barCfg(r.map(x=>x.k),r.map(x=>+x.pct.toFixed(1)),'Reply rate %');
+        }
+        const r=rows.map(([k,v])=>({k,s:v.sent})).sort((a,b)=>b.s-a.s);
+        return barCfg(r.map(x=>x.k),r.map(x=>x.s),'Sent');
+      }},
+    // 6. TAGS — contacts per tag / deals per tag
+    { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags'],
+      build(type){
+        const counts={};
+        scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();if(!t||t.length<2)return;
+          const isDeal=t.startsWith('deal:');
+          if(type==='Deal tags'?isDeal:!isDeal)counts[t]=(counts[t]||0)+1;}));
+        const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+        return barCfg(top.map(x=>x[0]),top.map(x=>x[1]),'Contacts');
+      }},
+    // 7. MEETINGS — over time / by status
+    { key:'meetings', title:'Meetings', types:['Over time','By status'],
+      build(type){
+        if (type==='By status'){
+          const s={};meets.forEach(m=>{const k=m.status||'scheduled';s[k]=(s[k]||0)+1;});
+          return doughnutCfg(Object.keys(s),Object.values(s));
+        }
+        const b=bucketByDay(meets,m=>m.start_at);
+        return lineCfg(b.labels,b.counts,'Meetings');
+      }},
+    // 8. TOP LEADS — most engaged contacts (opens+clicks+replies)
+    { key:'topleads', title:'Top Leads', types:['By engagement','By emails opened'],
+      build(type){
+        const ranked=scoped.map(c=>({
+          name:c.name||c.email||'—',
+          eng:(c.num_emails_opened||0)+(c.num_links_clicked||0)*2+(c.last_responded?5:0),
+          opened:c.num_emails_opened||0
+        }));
+        const key=type==='By emails opened'?'opened':'eng';
+        const top=ranked.sort((a,b)=>b[key]-a[key]).slice(0,8).filter(x=>x[key]>0);
+        return barCfg(top.map(x=>x.name),top.map(x=>x[key]),type==='By emails opened'?'Opens':'Engagement score','h');
+      }},
+    // 9. PAGES — views vs conversions / subscribers
+    { key:'pages', title:'Landing Pages', types:['Views vs conversions','Subscribers'],
+      build(type){
+        const pages=allPages.slice(0,8);
+        if (type==='Subscribers'){
+          return barCfg(pages.map(p=>p.name||'page'),pages.map(p=>p.subscribers||0),'Subscribers');
+        }
+        return multiBarCfg(pages.map(p=>p.name||'page'),
+          [{label:'Views',data:pages.map(p=>p.views||0)},
+           {label:'Conversions',data:pages.map(p=>p.conversions||0)}]);
+      }},
+    // 10. ADS — spend/impressions/conversions by platform, funnel
+    { key:'ads', title:'Ads', types:['Funnel','By platform','Conversions over time'],
+      build(type){
+        const ads=allAds.filter(a=>inWindow(a.created_at));
+        if (type==='By platform'){
+          const p={};ads.forEach(a=>{const k=a.platform||'other';p[k]=(p[k]||0)+(a.spend||0);});
+          return barCfg(Object.keys(p),Object.values(p),'Spend ($)');
+        }
+        if (type==='Conversions over time'){
+          const b=bucketByDay(ads,a=>a.created_at);
+          // sum conversions per bucket instead of count
+          const { start,end }=getWindow();const step=(end-start)/86400000>92?7:1;
+          const sums=new Array(b.labels.length).fill(0);
+          ads.forEach(a=>{const dt=new Date(a.created_at);if(isNaN(dt))return;
+            const idx=Math.min(sums.length-1,Math.floor((dt-start)/(step*86400000)));
+            if(idx>=0)sums[idx]+=(a.conversions||0);});
+          return lineCfg(b.labels,sums,'Conversions');
+        }
+        const imp=ads.reduce((s,a)=>s+(a.impressions||0),0);
+        const clk=ads.reduce((s,a)=>s+(a.clicks||0),0);
+        const cnv=ads.reduce((s,a)=>s+(a.conversions||0),0);
+        const mtg=ads.reduce((s,a)=>s+(a.meetings_booked||0),0);
+        return barCfg(['Impressions','Clicks','Conversions','Meetings'],[imp,clk,cnv,mtg],'Ads');
+      }}
+  ];
+}
+
+// Chart.js config builders
+const baseOpts = (extra={}) => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ display:false } },
+  scales:{ y:{ beginAtZero:true, ticks:{ font:{size:10} } }, x:{ ticks:{ font:{size:10}, maxRotation:45, minRotation:0 } } },
+  ...extra
+});
+function lineCfg(labels,data,label){
+  return { type:'line', data:{ labels, datasets:[{ label, data, borderColor:'#0A3161', backgroundColor:'rgba(10,49,97,0.1)', fill:true, tension:0.3, pointRadius:2 }] }, options:baseOpts() };
+}
+function barCfg(labels,data,label,dir){
+  return { type:'bar', data:{ labels, datasets:[{ label, data, backgroundColor:labels.map((_,i)=>VV_COLORS[i%VV_COLORS.length]) }] },
+    options:baseOpts(dir==='h'?{ indexAxis:'y' }:{}) };
+}
+function multiBarCfg(labels,datasets){
+  return { type:'bar', data:{ labels, datasets:datasets.map((d,i)=>({ ...d, backgroundColor:VV_COLORS[i%VV_COLORS.length] })) },
+    options:baseOpts({ plugins:{ legend:{ display:true, labels:{ font:{size:10} } } } }) };
+}
+function doughnutCfg(labels,data){
+  return { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:labels.map((_,i)=>VV_COLORS[i%VV_COLORS.length]) }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{size:10}, boxWidth:12 } } } } };
+}
+
+function renderAnalytics() {
+  const grid = document.getElementById('analyticsGrid');
+  if (!grid) return;
+  document.getElementById('analyticsLabel').textContent = `${tagLabel()} · ${windowLabel()}`;
+  const sections = analyticsSections();
+
+  // Build the boxes once (structure), then paint each canvas.
+  if (grid.dataset.built !== '1') {
+    grid.innerHTML = sections.map(s => {
+      const opts = s.types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+      return `<div class="analytics-box">
+        <h4>${esc(s.title)}<select onchange="onChartTypeChange('${s.key}', this.value)">${opts}</select></h4>
+        <div class="analytics-canvas-wrap"><canvas id="chart-${s.key}"></canvas></div>
+      </div>`;
+    }).join('');
+    grid.dataset.built = '1';
+  }
+  sections.forEach(s => {
+    const type = chartChoice[s.key] || s.types[0];
+    try {
+      const cfg = s.build(type);
+      const hasData = cfg && cfg.data && cfg.data.datasets.some(d => (d.data||[]).some(v => v>0));
+      if (!hasData) {
+        if (chartInstances['chart-'+s.key]) { chartInstances['chart-'+s.key].destroy(); delete chartInstances['chart-'+s.key]; }
+        const wrap = document.querySelector(`#chart-${s.key}`)?.parentElement;
+        if (wrap) wrap.innerHTML = `<div class="analytics-empty">No ${s.title.toLowerCase()} data in this scope.</div>`;
+        return;
+      }
+      // ensure canvas exists (may have been replaced by empty message)
+      const wrap = document.getElementById('chart-'+s.key)?.parentElement
+                 || document.querySelector(`.analytics-box h4 select[onchange*="'${s.key}'"]`)?.closest('.analytics-box')?.querySelector('.analytics-canvas-wrap');
+      if (wrap && !document.getElementById('chart-'+s.key)) wrap.innerHTML = `<canvas id="chart-${s.key}"></canvas>`;
+      drawChart('chart-'+s.key, cfg);
+    } catch(e) { console.warn('chart '+s.key+' failed', e); }
+  });
+}
+
+function onChartTypeChange(key, type) {
+  chartChoice[key] = type;
+  renderAnalytics();
+}
+
 // ─── Master render ─────────────────────────────────────
 function renderAll() {
   renderStats();
   renderFunnel();
+  renderAnalytics();
   renderInsights();
   renderAttribution();
   renderTimeline();
@@ -1578,6 +1875,7 @@ window.savePlanActions = savePlanActions;
 window.requestNewFeedback = requestNewFeedback;
 window.sendChat = sendChat;
 window.suggestChat = suggestChat;
+window.onChartTypeChange = onChartTypeChange;
 </script>
 </body>
 </html>
