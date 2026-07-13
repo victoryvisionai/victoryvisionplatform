@@ -669,6 +669,7 @@
         <div class="section-header">
           <h2>All Targets (sortable)</h2>
           <div>
+            <button class="btn btn-sm" id="draftSelectedBtn" onclick="generateDraftsForSelected()" disabled>✉️ Draft Selected (0)</button>
             <button class="btn btn-sm btn-secondary" onclick="downloadTargetsCSV()">Download CSV</button>
           </div>
         </div>
@@ -676,6 +677,7 @@
           <table class="targets-table" id="targetsTable">
             <thead>
               <tr>
+                <th style="width:32px;"><input type="checkbox" id="selectAllTargets" onclick="toggleSelectAllTargets(this.checked)" title="Select all"></th>
                 <th onclick="sortTargets('name')">Name ↕</th>
                 <th onclick="sortTargets('company')">Company ↕</th>
                 <th onclick="sortTargets('title')">Title ↕</th>
@@ -1896,6 +1898,8 @@ async function selectDeal(dealId) {
 }
 
 async function loadDealTargets() {
+  selectedTargetIds = new Set();
+  const selAll = document.getElementById('selectAllTargets'); if (selAll) selAll.checked = false;
   const slug = dealSlug(selectedDeal.deal_name);
   const { data, error } = await supabaseClient
     .from('contacts')
@@ -2722,6 +2726,7 @@ function renderTargets() {
 
     return `
       <tr onclick="openContactModal('${esc(t.id)}')" style="cursor: pointer;">
+        <td onclick="event.stopPropagation()"><input type="checkbox" class="target-check" value="${esc(t.id)}" ${selectedTargetIds.has(t.id) ? 'checked' : ''} onclick="toggleTargetSelect('${esc(t.id)}', this.checked)"></td>
         <td><strong>${esc(t.name || '')}</strong></td>
         <td>${esc(t.company || '')}</td>
         <td>${esc(t.title || '')}</td>
@@ -2738,6 +2743,7 @@ function renderTargets() {
       </tr>
     `;
   }).join('');
+  updateDraftSelectedBtn();
 }
 
 function sortTargets(field) {
@@ -2748,6 +2754,62 @@ function sortTargets(field) {
     targetsSortDir = field === 'score' ? 'desc' : 'asc';
   }
   renderTargets();
+}
+
+// ─── Bulk draft selection ───────────────────────────────
+let selectedTargetIds = new Set();
+
+function updateDraftSelectedBtn() {
+  const btn = document.getElementById('draftSelectedBtn');
+  if (!btn) return;
+  const n = selectedTargetIds.size;
+  btn.textContent = `✉️ Draft Selected (${n})`;
+  btn.disabled = n === 0;
+}
+
+function toggleTargetSelect(id, checked) {
+  if (checked) selectedTargetIds.add(id); else selectedTargetIds.delete(id);
+  updateDraftSelectedBtn();
+  const all = document.getElementById('selectAllTargets');
+  if (all) all.checked = dealTargets.length > 0 && selectedTargetIds.size === dealTargets.length;
+}
+
+function toggleSelectAllTargets(checked) {
+  selectedTargetIds = new Set(checked ? dealTargets.map(t => t.id) : []);
+  document.querySelectorAll('.target-check').forEach(cb => { cb.checked = checked; });
+  updateDraftSelectedBtn();
+}
+
+async function generateDraftsForSelected() {
+  if (!selectedDeal || selectedTargetIds.size === 0) return;
+  const ids = [...selectedTargetIds];
+  const dealName = selectedDeal.deal_name;
+  const dealFocus = `Move this contact forward in the "${dealName}" deal funnel — orient the message toward advancing them to the next stage of this specific deal.`;
+  const btn = document.getElementById('draftSelectedBtn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = `Drafting ${ids.length}…`;
+  showStatus(`Generating ${ids.length} draft${ids.length !== 1 ? 's' : ''} via AI…`, 'info');
+  try {
+    const res = await fetch(N8N_ENDPOINTS.generateDrafts, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID,
+        contact_ids: ids,
+        deal_focus: dealFocus,
+        deal_slug: dealSlug(dealName)
+      })
+    });
+    if (!res.ok) throw new Error('Draft webhook returned ' + res.status);
+    showStatus(`${ids.length} draft${ids.length !== 1 ? 's' : ''} created. Check Messages → Drafts.`, 'success');
+    selectedTargetIds.clear();
+    const all = document.getElementById('selectAllTargets'); if (all) all.checked = false;
+    renderTargets();
+  } catch (e) {
+    showStatus('Draft generation failed: ' + e.message, 'error');
+  } finally {
+    btn.textContent = orig; updateDraftSelectedBtn();
+  }
 }
 
 async function advanceStage(contactId) {
@@ -3069,7 +3131,8 @@ function saveStageConfigs() {
 let currentContact = null;
 const N8N_ENDPOINTS = {
   enrichContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich',
-  enrollWarmOutreach: 'https://victoryvision.app.n8n.cloud/webhook/outreach/friends'
+  enrollWarmOutreach: 'https://victoryvision.app.n8n.cloud/webhook/outreach/friends',
+  generateDrafts: 'https://victoryvision.app.n8n.cloud/webhook/drafts/generate'
 };
 
 async function openContactModal(contactId) {
@@ -3483,6 +3546,9 @@ window.saveDealMeta = saveDealMeta;
 window.sortTargets = sortTargets;
 window.advanceStage = advanceStage;
 window.downloadTargetsCSV = downloadTargetsCSV;
+window.toggleTargetSelect = toggleTargetSelect;
+window.toggleSelectAllTargets = toggleSelectAllTargets;
+window.generateDraftsForSelected = generateDraftsForSelected;
 window.handleDragStart = handleDragStart;
 window.handleDragOver = handleDragOver;
 window.handleDragLeave = handleDragLeave;
