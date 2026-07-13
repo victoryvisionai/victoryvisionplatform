@@ -96,6 +96,14 @@
   .funnel-bar-chip { background:rgba(255,255,255,0.2); padding:3px 9px; border-radius:10px; }
   
   /* Stats grid */
+  .focus-now-card { border:2px solid #0A3161; background:linear-gradient(180deg,#f8fafc,#eef2ff); }
+  .focus-now-item { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; background:white;
+    border-radius:8px; margin-bottom:8px; border-left:4px solid #0A3161; }
+  .focus-now-rank { font-weight:800; color:#0A3161; font-size:18px; min-width:24px; }
+  .focus-now-body { flex:1; min-width:0; }
+  .focus-now-body .fn-title { font-weight:700; color:#1f2937; font-size:14px; }
+  .focus-now-body .fn-why { font-size:12px; color:#64748b; margin-top:2px; }
+  .focus-now-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; color:white; white-space:nowrap; }
   .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;
                 margin-bottom:20px; }
   .stat-box { background:white; padding:16px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.08);
@@ -170,7 +178,11 @@
   .action-text textarea, .action-name input { width:100%; padding:6px; border:1px solid #d1d5db;
                                                 border-radius:4px; font-family:inherit; font-size:13px; }
   .action-controls { display:flex; flex-direction:column; gap:4px; }
-  .action-controls button { padding:4px 8px; font-size:11px; }
+  .action-controls button, .action-controls a.btn { padding:4px 8px; font-size:11px; text-align:center; text-decoration:none; white-space:nowrap; }
+  .action-why { background:#eff6ff; border-left:3px solid #3b82f6; padding:6px 10px; margin-top:6px;
+                font-size:12px; color:#1e3a8a; border-radius:0 4px 4px 0; line-height:1.4; }
+  .action-helpful { background:#f8fafc; border:1px solid #e2e8f0; padding:6px 10px; margin-top:6px;
+                    font-size:12px; color:#334155; border-radius:4px; line-height:1.5; }
   .action-completion-note { background:#ecfdf5; border-left:3px solid #10b981; padding:6px 10px;
                             margin-top:6px; font-size:12px; color:#065f46; font-style:italic; border-radius:0 4px 4px 0; }
   
@@ -426,6 +438,12 @@
     </div>
   </div>
 
+  <!-- FOCUS NOW — recommendations surfaced at top -->
+  <div class="card focus-now-card" id="focusNowCard" style="display:none;">
+    <h2 style="margin-bottom:10px;">🎯 Focus Now — Your Top Priorities</h2>
+    <div id="focusNow"></div>
+  </div>
+
   <!-- Stats grid -->
   <div class="stats-grid" id="statsGrid">
     <div class="stat-box"><span class="v" id="stContacts">0</span><div class="l">Contacts</div></div>
@@ -660,7 +678,7 @@ function populateMasterTagDropdown() {
 // ─── Direct Supabase loaders (replaces n8n webhooks) ────
 async function loadAllData() {
   const tasks = await Promise.allSettled([
-    sb.from('contacts').select('id, name, email, company, tags, created, client_won_date, client_ann_est, last_emailed_date, last_opened_date, last_responded, last_called, last_clicked_date, num_emails_opened, num_links_clicked, number_emails_sent, number_call_attempts, meeting_date, next_steps, next_step_due, customer_journey, campaigns')
+    sb.from('contacts').select('id, name, email, company, tags, created, client_won_date, client_ann_est, last_emailed_date, last_opened_date, last_responded, last_called, last_clicked_date, num_emails_opened, num_links_clicked, number_emails_sent, number_call_attempts, meeting_date, next_steps, customer_journey, campaigns')
       .eq('cus_id', CUSTOMER_ID).order('created', { ascending: false }).limit(2000),
     sb.from('email').select('id, "from", "to", subject, sent_at, opened_at, replied_at, clicked_at, opens, clicks, inbound, campaign, customer_id, created_at')
       .eq('customer_id', CUSTOMER_ID).gte('sent_at', new Date(Date.now() - 365*86400000).toISOString()).limit(2000),
@@ -1285,9 +1303,62 @@ function renderPlanCard(p) {
   `;
 }
 
+// Resolve a counterparty display name across both plan formats.
+function actionCounterparty(a) {
+  if (a.contact) return a.contact;                       // v3: contact name
+  // AI format: contact_ids array or payload_hint.to
+  const ph = a.payload_hint || {};
+  if (ph.to) return ph.to;
+  if (Array.isArray(a.contact_ids) && a.contact_ids.length) {
+    // try to resolve UUID → name from loaded contacts
+    const c = allContacts.find(x => x.id === a.contact_ids[0]);
+    return c ? (c.name || c.email) : a.contact_ids[0];
+  }
+  // v3 stores a UUID in contact_id — resolve to a name if we can
+  if (a.contact_id) {
+    const c = allContacts.find(x => x.id === a.contact_id);
+    if (c) return c.name || c.email;
+  }
+  return null;
+}
+
+// Human-readable "what this step will do" from an AI payload_hint.
+function payloadSummary(a) {
+  const ph = a.payload_hint || {};
+  const bits = [];
+  if (ph.subject) bits.push('✉️ <b>Subject:</b> ' + esc(ph.subject));
+  if (ph.campaign_name) bits.push('📣 <b>Campaign:</b> ' + esc(ph.campaign_name));
+  if (ph.num_leads) bits.push('🔍 <b>Leads:</b> ' + esc(ph.num_leads) + (ph.geography ? ' · ' + esc(ph.geography) : ''));
+  if (ph.title && !ph.subject) bits.push('📄 <b>Title:</b> ' + esc(ph.title));
+  if (ph.daily_budget) bits.push('💰 <b>Budget:</b> $' + esc(ph.daily_budget) + '/day');
+  if (ph.body) bits.push('<div style="color:#475569;margin-top:3px;">' + esc(String(ph.body).slice(0, 160)) + (String(ph.body).length > 160 ? '…' : '') + '</div>');
+  if (ph.message && !ph.body) bits.push('<div style="color:#475569;margin-top:3px;">' + esc(String(ph.message).slice(0, 160)) + '…</div>');
+  return bits.length ? bits.join('<br>') : '';
+}
+
+// Direct-execute affordance: Gmail draft link if present, else a Run button
+// that fires the action's own webhook with its payload.
+function actionExecuteControl(planId, a, i) {
+  if (a.gmail_draft_id) {
+    const url = 'https://mail.google.com/mail/u/0/#drafts/' + encodeURIComponent(a.gmail_draft_id);
+    return `<a class="btn btn-primary btn-sm" href="${url}" target="_blank" rel="noopener" title="Open Gmail draft">✉️ Open Draft</a>`;
+  }
+  if (a.webhook) {
+    return `<button class="btn btn-primary btn-sm" onclick="runAction(${planId}, ${i})" title="Run this action now">▶️ Run</button>`;
+  }
+  return '';
+}
+
 function renderAction(planId, a, i) {
   const completed = a.status === 'completed';
   const impactCls = 'impact-' + (a.impact || 'medium');
+  const name = a.action_id || (a.deal ? a.deal : 'Action');
+  const counterparty = actionCounterparty(a);
+  const rationale = a.why || a.blocker || '';         // AI uses why, v3 uses blocker
+  const value = a.client_ann_est || a.est_value;
+  const stageFlow = a.stage ? esc(a.stage) + (a.next_stage ? ' → ' + esc(a.next_stage) : '') : '';
+  const helpful = payloadSummary(a);
+  const execCtl = actionExecuteControl(planId, a, i);
   return `
     <div class="action ${completed ? 'action-completed' : ''}" data-plan="${planId}" data-i="${i}">
       <div class="action-priority">
@@ -1295,23 +1366,52 @@ function renderAction(planId, a, i) {
         <div class="action-impact ${impactCls}">${a.impact || 'med'}</div>
       </div>
       <div class="action-body">
-        <div class="action-name" id="aname-${planId}-${i}">${esc(a.action_id || 'Action')}</div>
-        <div class="action-contact">📧 ${esc(a.contact_id || '—')}${a.deal ? ' · 🏷️ ' + esc(a.deal) : ''}</div>
+        <div class="action-name" id="aname-${planId}-${i}">${esc(name)}</div>
+        <div class="action-contact">
+          👤 <b>${counterparty ? esc(counterparty) : 'No counterparty set'}</b>${a.deal ? ' · 🏷️ ' + esc(a.deal) : ''}
+        </div>
         <div class="action-meta">
           ${a.due ? `<span>⏰ ${esc(a.due)}</span>` : ''}
+          ${stageFlow ? `<span>📊 ${stageFlow}</span>` : ''}
+          ${value ? `<span>💵 ${fmtMoney(parseFloat(value) || 0)}/yr</span>` : ''}
+          ${a.credits ? `<span>🪙 ${esc(a.credits)} cr</span>` : ''}
           ${a.priority ? `<span>P${a.priority}</span>` : ''}
-          ${a.est_value ? `<span>💵 ${esc(a.est_value)}</span>` : ''}
         </div>
         <div class="action-text" id="atext-${planId}-${i}">${esc(a.action || '')}</div>
+        ${rationale ? `<div class="action-why">💡 <b>Why:</b> ${esc(rationale)}</div>` : ''}
+        ${helpful ? `<div class="action-helpful">${helpful}</div>` : ''}
         ${a.completion_note ? `<div class="action-completion-note">✓ ${esc(a.completion_note)}</div>` : ''}
       </div>
       <div class="action-controls">
+        ${execCtl}
         ${!completed ? `<button class="btn btn-success btn-sm" onclick="markActionComplete(${planId}, ${i})">✓ Done</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="editAction(${planId}, ${i})">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="removeActionLocal(${planId}, ${i})">✕</button>
       </div>
     </div>
   `;
+}
+
+// Fire a single action's webhook with its payload (per-action execute).
+async function runAction(planId, i) {
+  const plan = allPlans.find(p => p.id === planId);
+  if (!plan) return;
+  const a = safeJSON(plan.plan)[i];
+  if (!a || !a.webhook) { toast('No webhook on this action', 'error'); return; }
+  if (!confirm(`Run this action now?\n\n${a.action || a.action_id}`)) return;
+  const ph = a.payload_hint || {};
+  const body = Object.assign({ customer_id: CUSTOMER_ID, plan_id: planId, action_id: a.action_id || null, contact_ids: a.contact_ids || [] }, ph);
+  try {
+    const path = a.webhook.startsWith('/webhook') ? a.webhook.replace('/webhook', '') : a.webhook;
+    const res = await fetch(N8N + path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('Action fired', 'success');
+  } catch (e) {
+    toast('Run failed: ' + e.message, 'error');
+  }
 }
 
 function togglePlan(id) {
@@ -1809,8 +1909,45 @@ function onChartTypeChange(key, type) {
   renderAnalytics();
 }
 
+// ─── FOCUS NOW: surface top recommendations at the top of the page ──
+function renderFocusNow() {
+  const card = document.getElementById('focusNowCard');
+  const el = document.getElementById('focusNow');
+  if (!card || !el) return;
+  const impactColor = i => ({ critical:'#dc2626', high:'#ef4444', medium:'#f59e0b', low:'#22c55e' }[i] || '#64748b');
+  let items = [];
+
+  // Prefer AI feedback's top_5_actions (freshest strategic guidance)
+  if (userAifeedback && Array.isArray(userAifeedback.top_5_actions) && userAifeedback.top_5_actions.length) {
+    items = userAifeedback.top_5_actions.slice(0, 5).map(a => ({
+      title: a.action || '—', why: a.why || '', impact: a.impact || 'medium'
+    }));
+  } else {
+    // Fallback: highest-score open actions across active plans
+    const active = allPlans.filter(p => p.status === 'active');
+    const open = active.flatMap(p => safeJSON(p.plan)
+      .filter(a => a.status !== 'completed')
+      .map(a => ({ title: a.action || a.action_id || '—', why: a.why || a.blocker || '', impact: a.impact || 'medium', score: a.score || 0 })));
+    items = open.sort((a, b) => b.score - a.score).slice(0, 5);
+  }
+
+  if (!items.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  el.innerHTML = items.map((a, i) => `
+    <div class="focus-now-item">
+      <div class="focus-now-rank">${i + 1}</div>
+      <div class="focus-now-body">
+        <div class="fn-title">${esc(a.title)}</div>
+        ${a.why ? `<div class="fn-why">${esc(a.why)}</div>` : ''}
+      </div>
+      <span class="focus-now-badge" style="background:${impactColor(a.impact)};">${esc((a.impact || 'med').toUpperCase())}</span>
+    </div>
+  `).join('');
+}
+
 // ─── Master render ─────────────────────────────────────
 function renderAll() {
+  renderFocusNow();
   renderStats();
   renderFunnel();
   renderAnalytics();
@@ -1872,6 +2009,7 @@ window.editAction = editAction;
 window.removeActionLocal = removeActionLocal;
 window.addAction = addAction;
 window.savePlanActions = savePlanActions;
+window.runAction = runAction;
 window.requestNewFeedback = requestNewFeedback;
 window.sendChat = sendChat;
 window.suggestChat = suggestChat;
