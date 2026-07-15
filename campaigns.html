@@ -333,15 +333,15 @@
       background-color: rgba(0,0,0,0.5);
     }
     .modal-content {
-      background-color: #fefefe;
+      background-color: #ffffff;
       margin: 3% auto;
       padding: 0;
-      border-radius: 10px;
-      width: 92%;
-      max-width: 920px;
+      border-radius: 12px;
+      width: 94%;
+      max-width: 960px;
       max-height: 92vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.35);
     }
     .modal-header {
       background: linear-gradient(135deg, #0A3161, #1a4c80);
@@ -518,56 +518,78 @@
   .step-text {
     flex: 1;
   }
-/* ── Campaigns table ── */
-.campaigns-table-wrap { overflow-x: auto; }
-.campaigns-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.campaigns-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
-.campaigns-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-.campaigns-table tr:hover td { background: #fafbff; }
-.campaigns-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.c-name { font-weight: 600; color: #111827; }
-.c-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.c-created { color: #6b7280; white-space: nowrap; }
-.c-actions { white-space: nowrap; }
-.c-actions .btn-small { margin-right: 4px; }
-.type-pill { display: inline-block; padding: 2px 9px; border-radius: 10px; background: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: capitalize; }
-.status-pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: capitalize; background: #f3f4f6; color: #374151; }
-.status-pill.s-launched, .status-pill.s-active, .status-pill.s-live { background: #dcfce7; color: #166534; }
-.status-pill.s-draft, .status-pill.s-paused { background: #fef9c3; color: #854d0e; }
-.status-pill.s-archived, .status-pill.s-closed { background: #f3f4f6; color: #6b7280; }
-.assets { white-space: nowrap; }
-.asset-badge { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-right: 3px; }
-.asset-badge.on { background: #dbeafe; color: #1d4ed8; }
-.asset-badge.off { background: #f3f4f6; color: #cbd5e1; }
-/* ── Edit form ── */
-.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
-.edit-grid .f { display: flex; flex-direction: column; gap: 6px; }
-.edit-grid .f > span { font-size: 12px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
-.edit-grid .f.f-wide { grid-column: 1 / -1; }
-.edit-grid .f input, .edit-grid .f textarea {
-  padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
-  font-size: 14px; color: #111827; font-weight: 400; font-family: inherit;
-  width: 100%; box-sizing: border-box; background: #fff; line-height: 1.4;
+/* ═══ Campaigns — clean scheme ═══ */
+:root {
+  --ink: #1e293b; --ink-soft: #64748b; --brand: #4f46e5; --brand-dk: #4338ca;
+  --line: #e2e8f0; --bg-soft: #f8fafc; --val: #0f172a; --lbl: #6366f1;
 }
-.edit-grid .f textarea { resize: vertical; min-height: 60px; }
-.edit-grid .f input:focus, .edit-grid .f textarea:focus { outline: none; border-color: #0A3161; box-shadow: 0 0 0 3px rgba(10,49,97,.12); }
-.edit-actions { display: flex; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
-.edit-actions .btn-small { padding: 10px 18px; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; }
-.edit-actions .btn-primary { background: #0A3161; color: #fff; }
-.edit-actions .btn-primary:hover { background: #1a4c80; }
-.edit-actions .btn-ghost { background: #f3f4f6; color: #374151; }
-.edit-actions .btn-ghost:hover { background: #e5e7eb; }
-/* ── Analytics panel ── */
-.an-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.an-box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; background: #fff; }
-.an-box.wide { grid-column: 1 / -1; }
-.an-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #0A3161; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #eef2ff; }
-.an-kv { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; font-size: 14px; color: #4b5563; }
-.an-kv b { color: #0A3161; font-size: 16px; font-variant-numeric: tabular-nums; }
-.an-note { margin-top: 12px; font-size: 13px; color: #6b7280; line-height: 1.5; }
-.an-empty { font-size: 14px; color: #9ca3af; padding: 8px 0; }
-.an-loading { padding: 40px; text-align: center; color: #9ca3af; font-size: 15px; }
-@media (max-width: 760px) { .an-wrap, .edit-grid { grid-template-columns: 1fr; } }
+/* View toggle */
+.view-toggle { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 14px; }
+.vt-btn { padding: 7px 14px; border: 1px solid var(--line); background: #fff; color: var(--ink-soft); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.vt-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+/* Table */
+.table-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.ctable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ctable thead th { text-align: left; padding: 13px 14px; background: var(--bg-soft); color: var(--ink-soft); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--line); }
+.ctable td { padding: 13px 14px; border-bottom: 1px solid #f1f5f9; color: var(--ink); vertical-align: middle; }
+.ctable tbody tr:last-child td { border-bottom: none; }
+.ctable tbody tr:hover td { background: #fafbff; }
+.ctable .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--val); }
+.c-name { font-weight: 700; color: var(--val); }
+.c-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-created { color: var(--ink-soft); white-space: nowrap; }
+.c-actions { white-space: nowrap; }
+.type-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; background: #eef2ff; color: var(--brand-dk); font-size: 11px; font-weight: 700; text-transform: capitalize; }
+.status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: capitalize; background: #f1f5f9; color: #475569; }
+.status-pill.s-launched, .status-pill.s-active, .status-pill.s-live { background: #dcfce7; color: #15803d; }
+.status-pill.s-pre-launch, .status-pill.s-pre-marketing, .status-pill.s-draft, .status-pill.s-paused { background: #fef3c7; color: #b45309; }
+.status-pill.s-archived, .status-pill.s-closed { background: #f1f5f9; color: #94a3b8; }
+.asset { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+.asset.on { background: #dbeafe; color: #1d4ed8; } .asset.off { background: #f1f5f9; color: #cbd5e1; }
+/* Row action buttons */
+.ctable .btn-small, .c-card .btn-small { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; border: none; cursor: pointer; margin-right: 5px; }
+.btn-view { background: var(--brand); color: #fff; } .btn-view:hover { background: var(--brand-dk); }
+.btn-analytics { background: #e0e7ff; color: var(--brand-dk); } .btn-analytics:hover { background: #c7d2fe; }
+.btn-del { background: #fee2e2; color: #b91c1c; } .btn-del:hover { background: #fecaca; }
+/* Tiles */
+.c-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.c-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow .15s, transform .15s; }
+.c-card:hover { box-shadow: 0 12px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
+.c-card-img { height: 130px; background-size: cover; background-position: center; background-color: #eef2ff; }
+.c-card-img.noimg { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.c-card-body { padding: 15px; flex: 1; }
+.c-card-head { display: flex; gap: 8px; margin-bottom: 10px; }
+.c-card-assets { margin-top: 12px; }
+.c-card-meta { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+.c-card-actions { display: flex; padding: 0 15px 15px; }
+/* Edit form — distinct label vs value colors */
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; }
+.edit-grid .f { display: flex; flex-direction: column; gap: 7px; }
+.edit-grid .f.f-wide { grid-column: 1 / -1; }
+.f-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--lbl); }
+.edit-grid .f input, .edit-grid .f textarea {
+  padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 9px;
+  font-size: 15px; color: var(--val); font-weight: 500; font-family: inherit;
+  width: 100%; box-sizing: border-box; background: #fff; line-height: 1.45;
+}
+.edit-grid .f textarea { resize: vertical; min-height: 62px; }
+.edit-grid .f input:focus, .edit-grid .f textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79,70,229,.14); }
+/* Modal action buttons */
+.modal-actions { display: flex; gap: 12px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+.mbtn { padding: 12px 22px; font-size: 14px; font-weight: 700; border-radius: 9px; border: none; cursor: pointer; }
+.mbtn-primary { background: var(--brand); color: #fff; } .mbtn-primary:hover { background: var(--brand-dk); }
+.mbtn-secondary { background: #e0e7ff; color: var(--brand-dk); } .mbtn-secondary:hover { background: #c7d2fe; }
+.mbtn-ghost { background: #f1f5f9; color: #475569; } .mbtn-ghost:hover { background: #e2e8f0; }
+/* Analytics — distinct label vs value */
+.an-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.an-box { border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: #fff; }
+.an-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--brand); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #eef2ff; }
+.an-kv { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; }
+.an-k { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+.an-v { font-size: 17px; color: var(--val); font-weight: 800; font-variant-numeric: tabular-nums; }
+.an-empty { font-size: 14px; color: #94a3b8; padding: 6px 0; }
+.an-loading { padding: 44px; text-align: center; color: #94a3b8; font-size: 15px; }
+@media (max-width: 780px) { .an-wrap, .edit-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -867,7 +889,6 @@
 
   // Simple state management
   let allCampaigns = [];
-  let editingCampaignId = null;
   let filteredCampaigns = [];
 
   // DOM elements
@@ -1164,20 +1185,39 @@
   }
 
   // Render campaigns grid
+  // ── View mode (tiles or rows) ──
+  let campaignView = localStorage.getItem('vv_campaign_view') || 'rows';
+  let editingCampaignId = null;
+
   function campaignById(id) {
     return allCampaigns.find(c => String(c.id) === String(id)) || null;
+  }
+  function setCampaignView(mode) {
+    campaignView = mode;
+    localStorage.setItem('vv_campaign_view', mode);
+    renderCampaignsGrid();
   }
 
   function renderCampaignsGrid() {
     if (filteredCampaigns.length === 0) {
-      if (allCampaigns.length === 0) {
-        showEmptyState();
-      } else {
-        showNoResultsState();
-      }
+      if (allCampaigns.length === 0) { showEmptyState(); } else { showNoResultsState(); }
       return;
     }
+    const toggle = `
+      <div class="view-toggle">
+        <button class="vt-btn ${campaignView==='rows'?'active':''}" onclick="setCampaignView('rows')">▤ Rows</button>
+        <button class="vt-btn ${campaignView==='tiles'?'active':''}" onclick="setCampaignView('tiles')">▦ Tiles</button>
+      </div>`;
+    campaignsContainer.innerHTML = toggle + (campaignView === 'tiles' ? renderTiles() : renderRows());
+  }
 
+  function assetBadges(c) {
+    const b = (on,label) => `<span class="asset ${on?'on':'off'}">${label}</span>`;
+    return b(c.video_URL,'Vid') + b(c.image_URL,'Img') + b(c.campaign_URL,'Page');
+  }
+  function statusClass(s){ return 's-' + String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+
+  function renderRows() {
     const rows = filteredCampaigns.map(c => {
       const id = sanitizeInput(c.id);
       const name = sanitizeInput(c.name) || 'Untitled';
@@ -1185,218 +1225,158 @@
       const type = sanitizeInput(c.type) || '—';
       const status = sanitizeInput(c.status) || '—';
       const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
-      const rev = (c.revenue !== null && c.revenue !== undefined && c.revenue !== '') ? '$' + sanitizeInput(c.revenue) : '—';
-      const ctr = (c.CTR !== null && c.CTR !== undefined && c.CTR !== '') ? (parseFloat(c.CTR).toFixed(1) + '%') : '—';
-      const hasVid = c.video_URL ? 'on' : 'off';
-      const hasImg = c.image_URL ? 'on' : 'off';
-      const hasPage = c.campaign_URL ? 'on' : 'off';
+      const rev = (c.revenue!==null&&c.revenue!==undefined&&c.revenue!=='') ? '$'+sanitizeInput(c.revenue) : '—';
+      const ctr = (c.CTR!==null&&c.CTR!==undefined&&c.CTR!=='') ? parseFloat(c.CTR).toFixed(1)+'%' : '—';
       return `
         <tr>
-          <td>
-            <div class="c-name">${name}</div>
-            ${tagline ? `<div class="c-sub">${tagline}</div>` : ''}
-          </td>
+          <td><div class="c-name">${name}</div>${tagline?`<div class="c-sub">${tagline}</div>`:''}</td>
           <td><span class="type-pill">${type}</span></td>
-          <td><span class="status-pill s-${status.toLowerCase().replace(/[^a-z0-9]+/g,'-')}">${status}</span></td>
-          <td class="assets">
-            <span class="asset-badge ${hasVid}" title="Video">Vid</span>
-            <span class="asset-badge ${hasImg}" title="Image">Img</span>
-            <span class="asset-badge ${hasPage}" title="Page">Page</span>
-          </td>
+          <td><span class="status-pill ${statusClass(status)}">${status}</span></td>
+          <td class="assets">${assetBadges(c)}</td>
           <td class="num">${rev}</td>
           <td class="num">${ctr}</td>
           <td class="c-created">${created}</td>
           <td class="c-actions">
-            <button class="btn-small" onclick="openCampaignModal(campaignById('${id}'))">View/Edit</button>
-            <button class="btn-small" onclick="openAnalytics('${id}')">Analytics</button>
-            <button class="btn-small danger" onclick="deleteCampaign('${id}')">Delete</button>
+            <button class="btn-small btn-view" onclick="openCampaignModal(campaignById('${id}'))">View / Edit</button>
+            <button class="btn-small btn-analytics" onclick="openAnalytics('${id}')">Analytics</button>
+            <button class="btn-small btn-del" onclick="deleteCampaign('${id}')">Delete</button>
           </td>
         </tr>`;
     }).join('');
-
-    campaignsContainer.innerHTML = `
-      <div class="campaigns-table-wrap">
-        <table class="campaigns-table">
-          <thead>
-            <tr>
-              <th>Campaign</th><th>Type</th><th>Status</th><th>Assets</th>
-              <th class="num">Revenue</th><th class="num">CTR</th><th>Created</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
+    return `<div class="table-wrap"><table class="ctable">
+      <thead><tr><th>Campaign</th><th>Type</th><th>Status</th><th>Assets</th><th class="num">Revenue</th><th class="num">CTR</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
   }
 
-  // Open campaign modal (editable form) with sanitized content
+  function renderTiles() {
+    const cards = filteredCampaigns.map(c => {
+      const id = sanitizeInput(c.id);
+      const name = sanitizeInput(c.name) || 'Untitled';
+      const tagline = sanitizeInput(c.tagline) || '';
+      const status = sanitizeInput(c.status) || '—';
+      const type = sanitizeInput(c.type) || '';
+      const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+      return `
+        <div class="c-card">
+          ${c.image_URL?`<div class="c-card-img" style="background-image:url('${sanitizeInput(c.image_URL)}')"></div>`:`<div class="c-card-img noimg">${assetBadges(c)}</div>`}
+          <div class="c-card-body">
+            <div class="c-card-head">
+              <span class="type-pill">${type||'—'}</span>
+              <span class="status-pill ${statusClass(status)}">${status}</span>
+            </div>
+            <div class="c-name">${name}</div>
+            ${tagline?`<div class="c-sub">${tagline}</div>`:''}
+            <div class="c-card-assets">${assetBadges(c)}</div>
+            <div class="c-card-meta">${created}</div>
+          </div>
+          <div class="c-card-actions">
+            <button class="btn-small btn-view" onclick="openCampaignModal(campaignById('${id}'))">View / Edit</button>
+            <button class="btn-small btn-analytics" onclick="openAnalytics('${id}')">Analytics</button>
+            <button class="btn-small btn-del" onclick="deleteCampaign('${id}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `<div class="c-tiles">${cards}</div>`;
+  }
+
+  // ── Edit modal ──
   function openCampaignModal(campaign) {
     if (!campaign) { showStatus('Campaign not found', true); return; }
-    document.getElementById('modalTitle').textContent = sanitizeInput(campaign.name) || 'Campaign Details';
-    
-    const modalBody = document.getElementById('modalBody');
     editingCampaignId = campaign.id;
-
-    const val = (v) => (v === null || v === undefined) ? '' : String(v);
-    const esc = (v) => sanitizeInput(val(v));
-
-    modalBody.innerHTML = `
-      <div class="edit-grid">
-        <label class="f"><span>Name</span><input id="e_name" type="text" value="${esc(campaign.name)}"></label>
-        <label class="f"><span>Tagline</span><input id="e_tagline" type="text" value="${esc(campaign.tagline)}"></label>
-        <label class="f"><span>Type</span><input id="e_type" type="text" value="${esc(campaign.type)}"></label>
-        <label class="f"><span>Status</span><input id="e_status" type="text" value="${esc(campaign.status)}"></label>
-        <label class="f f-wide"><span>Goal Description</span><textarea id="e_goal_description" rows="2">${esc(campaign.goal_description)}</textarea></label>
-        <label class="f f-wide"><span>Main Prompt</span><textarea id="e_main_prompt" rows="3">${esc(campaign.main_prompt)}</textarea></label>
-        <label class="f f-wide"><span>ICP</span><textarea id="e_icp" rows="2">${esc(campaign.icp)}</textarea></label>
-        <label class="f f-wide"><span>Keywords</span><input id="e_keywords" type="text" value="${esc(campaign.keywords)}"></label>
-        <label class="f"><span>Campaign URL</span><input id="e_campaign_URL" type="text" value="${esc(campaign.campaign_URL)}"></label>
-        <label class="f"><span>Image URL</span><input id="e_image_URL" type="text" value="${esc(campaign.image_URL)}"></label>
-        <label class="f"><span>Video URL</span><input id="e_video_URL" type="text" value="${esc(campaign.video_URL)}"></label>
-        <label class="f"><span>Campaign Target</span><input id="e_campaign_target" type="text" value="${esc(campaign.campaign_target)}"></label>
-        <label class="f f-wide"><span>Image Prompt</span><textarea id="e_image_prompt" rows="2">${esc(campaign.image_prompt)}</textarea></label>
-        <label class="f f-wide"><span>Video Prompt</span><textarea id="e_video_prompt" rows="2">${esc(campaign.video_prompt)}</textarea></label>
-        <label class="f f-wide"><span>Page Prompt</span><textarea id="e_page_prompt" rows="2">${esc(campaign.page_prompt)}</textarea></label>
-        <label class="f f-wide"><span>LinkedIn Prompt</span><textarea id="e_Linkedin_prompt" rows="2">${esc(campaign.Linkedin_prompt)}</textarea></label>
-      </div>
-      <div class="edit-actions">
-        <button class="btn-small btn-primary" onclick="saveCampaign()">Save Changes</button>
-        <button class="btn-small btn-ghost" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
-        <button class="btn-small btn-ghost" onclick="closeModal()">Cancel</button>
-      </div>
-    `;
+    document.getElementById('modalTitle').textContent = (sanitizeInput(campaign.name)||'Campaign') + ' — Edit';
+    const esc = (v) => sanitizeInput(v===null||v===undefined?'':String(v));
+    const fields = [
+      ['name','Name','input'],['tagline','Tagline','input'],['type','Type','input'],['status','Status','input'],
+      ['goal_description','Goal Description','area'],['main_prompt','Main Prompt','area'],['icp','ICP','area'],
+      ['keywords','Keywords','input'],['campaign_URL','Campaign URL','input'],['image_URL','Image URL','input'],
+      ['video_URL','Video URL','input'],['campaign_target','Campaign Target','input'],
+      ['image_prompt','Image Prompt','area'],['video_prompt','Video Prompt','area'],
+      ['page_prompt','Page Prompt','area'],['Linkedin_prompt','LinkedIn Prompt','area']
+    ];
+    const wide = new Set(['goal_description','main_prompt','icp','keywords','image_prompt','video_prompt','page_prompt','Linkedin_prompt']);
+    const rows = fields.map(([k,label,kind]) => {
+      const w = wide.has(k) ? ' f-wide' : '';
+      const ctrl = kind==='area'
+        ? `<textarea id="e_${k}" rows="3">${esc(campaign[k])}</textarea>`
+        : `<input id="e_${k}" type="text" value="${esc(campaign[k])}">`;
+      return `<label class="f${w}"><span class="f-label">${label}</span>${ctrl}</label>`;
+    }).join('');
+    document.getElementById('modalBody').innerHTML = `
+      <div class="edit-grid">${rows}</div>
+      <div class="modal-actions">
+        <button class="mbtn mbtn-primary" onclick="saveCampaign()">Save Changes</button>
+        <button class="mbtn mbtn-secondary" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
+        <button class="mbtn mbtn-ghost" onclick="closeModal()">Cancel</button>
+      </div>`;
     campaignModal.style.display = 'block';
   }
 
-function closeModal() {
-  if (campaignModal) campaignModal.style.display = 'none';
-  if (researchProgressModal) researchProgressModal.style.display = 'none';
-  const rd = document.getElementById('researchDashboard');
-  if (rd) rd.style.display = 'none';
-}
-  // Edit campaign — opens the editable modal
-  function editCampaign(campaignId) {
-    const c = campaignById(campaignId);
-    if (!c) { showStatus('Campaign not found', true); return; }
-    openCampaignModal(c);
-  }
-
-  // Save edited campaign via /campaigns/update webhook
   async function saveCampaign() {
     if (!editingCampaignId) { showStatus('No campaign selected', true); return; }
-    const fields = ['name','tagline','type','status','goal_description','main_prompt','icp','keywords','campaign_URL','image_URL','video_URL','campaign_target','image_prompt','video_prompt','page_prompt','Linkedin_prompt'];
+    const keys = ['name','tagline','type','status','goal_description','main_prompt','icp','keywords','campaign_URL','image_URL','video_URL','campaign_target','image_prompt','video_prompt','page_prompt','Linkedin_prompt'];
     const payload = { campaign_id: editingCampaignId, customer_id: CUSTOMER_ID };
-    fields.forEach(f => {
-      const el = document.getElementById('e_' + f);
-      if (el) payload[f] = el.value;
-    });
+    keys.forEach(k => { const el = document.getElementById('e_'+k); if (el) payload[k] = el.value; });
     try {
       showStatus('Saving…');
       const res = await apiCall(ENDPOINTS.UPDATE_CAMPAIGN, payload);
       if (res && res.success !== false) {
-        showStatus('Campaign saved');
-        // update local copy
-        const idx = allCampaigns.findIndex(c => String(c.id) === String(editingCampaignId));
-        if (idx >= 0) allCampaigns[idx] = Object.assign({}, allCampaigns[idx], res.campaign || payload);
-        closeModal();
-        applyFilters();
-      } else {
-        showStatus('Save failed', true);
-      }
-    } catch (e) {
-      showStatus('Save error: ' + e.message, true);
-    }
+        const idx = allCampaigns.findIndex(c => String(c.id)===String(editingCampaignId));
+        if (idx>=0) allCampaigns[idx] = Object.assign({}, allCampaigns[idx], res.campaign||payload);
+        showStatus('Campaign saved'); closeModal(); applyFilters();
+      } else { showStatus('Save failed', true); }
+    } catch(e) { showStatus('Save error: '+e.message, true); }
   }
 
-  // Analytics panel — live rollup from child tables (emails, victories, pages, ads, social)
+  // ── Analytics modal ──
   async function openAnalytics(campaignId) {
     const c = campaignById(campaignId);
     if (!c) { showStatus('Campaign not found', true); return; }
-    document.getElementById('modalTitle').textContent = 'Analytics — ' + (sanitizeInput(c.name) || 'Campaign');
-    const modalBody = document.getElementById('modalBody');
-    modalBody.innerHTML = '<div class="an-loading">Loading performance…</div>';
+    document.getElementById('modalTitle').textContent = 'Analytics — ' + (sanitizeInput(c.name)||'Campaign');
+    const mb = document.getElementById('modalBody');
+    mb.innerHTML = '<div class="an-loading">Loading performance…</div>';
     campaignModal.style.display = 'block';
-
-    const cid = c.id;
-    const cname = c.name;
+    const esc = (v)=>sanitizeInput(v===null||v===undefined?'':String(v));
     try {
       const [pagesR, adsR, emailR, socialR, vicR] = await Promise.all([
-        supabaseClient.from('pages').select('name,views,conversions,CTR,revenue,experiment_wins,ab_variant,slug,URL').eq('campaign_id', cid),
-        supabaseClient.from('ads').select('title,platform,impressions,clicks,conversions,ctr,spend,meetings_booked,new_customers,conversion_revenue,ab_variant').eq('campaign_id', cid),
-        supabaseClient.from('email').select('subject,opens,clicks,replied_at,opened_at,clicked_at').eq('customer_id', CUSTOMER_ID).eq('campaign', cname),
-        supabaseClient.from('social').select('platform,title,impressions,engagements,clicks,shares,revenue,URL').eq('customer_id', CUSTOMER_ID).eq('campaign', cname),
-        supabaseClient.from('victories').select('company_won,estimated_annual_revenue,created_at,contact_converted').eq('customer_id', CUSTOMER_ID)
+        supabaseClient.from('pages').select('name,views,conversions,CTR,revenue,experiment_wins,ab_variant,slug').eq('campaign_id', c.id),
+        supabaseClient.from('ads').select('impressions,clicks,conversions,spend,meetings_booked,new_customers,conversion_revenue').eq('campaign_id', c.id),
+        supabaseClient.from('email').select('subject,opens,clicks,replied_at,opened_at,clicked_at').eq('customer_id', CUSTOMER_ID).eq('campaign', c.name),
+        supabaseClient.from('social').select('impressions,engagements,clicks,shares').eq('customer_id', CUSTOMER_ID).eq('campaign', c.name),
+        supabaseClient.from('victories').select('company_won,estimated_annual_revenue').eq('customer_id', CUSTOMER_ID)
       ]);
-      const pages = pagesR.data || [], ads = adsR.data || [], emails = emailR.data || [], social = socialR.data || [], vics = vicR.data || [];
-
-      // Email rollup
-      const eSent = emails.length;
-      const eOpen = emails.filter(e => e.opened_at || (e.opens||0) > 0).length;
-      const eClick = emails.filter(e => e.clicked_at || (e.clicks||0) > 0).length;
-      const eReply = emails.filter(e => e.replied_at).length;
-      const pct = (n,d) => d ? Math.round(n*100/d) + '%' : '—';
-
-      // Page rollup
-      const pViews = pages.reduce((s,p)=>s+(p.views||0),0);
-      const pConv = pages.reduce((s,p)=>s+(p.conversions||0),0);
-      const pRev = pages.reduce((s,p)=>s+(parseFloat(p.revenue)||0),0);
-
-      // Ad funnel rollup
-      const aImp = ads.reduce((s,a)=>s+(a.impressions||0),0);
-      const aClk = ads.reduce((s,a)=>s+(a.clicks||0),0);
-      const aConv = ads.reduce((s,a)=>s+(a.conversions||0),0);
-      const aMtg = ads.reduce((s,a)=>s+(a.meetings_booked||0),0);
-      const aCust = ads.reduce((s,a)=>s+(a.new_customers||0),0);
-      const aSpend = ads.reduce((s,a)=>s+(parseFloat(a.spend)||0),0);
-      const aRev = ads.reduce((s,a)=>s+(parseFloat(a.conversion_revenue)||0),0);
-
-      // Social rollup
-      const sImp = social.reduce((s,x)=>s+(x.impressions||0),0);
-      const sEng = social.reduce((s,x)=>s+(x.engagements||0),0);
-      const sClk = social.reduce((s,x)=>s+(x.clicks||0),0);
-
-      const esc = (v)=>sanitizeInput(v===null||v===undefined?'':String(v));
-      const box = (label, body) => `<div class="an-box"><div class="an-h">${label}</div>${body}</div>`;
-      const kv = (k,v) => `<div class="an-kv"><span>${k}</span><b>${v}</b></div>`;
-
-      // Winning page (experiment_wins or highest conversions)
-      const winPage = pages.slice().sort((a,b)=>(b.experiment_wins||0)-(a.experiment_wins||0)||(b.conversions||0)-(a.conversions||0))[0];
-      // Top email by clicks then opens
-      const topEmail = emails.slice().sort((a,b)=>((b.clicks||0)-(a.clicks||0))||((b.opens||0)-(a.opens||0)))[0];
-
-      modalBody.innerHTML = `
+      const pages=pagesR.data||[], ads=adsR.data||[], emails=emailR.data||[], social=socialR.data||[], vics=vicR.data||[];
+      const pct=(n,d)=>d?Math.round(n*100/d)+'%':'—';
+      const sum=(a,k)=>a.reduce((s,x)=>s+(parseFloat(x[k])||0),0);
+      const eOpen=emails.filter(e=>e.opened_at||(e.opens||0)>0).length;
+      const eClick=emails.filter(e=>e.clicked_at||(e.clicks||0)>0).length;
+      const eReply=emails.filter(e=>e.replied_at).length;
+      const aSpend=sum(ads,'spend'), aRev=sum(ads,'conversion_revenue');
+      const kv=(k,v)=>`<div class="an-kv"><span class="an-k">${k}</span><span class="an-v">${v}</span></div>`;
+      const box=(t,inner)=>`<div class="an-box"><div class="an-h">${t}</div>${inner}</div>`;
+      const empty=m=>`<div class="an-empty">${m}</div>`;
+      mb.innerHTML = `
         <div class="an-wrap">
-          ${box('Email', eSent ? (
-            kv('Sent', eSent) + kv('Open rate', pct(eOpen,eSent)) + kv('Click rate', pct(eClick,eSent)) + kv('Reply rate', pct(eReply,eSent)) +
-            (topEmail ? `<div class="an-note">Top: "${esc(topEmail.subject)}"</div>` : '')
-          ) : '<div class="an-empty">No campaign emails yet.</div>')}
-
-          ${box('Landing Pages', pages.length ? (
-            kv('Pages', pages.length) + kv('Views', pViews) + kv('Conversions', pConv) + kv('Conv. rate', pct(pConv,pViews)) + kv('Revenue', '$'+Math.round(pRev)) +
-            (winPage ? `<div class="an-note">Winning: ${esc(winPage.name||winPage.slug||'variant '+(winPage.ab_variant||''))} ${winPage.experiment_wins?('('+winPage.experiment_wins+' wins)'):''}</div>` : '')
-          ) : '<div class="an-empty">No pages linked. Build one from this campaign.</div>')}
-
-          ${box('LinkedIn / Ads', ads.length ? (
-            kv('Impressions', aImp) + kv('Clicks', aClk) + kv('CTR', pct(aClk,aImp)) + kv('Conversions', aConv) +
-            kv('Meetings', aMtg) + kv('New customers', aCust) + kv('Spend', '$'+Math.round(aSpend)) + kv('Revenue', '$'+Math.round(aRev)) +
-            (aSpend>0 ? kv('ROAS', (aRev/aSpend).toFixed(1)+'x') : '')
-          ) : '<div class="an-empty">No ads yet. Run these last, after free channels prove creative + audience.</div>')}
-
-          ${box('Social', social.length ? (
-            kv('Posts', social.length) + kv('Impressions', sImp) + kv('Engagements', sEng) + kv('Clicks', sClk)
-          ) : '<div class="an-empty">No social posts linked yet.</div>')}
-
-          ${box('Victories', vics.length ? (
-            kv('Total wins', vics.length) + kv('Est. annual rev', '$'+Math.round(vics.reduce((s,v)=>s+(parseFloat(v.estimated_annual_revenue)||0),0))) +
-            `<div class="an-note">${esc(vics.slice(0,3).map(v=>v.company_won).filter(Boolean).join(', '))}</div>`
-          ) : '<div class="an-empty">No victories recorded yet.</div>')}
+          ${box('Email', emails.length?(kv('Sent',emails.length)+kv('Open rate',pct(eOpen,emails.length))+kv('Click rate',pct(eClick,emails.length))+kv('Reply rate',pct(eReply,emails.length))):empty('No campaign emails yet.'))}
+          ${box('Landing Pages', pages.length?(kv('Pages',pages.length)+kv('Views',sum(pages,'views'))+kv('Conversions',sum(pages,'conversions'))+kv('Revenue','$'+Math.round(sum(pages,'revenue')))):empty('No pages linked yet.'))}
+          ${box('LinkedIn / Ads', ads.length?(kv('Impressions',sum(ads,'impressions'))+kv('Clicks',sum(ads,'clicks'))+kv('Conversions',sum(ads,'conversions'))+kv('Meetings',sum(ads,'meetings_booked'))+kv('Spend','$'+Math.round(aSpend))+kv('Revenue','$'+Math.round(aRev))+(aSpend>0?kv('ROAS',(aRev/aSpend).toFixed(1)+'x'):'')):empty('No ads yet — run these last.'))}
+          ${box('Social', social.length?(kv('Posts',social.length)+kv('Impressions',sum(social,'impressions'))+kv('Engagements',sum(social,'engagements'))+kv('Clicks',sum(social,'clicks'))):empty('No social posts linked yet.'))}
+          ${box('Victories', vics.length?(kv('Total wins',vics.length)+kv('Est. annual rev','$'+Math.round(sum(vics,'estimated_annual_revenue')))):empty('No victories recorded yet.'))}
         </div>
-        <div class="edit-actions">
-          <button class="btn-small btn-primary" onclick="openCampaignModal(campaignById('${esc(cid)}'))">Edit Campaign</button>
-          <button class="btn-small btn-ghost" onclick="closeModal()">Close</button>
+        <div class="modal-actions">
+          <button class="mbtn mbtn-primary" onclick="openCampaignModal(campaignById('${esc(c.id)}'))">Edit Campaign</button>
+          <button class="mbtn mbtn-ghost" onclick="closeModal()">Close</button>
         </div>`;
-    } catch (e) {
-      modalBody.innerHTML = '<div class="an-empty">Could not load analytics: ' + sanitizeInput(e.message) + '</div>';
-    }
+    } catch(e) { mb.innerHTML = `<div class="an-empty">Could not load analytics: ${sanitizeInput(e.message)}</div>`; }
+  }
+
+
+  function closeModal() {
+    if (campaignModal) campaignModal.style.display = 'none';
+    const rp = document.getElementById('researchProgressModal');
+    if (rp) rp.style.display = 'none';
+    const rd = document.getElementById('researchDashboard');
+    if (rd) rd.style.display = 'none';
+    editingCampaignId = null;
   }
 
   // Delete campaign with confirmation
@@ -1586,12 +1566,12 @@ function closeModal() {
 
   // Make functions globally available for onclick handlers
   window.openCampaignModal = openCampaignModal;
+  window.closeModal = closeModal;
+  window.deleteCampaign = deleteCampaign;
   window.campaignById = campaignById;
+  window.setCampaignView = setCampaignView;
   window.saveCampaign = saveCampaign;
   window.openAnalytics = openAnalytics;
-  window.closeModal = closeModal;
-  window.editCampaign = editCampaign;
-  window.deleteCampaign = deleteCampaign;
 
   // Initialize when DOM loads
   document.addEventListener('DOMContentLoaded', init);
