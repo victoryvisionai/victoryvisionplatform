@@ -333,15 +333,14 @@
       background-color: rgba(0,0,0,0.5);
     }
     .modal-content {
-      background-color: #ffffff;
-      margin: 3% auto;
+      background-color: #fefefe;
+      margin: 5% auto;
       padding: 0;
-      border-radius: 12px;
-      width: 94%;
-      max-width: 960px;
-      max-height: 92vh;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 24px 70px rgba(0,0,0,0.35);
     }
     .modal-header {
       background: linear-gradient(135deg, #0A3161, #1a4c80);
@@ -518,78 +517,6 @@
   .step-text {
     flex: 1;
   }
-/* ═══ Campaigns — clean scheme ═══ */
-:root {
-  --ink: #1e293b; --ink-soft: #64748b; --brand: #4f46e5; --brand-dk: #4338ca;
-  --line: #e2e8f0; --bg-soft: #f8fafc; --val: #0f172a; --lbl: #6366f1;
-}
-/* View toggle */
-.view-toggle { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 14px; }
-.vt-btn { padding: 7px 14px; border: 1px solid var(--line); background: #fff; color: var(--ink-soft); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.vt-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-/* Table */
-.table-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
-.ctable { width: 100%; border-collapse: collapse; font-size: 14px; }
-.ctable thead th { text-align: left; padding: 13px 14px; background: var(--bg-soft); color: var(--ink-soft); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--line); }
-.ctable td { padding: 13px 14px; border-bottom: 1px solid #f1f5f9; color: var(--ink); vertical-align: middle; }
-.ctable tbody tr:last-child td { border-bottom: none; }
-.ctable tbody tr:hover td { background: #fafbff; }
-.ctable .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--val); }
-.c-name { font-weight: 700; color: var(--val); }
-.c-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.c-created { color: var(--ink-soft); white-space: nowrap; }
-.c-actions { white-space: nowrap; }
-.type-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; background: #eef2ff; color: var(--brand-dk); font-size: 11px; font-weight: 700; text-transform: capitalize; }
-.status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: capitalize; background: #f1f5f9; color: #475569; }
-.status-pill.s-launched, .status-pill.s-active, .status-pill.s-live { background: #dcfce7; color: #15803d; }
-.status-pill.s-pre-launch, .status-pill.s-pre-marketing, .status-pill.s-draft, .status-pill.s-paused { background: #fef3c7; color: #b45309; }
-.status-pill.s-archived, .status-pill.s-closed { background: #f1f5f9; color: #94a3b8; }
-.asset { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-right: 4px; }
-.asset.on { background: #dbeafe; color: #1d4ed8; } .asset.off { background: #f1f5f9; color: #cbd5e1; }
-/* Row action buttons */
-.ctable .btn-small, .c-card .btn-small { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; border: none; cursor: pointer; margin-right: 5px; }
-.btn-view { background: var(--brand); color: #fff; } .btn-view:hover { background: var(--brand-dk); }
-.btn-analytics { background: #e0e7ff; color: var(--brand-dk); } .btn-analytics:hover { background: #c7d2fe; }
-.btn-del { background: #fee2e2; color: #b91c1c; } .btn-del:hover { background: #fecaca; }
-/* Tiles */
-.c-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
-.c-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow .15s, transform .15s; }
-.c-card:hover { box-shadow: 0 12px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
-.c-card-img { height: 130px; background-size: cover; background-position: center; background-color: #eef2ff; }
-.c-card-img.noimg { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.c-card-body { padding: 15px; flex: 1; }
-.c-card-head { display: flex; gap: 8px; margin-bottom: 10px; }
-.c-card-assets { margin-top: 12px; }
-.c-card-meta { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
-.c-card-actions { display: flex; padding: 0 15px 15px; }
-/* Edit form — distinct label vs value colors */
-.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; }
-.edit-grid .f { display: flex; flex-direction: column; gap: 7px; }
-.edit-grid .f.f-wide { grid-column: 1 / -1; }
-.f-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--lbl); }
-.edit-grid .f input, .edit-grid .f textarea {
-  padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 9px;
-  font-size: 15px; color: var(--val); font-weight: 500; font-family: inherit;
-  width: 100%; box-sizing: border-box; background: #fff; line-height: 1.45;
-}
-.edit-grid .f textarea { resize: vertical; min-height: 62px; }
-.edit-grid .f input:focus, .edit-grid .f textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79,70,229,.14); }
-/* Modal action buttons */
-.modal-actions { display: flex; gap: 12px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
-.mbtn { padding: 12px 22px; font-size: 14px; font-weight: 700; border-radius: 9px; border: none; cursor: pointer; }
-.mbtn-primary { background: var(--brand); color: #fff; } .mbtn-primary:hover { background: var(--brand-dk); }
-.mbtn-secondary { background: #e0e7ff; color: var(--brand-dk); } .mbtn-secondary:hover { background: #c7d2fe; }
-.mbtn-ghost { background: #f1f5f9; color: #475569; } .mbtn-ghost:hover { background: #e2e8f0; }
-/* Analytics — distinct label vs value */
-.an-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.an-box { border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: #fff; }
-.an-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--brand); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #eef2ff; }
-.an-kv { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; }
-.an-k { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
-.an-v { font-size: 17px; color: var(--val); font-weight: 800; font-variant-numeric: tabular-nums; }
-.an-empty { font-size: 14px; color: #94a3b8; padding: 6px 0; }
-.an-loading { padding: 44px; text-align: center; color: #94a3b8; font-size: 15px; }
-@media (max-width: 780px) { .an-wrap, .edit-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1184,206 +1111,171 @@
     applyFilters();
   }
 
-  // Render campaigns grid
-  // ── View mode (tiles or rows) ──
-  let campaignView = localStorage.getItem('vv_campaign_view') || 'rows';
+  // ── View state ──
+  let campaignView = localStorage.getItem('vv_campaign_view') || 'tiles';
   let editingCampaignId = null;
+  const cById = (id) => allCampaigns.find(c => String(c.id) === String(id)) || null;
+  function setCampaignView(mode){ campaignView = mode; localStorage.setItem('vv_campaign_view', mode); renderCampaignsGrid(); }
 
-  function campaignById(id) {
-    return allCampaigns.find(c => String(c.id) === String(id)) || null;
-  }
-  function setCampaignView(mode) {
-    campaignView = mode;
-    localStorage.setItem('vv_campaign_view', mode);
-    renderCampaignsGrid();
+  const NAVY='#0A3161', NAVY2='#1a4c80', GREEN='#28a745', INK='#0A3161', MUT='#667085', LINE='#e6e9ef';
+  function statusColor(s){ s=String(s||'').toLowerCase();
+    if(/launch|active|live/.test(s)) return ['#e6f7ec','#1a7f43'];
+    if(/pre-|draft|pause|market/.test(s)) return ['#fff4e0','#b06a00'];
+    if(/archiv|close/.test(s)) return ['#eef1f5','#7a8699'];
+    return ['#eef1f5','#54607a']; }
+  function assetChips(c){
+    const chip=(on,l)=>`<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:5px;background:${on?'#e3edff':'#f0f2f5'};color:${on?NAVY:'#c2c8d2'};">${l}</span>`;
+    return chip(c.video_URL,'Video')+chip(c.image_URL,'Image')+chip(c.campaign_URL,'Page'); }
+
+  function renderCampaignsGrid(){
+    if (filteredCampaigns.length === 0){ if (allCampaigns.length===0) showEmptyState(); else showNoResultsState(); return; }
+    const tb=(m,l)=>`<button onclick="setCampaignView('${m}')" style="padding:8px 16px;border:1px solid ${LINE};border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:${campaignView===m?NAVY:'#fff'};color:${campaignView===m?'#fff':MUT};">${l}</button>`;
+    const toggle=`<div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;">${tb('tiles','▦ Tiles')}${tb('rows','▤ Rows')}</div>`;
+    campaignsContainer.innerHTML = toggle + (campaignView==='tiles'? tilesHTML() : rowsHTML());
   }
 
-  function renderCampaignsGrid() {
-    if (filteredCampaigns.length === 0) {
-      if (allCampaigns.length === 0) { showEmptyState(); } else { showNoResultsState(); }
-      return;
-    }
-    const toggle = `
-      <div class="view-toggle">
-        <button class="vt-btn ${campaignView==='rows'?'active':''}" onclick="setCampaignView('rows')">▤ Rows</button>
-        <button class="vt-btn ${campaignView==='tiles'?'active':''}" onclick="setCampaignView('tiles')">▦ Tiles</button>
+  function tilesHTML(){
+    const cards = filteredCampaigns.map(c=>{
+      const id=sanitizeInput(c.id), name=sanitizeInput(c.name)||'Untitled', tag=sanitizeInput(c.tagline||c.goal_description)||'';
+      const type=sanitizeInput(c.type)||'—', status=sanitizeInput(c.status)||'—';
+      const [sb,sf]=statusColor(status);
+      const created=c.created_at?new Date(c.created_at).toLocaleDateString():'';
+      const rev=(c.revenue!=null&&c.revenue!=='')?'$'+sanitizeInput(c.revenue):'—';
+      const ctr=(c.CTR!=null&&c.CTR!=='')?parseFloat(c.CTR).toFixed(1)+'%':'—';
+      return `<div style="background:#fff;border:1px solid ${LINE};border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.06);overflow:hidden;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 4px rgba(0,0,0,0.06)'">
+        ${c.image_URL?`<div style="height:120px;background:url('${sanitizeInput(c.image_URL)}') center/cover;"></div>`:`<div style="height:8px;background:linear-gradient(90deg,${NAVY},${NAVY2});"></div>`}
+        <div style="padding:16px;flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">
+            <div style="font-weight:700;font-size:1rem;color:${INK};line-height:1.25;">${name}</div>
+            <span style="flex-shrink:0;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:capitalize;background:${sb};color:${sf};">${status}</span>
+          </div>
+          ${tag?`<div style="font-size:0.82rem;color:${MUT};line-height:1.4;margin-bottom:12px;">${tag.length>120?tag.slice(0,120)+'…':tag}</div>`:''}
+          <div style="margin-bottom:12px;">${assetChips(c)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px;background:#f7f9fc;border-radius:8px;">
+            <div><div style="font-size:0.6rem;color:${MUT};text-transform:uppercase;letter-spacing:.04em;">Type</div><div style="font-size:0.85rem;font-weight:600;color:${INK};text-transform:capitalize;">${type}</div></div>
+            <div style="border-left:1px solid #dde3ec;padding-left:8px;"><div style="font-size:0.6rem;color:${MUT};text-transform:uppercase;">Revenue</div><div style="font-size:0.85rem;font-weight:600;color:${GREEN};">${rev}</div></div>
+            <div style="border-left:1px solid #dde3ec;padding-left:8px;"><div style="font-size:0.6rem;color:${MUT};text-transform:uppercase;">CTR</div><div style="font-size:0.85rem;font-weight:600;color:${INK};">${ctr}</div></div>
+          </div>
+          <div style="font-size:0.7rem;color:#98a2b3;margin-top:10px;">Created ${created}</div>
+        </div>
+        <div style="display:flex;gap:6px;padding:12px 16px;border-top:1px solid ${LINE};">${btns(id)}</div>
       </div>`;
-    campaignsContainer.innerHTML = toggle + (campaignView === 'tiles' ? renderTiles() : renderRows());
-  }
-
-  function assetBadges(c) {
-    const b = (on,label) => `<span class="asset ${on?'on':'off'}" style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;margin-right:4px;background:${on?'#dbeafe':'#f1f5f9'};color:${on?'#1d4ed8':'#cbd5e1'};">${label}</span>`;
-    return b(c.video_URL,'Vid') + b(c.image_URL,'Img') + b(c.campaign_URL,'Page');
-  }
-  function statusClass(s){ return 's-' + String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
-
-  function renderRows() {
-    const rows = filteredCampaigns.map(c => {
-      const id = sanitizeInput(c.id);
-      const name = sanitizeInput(c.name) || 'Untitled';
-      const tagline = sanitizeInput(c.tagline) || '';
-      const type = sanitizeInput(c.type) || '—';
-      const status = sanitizeInput(c.status) || '—';
-      const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
-      const rev = (c.revenue!==null&&c.revenue!==undefined&&c.revenue!=='') ? '$'+sanitizeInput(c.revenue) : '—';
-      const ctr = (c.CTR!==null&&c.CTR!==undefined&&c.CTR!=='') ? parseFloat(c.CTR).toFixed(1)+'%' : '—';
-      return `
-        <tr>
-          <td><div class="c-name">${name}</div>${tagline?`<div class="c-sub">${tagline}</div>`:''}</td>
-          <td><span class="type-pill">${type}</span></td>
-          <td><span class="status-pill ${statusClass(status)}">${status}</span></td>
-          <td class="assets">${assetBadges(c)}</td>
-          <td class="num">${rev}</td>
-          <td class="num">${ctr}</td>
-          <td class="c-created">${created}</td>
-          <td class="c-actions">
-            <button class="btn-small btn-view" onclick="openCampaignModal(campaignById('${id}'))">View / Edit</button>
-            <button class="btn-small btn-analytics" onclick="openAnalytics('${id}')">Analytics</button>
-            <button class="btn-small btn-del" onclick="deleteCampaign('${id}')">Delete</button>
-          </td>
-        </tr>`;
     }).join('');
-    return `<div class="table-wrap"><table class="ctable">
-      <thead><tr><th>Campaign</th><th>Type</th><th>Status</th><th>Assets</th><th class="num">Revenue</th><th class="num">CTR</th><th>Created</th><th>Actions</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;">${cards}</div>`;
   }
 
-  function renderTiles() {
-    const cards = filteredCampaigns.map(c => {
-      const id = sanitizeInput(c.id);
-      const name = sanitizeInput(c.name) || 'Untitled';
-      const tagline = sanitizeInput(c.tagline) || '';
-      const status = sanitizeInput(c.status) || '—';
-      const type = sanitizeInput(c.type) || '';
-      const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
-      return `
-        <div class="c-card">
-          ${c.image_URL?`<div class="c-card-img" style="background-image:url('${sanitizeInput(c.image_URL)}')"></div>`:`<div class="c-card-img noimg">${assetBadges(c)}</div>`}
-          <div class="c-card-body">
-            <div class="c-card-head">
-              <span class="type-pill">${type||'—'}</span>
-              <span class="status-pill ${statusClass(status)}">${status}</span>
-            </div>
-            <div class="c-name">${name}</div>
-            ${tagline?`<div class="c-sub">${tagline}</div>`:''}
-            <div class="c-card-assets">${assetBadges(c)}</div>
-            <div class="c-card-meta">${created}</div>
-          </div>
-          <div class="c-card-actions">
-            <button class="btn-small btn-view" onclick="openCampaignModal(campaignById('${id}'))">View / Edit</button>
-            <button class="btn-small btn-analytics" onclick="openAnalytics('${id}')">Analytics</button>
-            <button class="btn-small btn-del" onclick="deleteCampaign('${id}')">Delete</button>
-          </div>
-        </div>`;
+  function rowsHTML(){
+    const rows = filteredCampaigns.map(c=>{
+      const id=sanitizeInput(c.id), name=sanitizeInput(c.name)||'Untitled', tag=sanitizeInput(c.tagline)||'';
+      const type=sanitizeInput(c.type)||'—', status=sanitizeInput(c.status)||'—'; const [sb,sf]=statusColor(status);
+      const created=c.created_at?new Date(c.created_at).toLocaleDateString():'—';
+      const rev=(c.revenue!=null&&c.revenue!=='')?'$'+sanitizeInput(c.revenue):'—';
+      const ctr=(c.CTR!=null&&c.CTR!=='')?parseFloat(c.CTR).toFixed(1)+'%':'—';
+      return `<tr style="border-bottom:1px solid #f0f2f5;">
+        <td style="padding:14px;"><div style="font-weight:700;color:${INK};">${name}</div>${tag?`<div style="font-size:12px;color:${MUT};margin-top:3px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tag}</div>`:''}</td>
+        <td style="padding:14px;text-transform:capitalize;color:${INK};">${type}</td>
+        <td style="padding:14px;"><span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:capitalize;background:${sb};color:${sf};">${status}</span></td>
+        <td style="padding:14px;white-space:nowrap;">${assetChips(c)}</td>
+        <td style="padding:14px;text-align:right;font-weight:600;color:${GREEN};">${rev}</td>
+        <td style="padding:14px;text-align:right;color:${INK};">${ctr}</td>
+        <td style="padding:14px;color:${MUT};white-space:nowrap;">${created}</td>
+        <td style="padding:14px;"><div style="display:flex;gap:6px;">${btns(id)}</div></td>
+      </tr>`;
     }).join('');
-    return `<div class="c-tiles">${cards}</div>`;
+    return `<div style="overflow-x:auto;background:#fff;border:1px solid ${LINE};border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.06);">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead><tr style="background:#f7f9fc;">
+          ${['Campaign','Type','Status','Assets','Revenue','CTR','Created','Actions'].map((h,i)=>`<th style="padding:12px 14px;text-align:${i>=4&&i<=5?'right':'left'};color:${MUT};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid ${LINE};">${h}</th>`).join('')}
+        </tr></thead><tbody>${rows}</tbody></table></div>`;
   }
+
+  function btns(id){
+    const b=(bg,fg,fn,l)=>`<button onclick="${fn}('${id}')" style="padding:6px 12px;font-size:12px;font-weight:600;border-radius:7px;border:none;cursor:pointer;background:${bg};color:${fg};white-space:nowrap;">${l}</button>`;
+    return b(NAVY,'#fff','openCampaignById','View / Edit')+b('#e3edff',NAVY,'openAnalytics','Analytics')+b('#fdecec','#c0392b','deleteCampaign','Delete');
+  }
+  function openCampaignById(id){ const c=cById(id); if(c) openCampaignModal(c); else showStatus('Campaign not found',true); }
 
   // ── Edit modal ──
-  function openCampaignModal(campaign) {
-    if (!campaign) { showStatus('Campaign not found', true); return; }
-    editingCampaignId = campaign.id;
-    const mc = campaignModal.querySelector('.modal-content');
-    if (mc) { mc.style.maxWidth = '960px'; mc.style.width = '94%'; }
-    document.getElementById('modalTitle').textContent = (sanitizeInput(campaign.name)||'Campaign') + ' — Edit';
-    const esc = (v) => sanitizeInput(v===null||v===undefined?'':String(v));
-    const fields = [
-      ['name','Name','input'],['tagline','Tagline','input'],['type','Type','input'],['status','Status','input'],
-      ['goal_description','Goal Description','area'],['main_prompt','Main Prompt','area'],['icp','ICP','area'],
-      ['keywords','Keywords','input'],['campaign_URL','Campaign URL','input'],['image_URL','Image URL','input'],
-      ['video_URL','Video URL','input'],['campaign_target','Campaign Target','input'],
-      ['image_prompt','Image Prompt','area'],['video_prompt','Video Prompt','area'],
-      ['page_prompt','Page Prompt','area'],['Linkedin_prompt','LinkedIn Prompt','area']
-    ];
-    const wide = new Set(['goal_description','main_prompt','icp','keywords','image_prompt','video_prompt','page_prompt','Linkedin_prompt']);
-    const rows = fields.map(([k,label,kind]) => {
-      const w = wide.has(k) ? ' f-wide' : '';
-      const wStyle = wide.has(k) ? 'grid-column:1 / -1;' : '';
-      const ctrl = kind==='area'
-        ? `<textarea id="e_${k}" rows="3" style="padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.45;resize:vertical;min-height:62px;">${esc(campaign[k])}</textarea>`
-        : `<input id="e_${k}" type="text" value="${esc(campaign[k])}" style="padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.45;">`;
-      return `<label class="f${w}" style="display:flex;flex-direction:column;gap:7px;${wStyle}"><span class="f-label" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6366f1;">${label}</span>${ctrl}</label>`;
+  function sizeModal(){ const mc=campaignModal.querySelector('.modal-content'); if(mc){mc.style.maxWidth='940px';mc.style.width='94%';} }
+  function openCampaignModal(campaign){
+    if(!campaign){ showStatus('Campaign not found',true); return; }
+    editingCampaignId=campaign.id; sizeModal();
+    document.getElementById('modalTitle').textContent=(sanitizeInput(campaign.name)||'Campaign')+' — Edit';
+    const esc=v=>sanitizeInput(v==null?'':String(v));
+    const F=[['name','Name',0],['tagline','Tagline',0],['type','Type',0],['status','Status',0],['goal_description','Goal Description',1],['main_prompt','Main Prompt',1],['icp','ICP',1],['keywords','Keywords',0],['campaign_URL','Campaign URL',0],['image_URL','Image URL',0],['video_URL','Video URL',0],['campaign_target','Campaign Target',0],['image_prompt','Image Prompt',1],['video_prompt','Video Prompt',1],['page_prompt','Page Prompt',1],['Linkedin_prompt','LinkedIn Prompt',1]];
+    const wide=new Set(['goal_description','main_prompt','icp','keywords','image_prompt','video_prompt','page_prompt','Linkedin_prompt']);
+    const inStyle='padding:10px 12px;border:1.5px solid #dfe3ea;border-radius:8px;font-size:14px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.4;';
+    const flds=F.map(([k,l,area])=>{
+      const w=wide.has(k)?'grid-column:1 / -1;':'';
+      const ctrl=area?`<textarea id="e_${k}" rows="3" style="${inStyle}resize:vertical;min-height:60px;">${esc(campaign[k])}</textarea>`:`<input id="e_${k}" type="text" value="${esc(campaign[k])}" style="${inStyle}">`;
+      return `<label style="display:flex;flex-direction:column;gap:6px;${w}"><span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#5b6be0;">${l}</span>${ctrl}</label>`;
     }).join('');
-    document.getElementById('modalBody').innerHTML = `
-      <div class="edit-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;">${rows}</div>
-      <div class="modal-actions" style="display:flex;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid #e2e8f0;">
-        <button class="mbtn mbtn-primary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#4f46e5;color:#fff;" onclick="saveCampaign()">Save Changes</button>
-        <button class="mbtn mbtn-secondary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#e0e7ff;color:#4338ca;" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
-        <button class="mbtn mbtn-ghost" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#f1f5f9;color:#475569;" onclick="closeModal()">Cancel</button>
+    document.getElementById('modalBody').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;">${flds}</div>
+      <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #e6e9ef;">
+        ${mbtn(NAVY,'#fff',`saveCampaign()`,'Save Changes')}
+        ${mbtn('#e3edff',NAVY,`openAnalytics('${esc(campaign.id)}')`,'View Analytics')}
+        ${mbtn('#f1f3f7','#54607a',`closeModal()`,'Cancel')}
       </div>`;
-    campaignModal.style.display = 'block';
+    campaignModal.style.display='block';
+  }
+  function mbtn(bg,fg,fn,l){ return `<button onclick="${fn}" style="padding:11px 20px;font-size:14px;font-weight:700;border-radius:8px;border:none;cursor:pointer;background:${bg};color:${fg};">${l}</button>`; }
+
+  async function saveCampaign(){
+    if(!editingCampaignId){ showStatus('No campaign selected',true); return; }
+    const keys=['name','tagline','type','status','goal_description','main_prompt','icp','keywords','campaign_URL','image_URL','video_URL','campaign_target','image_prompt','video_prompt','page_prompt','Linkedin_prompt'];
+    const payload={campaign_id:editingCampaignId,customer_id:CUSTOMER_ID};
+    keys.forEach(k=>{const el=document.getElementById('e_'+k); if(el) payload[k]=el.value;});
+    try{ showStatus('Saving…');
+      const res=await apiCall(ENDPOINTS.UPDATE_CAMPAIGN,payload);
+      if(res&&res.success!==false){ const i=allCampaigns.findIndex(c=>String(c.id)===String(editingCampaignId)); if(i>=0) allCampaigns[i]=Object.assign({},allCampaigns[i],res.campaign||payload); showStatus('Campaign saved'); closeModal(); applyFilters(); }
+      else showStatus('Save failed',true);
+    }catch(e){ showStatus('Save error: '+e.message,true); }
   }
 
-  async function saveCampaign() {
-    if (!editingCampaignId) { showStatus('No campaign selected', true); return; }
-    const keys = ['name','tagline','type','status','goal_description','main_prompt','icp','keywords','campaign_URL','image_URL','video_URL','campaign_target','image_prompt','video_prompt','page_prompt','Linkedin_prompt'];
-    const payload = { campaign_id: editingCampaignId, customer_id: CUSTOMER_ID };
-    keys.forEach(k => { const el = document.getElementById('e_'+k); if (el) payload[k] = el.value; });
-    try {
-      showStatus('Saving…');
-      const res = await apiCall(ENDPOINTS.UPDATE_CAMPAIGN, payload);
-      if (res && res.success !== false) {
-        const idx = allCampaigns.findIndex(c => String(c.id)===String(editingCampaignId));
-        if (idx>=0) allCampaigns[idx] = Object.assign({}, allCampaigns[idx], res.campaign||payload);
-        showStatus('Campaign saved'); closeModal(); applyFilters();
-      } else { showStatus('Save failed', true); }
-    } catch(e) { showStatus('Save error: '+e.message, true); }
-  }
-
-  // ── Analytics modal ──
-  async function openAnalytics(campaignId) {
-    const c = campaignById(campaignId);
-    if (!c) { showStatus('Campaign not found', true); return; }
-    const mc = campaignModal.querySelector('.modal-content');
-    if (mc) { mc.style.maxWidth = '960px'; mc.style.width = '94%'; }
-    document.getElementById('modalTitle').textContent = 'Analytics — ' + (sanitizeInput(c.name)||'Campaign');
-    const mb = document.getElementById('modalBody');
-    mb.innerHTML = '<div class="an-loading">Loading performance…</div>';
-    campaignModal.style.display = 'block';
-    const esc = (v)=>sanitizeInput(v===null||v===undefined?'':String(v));
-    try {
-      const [pagesR, adsR, emailR, socialR, vicR] = await Promise.all([
-        supabaseClient.from('pages').select('name,views,conversions,CTR,revenue,experiment_wins,ab_variant,slug').eq('campaign_id', c.id),
-        supabaseClient.from('ads').select('impressions,clicks,conversions,spend,meetings_booked,new_customers,conversion_revenue').eq('campaign_id', c.id),
-        supabaseClient.from('email').select('subject,opens,clicks,replied_at,opened_at,clicked_at').eq('customer_id', CUSTOMER_ID).eq('campaign', c.name),
-        supabaseClient.from('social').select('impressions,engagements,clicks,shares').eq('customer_id', CUSTOMER_ID).eq('campaign', c.name),
-        supabaseClient.from('victories').select('company_won,estimated_annual_revenue').eq('customer_id', CUSTOMER_ID)
+  // ── Analytics modal (per-campaign attribution only) ──
+  async function openAnalytics(campaignId){
+    const c=cById(campaignId); if(!c){ showStatus('Campaign not found',true); return; }
+    sizeModal();
+    document.getElementById('modalTitle').textContent='Analytics — '+(sanitizeInput(c.name)||'Campaign');
+    const mb=document.getElementById('modalBody');
+    mb.innerHTML='<div style="padding:44px;text-align:center;color:#98a2b3;font-size:15px;">Loading performance…</div>';
+    campaignModal.style.display='block';
+    const esc=v=>sanitizeInput(v==null?'':String(v));
+    try{
+      const [pagesR,adsR,emailR,socialR]=await Promise.all([
+        supabaseClient.from('pages').select('views,conversions,revenue,experiment_wins').eq('campaign_id',c.id),
+        supabaseClient.from('ads').select('impressions,clicks,conversions,spend,meetings_booked,new_customers,conversion_revenue').eq('campaign_id',c.id),
+        supabaseClient.from('email').select('opens,clicks,replied_at,opened_at,clicked_at').eq('customer_id',CUSTOMER_ID).eq('campaign',c.name),
+        supabaseClient.from('social').select('impressions,engagements,clicks,shares').eq('customer_id',CUSTOMER_ID).eq('campaign',c.name)
       ]);
-      const pages=pagesR.data||[], ads=adsR.data||[], emails=emailR.data||[], social=socialR.data||[], vics=vicR.data||[];
-      const pct=(n,d)=>d?Math.round(n*100/d)+'%':'—';
-      const sum=(a,k)=>a.reduce((s,x)=>s+(parseFloat(x[k])||0),0);
-      const eOpen=emails.filter(e=>e.opened_at||(e.opens||0)>0).length;
-      const eClick=emails.filter(e=>e.clicked_at||(e.clicks||0)>0).length;
-      const eReply=emails.filter(e=>e.replied_at).length;
-      const aSpend=sum(ads,'spend'), aRev=sum(ads,'conversion_revenue');
-      const kv=(k,v)=>`<div class="an-kv" style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;"><span class="an-k" style="font-size:13px;color:#64748b;font-weight:600;">${k}</span><span class="an-v" style="font-size:17px;color:#0f172a;font-weight:800;">${v}</span></div>`;
-      const box=(t,inner)=>`<div class="an-box" style="border:1px solid #e2e8f0;border-radius:14px;padding:20px;background:#fff;"><div class="an-h" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #eef2ff;">${t}</div>${inner}</div>`;
-      const empty=m=>`<div class="an-empty" style="font-size:14px;color:#94a3b8;padding:6px 0;">${m}</div>`;
-      mb.innerHTML = `
-        <div class="an-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-          ${box('Email', emails.length?(kv('Sent',emails.length)+kv('Open rate',pct(eOpen,emails.length))+kv('Click rate',pct(eClick,emails.length))+kv('Reply rate',pct(eReply,emails.length))):empty('No campaign emails yet.'))}
+      const pages=pagesR.data||[],ads=adsR.data||[],emails=emailR.data||[],social=socialR.data||[];
+      const pct=(n,d)=>d?Math.round(n*100/d)+'%':'—', sum=(a,k)=>a.reduce((s,x)=>s+(parseFloat(x[k])||0),0);
+      const eO=emails.filter(e=>e.opened_at||(e.opens||0)>0).length, eC=emails.filter(e=>e.clicked_at||(e.clicks||0)>0).length, eR=emails.filter(e=>e.replied_at).length;
+      const aSp=sum(ads,'spend'),aRv=sum(ads,'conversion_revenue');
+      const kv=(k,v)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;"><span style="font-size:13px;color:${MUT};font-weight:600;">${k}</span><span style="font-size:17px;color:#0f172a;font-weight:800;">${v}</span></div>`;
+      const box=(t,inner)=>`<div style="border:1px solid ${LINE};border-radius:12px;padding:18px;background:#fff;"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:${NAVY};margin-bottom:14px;padding-bottom:9px;border-bottom:2px solid #eef2ff;">${t}</div>${inner}</div>`;
+      const empty=m=>`<div style="font-size:14px;color:#98a2b3;padding:6px 0;">${m}</div>`;
+      mb.innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          ${box('Email', emails.length?(kv('Sent',emails.length)+kv('Open rate',pct(eO,emails.length))+kv('Click rate',pct(eC,emails.length))+kv('Reply rate',pct(eR,emails.length))):empty('No campaign emails yet.'))}
           ${box('Landing Pages', pages.length?(kv('Pages',pages.length)+kv('Views',sum(pages,'views'))+kv('Conversions',sum(pages,'conversions'))+kv('Revenue','$'+Math.round(sum(pages,'revenue')))):empty('No pages linked yet.'))}
-          ${box('LinkedIn / Ads', ads.length?(kv('Impressions',sum(ads,'impressions'))+kv('Clicks',sum(ads,'clicks'))+kv('Conversions',sum(ads,'conversions'))+kv('Meetings',sum(ads,'meetings_booked'))+kv('Spend','$'+Math.round(aSpend))+kv('Revenue','$'+Math.round(aRev))+(aSpend>0?kv('ROAS',(aRev/aSpend).toFixed(1)+'x'):'')):empty('No ads yet — run these last.'))}
+          ${box('LinkedIn / Ads', ads.length?(kv('Impressions',sum(ads,'impressions'))+kv('Clicks',sum(ads,'clicks'))+kv('Conversions',sum(ads,'conversions'))+kv('Meetings',sum(ads,'meetings_booked'))+kv('Spend','$'+Math.round(aSp))+kv('Revenue','$'+Math.round(aRv))+(aSp>0?kv('ROAS',(aRv/aSp).toFixed(1)+'x'):'')):empty('No ads yet — run these last.'))}
           ${box('Social', social.length?(kv('Posts',social.length)+kv('Impressions',sum(social,'impressions'))+kv('Engagements',sum(social,'engagements'))+kv('Clicks',sum(social,'clicks'))):empty('No social posts linked yet.'))}
-          ${box('Victories', vics.length?(kv('Total wins',vics.length)+kv('Est. annual rev','$'+Math.round(sum(vics,'estimated_annual_revenue')))):empty('No victories recorded yet.'))}
         </div>
-        <div class="modal-actions" style="display:flex;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid #e2e8f0;">
-          <button class="mbtn mbtn-primary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#4f46e5;color:#fff;" onclick="openCampaignModal(campaignById('${esc(c.id)}'))">Edit Campaign</button>
-          <button class="mbtn mbtn-ghost" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#f1f5f9;color:#475569;" onclick="closeModal()">Close</button>
+        <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #e6e9ef;">
+          ${mbtn(NAVY,'#fff',`openCampaignById('${esc(c.id)}')`,'Edit Campaign')}
+          ${mbtn('#f1f3f7','#54607a',`closeModal()`,'Close')}
         </div>`;
-    } catch(e) { mb.innerHTML = `<div class="an-empty">Could not load analytics: ${sanitizeInput(e.message)}</div>`; }
+    }catch(e){ mb.innerHTML=`<div style="font-size:14px;color:#98a2b3;padding:20px;">Could not load analytics: ${sanitizeInput(e.message)}</div>`; }
   }
 
-
-  function closeModal() {
-    if (campaignModal) campaignModal.style.display = 'none';
-    const rp = document.getElementById('researchProgressModal');
-    if (rp) rp.style.display = 'none';
-    const rd = document.getElementById('researchDashboard');
-    if (rd) rd.style.display = 'none';
-    editingCampaignId = null;
-  }
-
+function closeModal() {
+  if (campaignModal) campaignModal.style.display = 'none';
+  if (researchProgressModal) researchProgressModal.style.display = 'none';
+  const rd = document.getElementById('researchDashboard');
+  if (rd) rd.style.display = 'none';
+}
   // Delete campaign with confirmation
   async function deleteCampaign(campaignId) {
     // Validate campaign ID
@@ -1573,8 +1465,8 @@
   window.openCampaignModal = openCampaignModal;
   window.closeModal = closeModal;
   window.deleteCampaign = deleteCampaign;
-  window.campaignById = campaignById;
   window.setCampaignView = setCampaignView;
+  window.openCampaignById = openCampaignById;
   window.saveCampaign = saveCampaign;
   window.openAnalytics = openAnalytics;
 
