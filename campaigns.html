@@ -1212,7 +1212,7 @@
   }
 
   function assetBadges(c) {
-    const b = (on,label) => `<span class="asset ${on?'on':'off'}">${label}</span>`;
+    const b = (on,label) => `<span class="asset ${on?'on':'off'}" style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;margin-right:4px;background:${on?'#dbeafe':'#f1f5f9'};color:${on?'#1d4ed8':'#cbd5e1'};">${label}</span>`;
     return b(c.video_URL,'Vid') + b(c.image_URL,'Img') + b(c.campaign_URL,'Page');
   }
   function statusClass(s){ return 's-' + String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
@@ -1283,6 +1283,8 @@
   function openCampaignModal(campaign) {
     if (!campaign) { showStatus('Campaign not found', true); return; }
     editingCampaignId = campaign.id;
+    const mc = campaignModal.querySelector('.modal-content');
+    if (mc) { mc.style.maxWidth = '960px'; mc.style.width = '94%'; }
     document.getElementById('modalTitle').textContent = (sanitizeInput(campaign.name)||'Campaign') + ' — Edit';
     const esc = (v) => sanitizeInput(v===null||v===undefined?'':String(v));
     const fields = [
@@ -1296,17 +1298,18 @@
     const wide = new Set(['goal_description','main_prompt','icp','keywords','image_prompt','video_prompt','page_prompt','Linkedin_prompt']);
     const rows = fields.map(([k,label,kind]) => {
       const w = wide.has(k) ? ' f-wide' : '';
+      const wStyle = wide.has(k) ? 'grid-column:1 / -1;' : '';
       const ctrl = kind==='area'
-        ? `<textarea id="e_${k}" rows="3">${esc(campaign[k])}</textarea>`
-        : `<input id="e_${k}" type="text" value="${esc(campaign[k])}">`;
-      return `<label class="f${w}"><span class="f-label">${label}</span>${ctrl}</label>`;
+        ? `<textarea id="e_${k}" rows="3" style="padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.45;resize:vertical;min-height:62px;">${esc(campaign[k])}</textarea>`
+        : `<input id="e_${k}" type="text" value="${esc(campaign[k])}" style="padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.45;">`;
+      return `<label class="f${w}" style="display:flex;flex-direction:column;gap:7px;${wStyle}"><span class="f-label" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6366f1;">${label}</span>${ctrl}</label>`;
     }).join('');
     document.getElementById('modalBody').innerHTML = `
-      <div class="edit-grid">${rows}</div>
-      <div class="modal-actions">
-        <button class="mbtn mbtn-primary" onclick="saveCampaign()">Save Changes</button>
-        <button class="mbtn mbtn-secondary" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
-        <button class="mbtn mbtn-ghost" onclick="closeModal()">Cancel</button>
+      <div class="edit-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;">${rows}</div>
+      <div class="modal-actions" style="display:flex;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid #e2e8f0;">
+        <button class="mbtn mbtn-primary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#4f46e5;color:#fff;" onclick="saveCampaign()">Save Changes</button>
+        <button class="mbtn mbtn-secondary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#e0e7ff;color:#4338ca;" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
+        <button class="mbtn mbtn-ghost" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#f1f5f9;color:#475569;" onclick="closeModal()">Cancel</button>
       </div>`;
     campaignModal.style.display = 'block';
   }
@@ -1331,6 +1334,8 @@
   async function openAnalytics(campaignId) {
     const c = campaignById(campaignId);
     if (!c) { showStatus('Campaign not found', true); return; }
+    const mc = campaignModal.querySelector('.modal-content');
+    if (mc) { mc.style.maxWidth = '960px'; mc.style.width = '94%'; }
     document.getElementById('modalTitle').textContent = 'Analytics — ' + (sanitizeInput(c.name)||'Campaign');
     const mb = document.getElementById('modalBody');
     mb.innerHTML = '<div class="an-loading">Loading performance…</div>';
@@ -1351,20 +1356,20 @@
       const eClick=emails.filter(e=>e.clicked_at||(e.clicks||0)>0).length;
       const eReply=emails.filter(e=>e.replied_at).length;
       const aSpend=sum(ads,'spend'), aRev=sum(ads,'conversion_revenue');
-      const kv=(k,v)=>`<div class="an-kv"><span class="an-k">${k}</span><span class="an-v">${v}</span></div>`;
-      const box=(t,inner)=>`<div class="an-box"><div class="an-h">${t}</div>${inner}</div>`;
-      const empty=m=>`<div class="an-empty">${m}</div>`;
+      const kv=(k,v)=>`<div class="an-kv" style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;"><span class="an-k" style="font-size:13px;color:#64748b;font-weight:600;">${k}</span><span class="an-v" style="font-size:17px;color:#0f172a;font-weight:800;">${v}</span></div>`;
+      const box=(t,inner)=>`<div class="an-box" style="border:1px solid #e2e8f0;border-radius:14px;padding:20px;background:#fff;"><div class="an-h" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #eef2ff;">${t}</div>${inner}</div>`;
+      const empty=m=>`<div class="an-empty" style="font-size:14px;color:#94a3b8;padding:6px 0;">${m}</div>`;
       mb.innerHTML = `
-        <div class="an-wrap">
+        <div class="an-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
           ${box('Email', emails.length?(kv('Sent',emails.length)+kv('Open rate',pct(eOpen,emails.length))+kv('Click rate',pct(eClick,emails.length))+kv('Reply rate',pct(eReply,emails.length))):empty('No campaign emails yet.'))}
           ${box('Landing Pages', pages.length?(kv('Pages',pages.length)+kv('Views',sum(pages,'views'))+kv('Conversions',sum(pages,'conversions'))+kv('Revenue','$'+Math.round(sum(pages,'revenue')))):empty('No pages linked yet.'))}
           ${box('LinkedIn / Ads', ads.length?(kv('Impressions',sum(ads,'impressions'))+kv('Clicks',sum(ads,'clicks'))+kv('Conversions',sum(ads,'conversions'))+kv('Meetings',sum(ads,'meetings_booked'))+kv('Spend','$'+Math.round(aSpend))+kv('Revenue','$'+Math.round(aRev))+(aSpend>0?kv('ROAS',(aRev/aSpend).toFixed(1)+'x'):'')):empty('No ads yet — run these last.'))}
           ${box('Social', social.length?(kv('Posts',social.length)+kv('Impressions',sum(social,'impressions'))+kv('Engagements',sum(social,'engagements'))+kv('Clicks',sum(social,'clicks'))):empty('No social posts linked yet.'))}
           ${box('Victories', vics.length?(kv('Total wins',vics.length)+kv('Est. annual rev','$'+Math.round(sum(vics,'estimated_annual_revenue')))):empty('No victories recorded yet.'))}
         </div>
-        <div class="modal-actions">
-          <button class="mbtn mbtn-primary" onclick="openCampaignModal(campaignById('${esc(c.id)}'))">Edit Campaign</button>
-          <button class="mbtn mbtn-ghost" onclick="closeModal()">Close</button>
+        <div class="modal-actions" style="display:flex;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid #e2e8f0;">
+          <button class="mbtn mbtn-primary" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#4f46e5;color:#fff;" onclick="openCampaignModal(campaignById('${esc(c.id)}'))">Edit Campaign</button>
+          <button class="mbtn mbtn-ghost" style="padding:12px 22px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#f1f5f9;color:#475569;" onclick="closeModal()">Close</button>
         </div>`;
     } catch(e) { mb.innerHTML = `<div class="an-empty">Could not load analytics: ${sanitizeInput(e.message)}</div>`; }
   }
