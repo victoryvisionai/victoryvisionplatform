@@ -517,6 +517,44 @@
   .step-text {
     flex: 1;
   }
+/* ── Campaigns table ── */
+.campaigns-table-wrap { overflow-x: auto; }
+.campaigns-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.campaigns-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+.campaigns-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+.campaigns-table tr:hover td { background: #fafbff; }
+.campaigns-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.c-name { font-weight: 600; color: #111827; }
+.c-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-created { color: #6b7280; white-space: nowrap; }
+.c-actions { white-space: nowrap; }
+.c-actions .btn-small { margin-right: 4px; }
+.type-pill { display: inline-block; padding: 2px 9px; border-radius: 10px; background: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+.status-pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: capitalize; background: #f3f4f6; color: #374151; }
+.status-pill.s-launched, .status-pill.s-active, .status-pill.s-live { background: #dcfce7; color: #166534; }
+.status-pill.s-draft, .status-pill.s-paused { background: #fef9c3; color: #854d0e; }
+.status-pill.s-archived, .status-pill.s-closed { background: #f3f4f6; color: #6b7280; }
+.assets { white-space: nowrap; }
+.asset-badge { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-right: 3px; }
+.asset-badge.on { background: #dbeafe; color: #1d4ed8; }
+.asset-badge.off { background: #f3f4f6; color: #cbd5e1; }
+/* ── Edit form ── */
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.edit-grid .f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #6b7280; font-weight: 600; }
+.edit-grid .f.f-wide { grid-column: 1 / -1; }
+.edit-grid .f input, .edit-grid .f textarea { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: #111827; font-weight: 400; font-family: inherit; }
+.edit-grid .f input:focus, .edit-grid .f textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+.edit-actions { display: flex; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee; }
+/* ── Analytics panel ── */
+.an-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.an-box { border: 1px solid #eef0f4; border-radius: 10px; padding: 14px; background: #fcfcfd; }
+.an-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #6366f1; margin-bottom: 10px; }
+.an-kv { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; color: #4b5563; }
+.an-kv b { color: #111827; font-variant-numeric: tabular-nums; }
+.an-note { margin-top: 8px; font-size: 12px; color: #6b7280; font-style: italic; }
+.an-empty { font-size: 13px; color: #9ca3af; }
+.an-loading { padding: 30px; text-align: center; color: #9ca3af; }
+@media (max-width: 700px) { .an-wrap, .edit-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -766,7 +804,8 @@
     GET_USER: `${N8N_BASE_URL}/user/get`,
     GET_CAMPAIGNS: `${N8N_BASE_URL}/campaigns/get`,
     CREATE_CAMPAIGN: `${N8N_BASE_URL}/campaigns/create`,
-    REMOVE_CAMPAIGN: `${N8N_BASE_URL}/campaigns/remove`
+    REMOVE_CAMPAIGN: `${N8N_BASE_URL}/campaigns/remove`,
+    UPDATE_CAMPAIGN: `${N8N_BASE_URL}/campaigns/update`
   };
   
   let CUSTOMER_ID = null;
@@ -815,6 +854,7 @@
 
   // Simple state management
   let allCampaigns = [];
+  let editingCampaignId = null;
   let filteredCampaigns = [];
 
   // DOM elements
@@ -1111,6 +1151,10 @@
   }
 
   // Render campaigns grid
+  function campaignById(id) {
+    return allCampaigns.find(c => String(c.id) === String(id)) || null;
+  }
+
   function renderCampaignsGrid() {
     if (filteredCampaigns.length === 0) {
       if (allCampaigns.length === 0) {
@@ -1121,168 +1165,92 @@
       return;
     }
 
-    const grid = document.createElement('div');
-    grid.className = 'campaigns-grid';
+    const rows = filteredCampaigns.map(c => {
+      const id = sanitizeInput(c.id);
+      const name = sanitizeInput(c.name) || 'Untitled';
+      const tagline = sanitizeInput(c.tagline) || '';
+      const type = sanitizeInput(c.type) || '—';
+      const status = sanitizeInput(c.status) || '—';
+      const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
+      const rev = (c.revenue !== null && c.revenue !== undefined && c.revenue !== '') ? '$' + sanitizeInput(c.revenue) : '—';
+      const ctr = (c.CTR !== null && c.CTR !== undefined && c.CTR !== '') ? (parseFloat(c.CTR).toFixed(1) + '%') : '—';
+      const hasVid = c.video_URL ? 'on' : 'off';
+      const hasImg = c.image_URL ? 'on' : 'off';
+      const hasPage = c.campaign_URL ? 'on' : 'off';
+      return `
+        <tr>
+          <td>
+            <div class="c-name">${name}</div>
+            ${tagline ? `<div class="c-sub">${tagline}</div>` : ''}
+          </td>
+          <td><span class="type-pill">${type}</span></td>
+          <td><span class="status-pill s-${status.toLowerCase().replace(/[^a-z0-9]+/g,'-')}">${status}</span></td>
+          <td class="assets">
+            <span class="asset-badge ${hasVid}" title="Video">Vid</span>
+            <span class="asset-badge ${hasImg}" title="Image">Img</span>
+            <span class="asset-badge ${hasPage}" title="Page">Page</span>
+          </td>
+          <td class="num">${rev}</td>
+          <td class="num">${ctr}</td>
+          <td class="c-created">${created}</td>
+          <td class="c-actions">
+            <button class="btn-small" onclick="openCampaignModal(campaignById('${id}'))">View/Edit</button>
+            <button class="btn-small" onclick="openAnalytics('${id}')">Analytics</button>
+            <button class="btn-small danger" onclick="deleteCampaign('${id}')">Delete</button>
+          </td>
+        </tr>`;
+    }).join('');
 
-    filteredCampaigns.forEach(campaign => {
-      const card = createCampaignCard(campaign);
-      grid.appendChild(card);
-    });
-
-    campaignsContainer.innerHTML = '';
-    campaignsContainer.appendChild(grid);
+    campaignsContainer.innerHTML = `
+      <div class="campaigns-table-wrap">
+        <table class="campaigns-table">
+          <thead>
+            <tr>
+              <th>Campaign</th><th>Type</th><th>Status</th><th>Assets</th>
+              <th class="num">Revenue</th><th class="num">CTR</th><th>Created</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   }
 
-  // Create campaign card with sanitized content
-  function createCampaignCard(campaign) {
-    const card = document.createElement('div');
-    card.className = 'campaign-card';
-    card.onclick = () => openCampaignModal(campaign);
-
-    let createdDate = 'Unknown';
-    if (campaign.created_at) {
-      try {
-        createdDate = new Date(campaign.created_at).toLocaleDateString();
-      } catch (e) {
-        createdDate = sanitizeInput(campaign.created_at);
-      }
-    }
-
-    // Sanitize all display content
-    const safeName = sanitizeInput(campaign.name) || 'Untitled';
-    const safeTagline = sanitizeInput(campaign.tagline) || 'No tagline';
-    const safeDescription = sanitizeInput(campaign.viral || campaign.main_prompt) || 'No description available';
-    const safeRevenue = sanitizeInput(campaign.revenue) || 'N/A';
-    const safeKeywords = sanitizeInput(campaign.keywords) || 'None';
-
-    card.innerHTML = `
-      ${campaign.image_URL ? `<img src="${sanitizeInput(campaign.image_URL)}" alt="Campaign Image" style="width: 100%; height: 150px; object-fit: cover; display: block;" onerror="this.style.display='none'">` : ''}
-      <div class="campaign-header">
-          <div class="campaign-title">${safeTagline}</div>
-      <div class="campaign-tagline">${campaign.video_URL ? ' ' : ' '}</div>
-      </div>
-      <div class="campaign-info">
-        <p class="campaign-description">${safeDescription}</p>
-        <div class="campaign-meta">
-          <div class="meta-item">
-            <span class="meta-label">Name:</span>
-            ${safeName}
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Revenue:</span>
-            ${safeRevenue}
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Keywords:</span>
-            ${safeKeywords}
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Video URL:</span>
-            ${campaign.video_URL ? 'Available' : 'None'}
-          </div>
-        </div>
-      </div>
-      <div class="campaign-actions">
-        <button onclick="event.stopPropagation(); editCampaign('${sanitizeInput(campaign.id)}')" class="btn-small">Edit</button>
-        <button onclick="event.stopPropagation(); deleteCampaign('${sanitizeInput(campaign.id)}')" class="btn-small danger">Delete</button>
-      </div>
-    `;
-
-    return card;
-  }
-
-  // Open campaign modal with sanitized content
+  // Open campaign modal (editable form) with sanitized content
   function openCampaignModal(campaign) {
+    if (!campaign) { showStatus('Campaign not found', true); return; }
     document.getElementById('modalTitle').textContent = sanitizeInput(campaign.name) || 'Campaign Details';
     
     const modalBody = document.getElementById('modalBody');
-    
-    // Format 30_day and 90_day data safely
-    let thirtyDayDisplay = 'N/A';
-    let ninetyDayDisplay = 'N/A';
-    
-    try {
-      if (campaign['30_day']) {
-        if (typeof campaign['30_day'] === 'object') {
-          thirtyDayDisplay = JSON.stringify(campaign['30_day'], null, 2);
-        } else {
-          thirtyDayDisplay = sanitizeInput(campaign['30_day']);
-        }
-      }
-      
-      if (campaign['90_day']) {
-        if (typeof campaign['90_day'] === 'object') {
-          ninetyDayDisplay = JSON.stringify(campaign['90_day'], null, 2);
-        } else {
-          ninetyDayDisplay = sanitizeInput(campaign['90_day']);
-        }
-      }
-    } catch (e) {
-      console.error('Error formatting day plans:', e);
-    }
+    editingCampaignId = campaign.id;
+
+    const val = (v) => (v === null || v === undefined) ? '' : String(v);
+    const esc = (v) => sanitizeInput(val(v));
 
     modalBody.innerHTML = `
-      <div class="field-group">
-        <div class="field-label">Name</div>
-        <div class="field-value">${sanitizeInput(campaign.name) || 'N/A'}</div>
+      <div class="edit-grid">
+        <label class="f"><span>Name</span><input id="e_name" type="text" value="${esc(campaign.name)}"></label>
+        <label class="f"><span>Tagline</span><input id="e_tagline" type="text" value="${esc(campaign.tagline)}"></label>
+        <label class="f"><span>Type</span><input id="e_type" type="text" value="${esc(campaign.type)}"></label>
+        <label class="f"><span>Status</span><input id="e_status" type="text" value="${esc(campaign.status)}"></label>
+        <label class="f f-wide"><span>Goal Description</span><textarea id="e_goal_description" rows="2">${esc(campaign.goal_description)}</textarea></label>
+        <label class="f f-wide"><span>Main Prompt</span><textarea id="e_main_prompt" rows="3">${esc(campaign.main_prompt)}</textarea></label>
+        <label class="f f-wide"><span>ICP</span><textarea id="e_icp" rows="2">${esc(campaign.icp)}</textarea></label>
+        <label class="f f-wide"><span>Keywords</span><input id="e_keywords" type="text" value="${esc(campaign.keywords)}"></label>
+        <label class="f"><span>Campaign URL</span><input id="e_campaign_URL" type="text" value="${esc(campaign.campaign_URL)}"></label>
+        <label class="f"><span>Image URL</span><input id="e_image_URL" type="text" value="${esc(campaign.image_URL)}"></label>
+        <label class="f"><span>Video URL</span><input id="e_video_URL" type="text" value="${esc(campaign.video_URL)}"></label>
+        <label class="f"><span>Campaign Target</span><input id="e_campaign_target" type="text" value="${esc(campaign.campaign_target)}"></label>
+        <label class="f f-wide"><span>Image Prompt</span><textarea id="e_image_prompt" rows="2">${esc(campaign.image_prompt)}</textarea></label>
+        <label class="f f-wide"><span>Video Prompt</span><textarea id="e_video_prompt" rows="2">${esc(campaign.video_prompt)}</textarea></label>
+        <label class="f f-wide"><span>Page Prompt</span><textarea id="e_page_prompt" rows="2">${esc(campaign.page_prompt)}</textarea></label>
+        <label class="f f-wide"><span>LinkedIn Prompt</span><textarea id="e_Linkedin_prompt" rows="2">${esc(campaign.Linkedin_prompt)}</textarea></label>
       </div>
-      <div class="field-group">
-        <div class="field-label">Created At</div>
-        <div class="field-value">${campaign.created_at ? new Date(campaign.created_at).toLocaleString() : 'N/A'}</div>
+      <div class="edit-actions">
+        <button class="btn-small" onclick="saveCampaign()">Save Changes</button>
+        <button class="btn-small" onclick="openAnalytics('${esc(campaign.id)}')">View Analytics</button>
+        <button class="btn-small" onclick="closeModal()">Cancel</button>
       </div>
-      <div class="field-group">
-        <div class="field-label">Revenue</div>
-        <div class="field-value">${sanitizeInput(campaign.revenue) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Tagline</div>
-        <div class="field-value">${sanitizeInput(campaign.tagline) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Campaign URL</div>
-        <div class="field-value">${campaign.campaign_URL ? `<a href="${sanitizeInput(campaign.campaign_URL)}" target="_blank" rel="noopener noreferrer">${sanitizeInput(campaign.campaign_URL)}</a>` : 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Social Posts</div>
-        <div class="field-value">${sanitizeInput(campaign.social_posts) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Main Prompt</div>
-        <div class="field-value">${sanitizeInput(campaign.main_prompt) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Keywords</div>
-        <div class="field-value">${sanitizeInput(campaign.keywords) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Viral</div>
-        <div class="field-value">${sanitizeInput(campaign.viral) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Goal Description</div>
-        <div class="field-value">${sanitizeInput(campaign.goal_description) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Video URL</div>
-        <div class="field-value">${campaign.video_URL ? `<a href="${sanitizeInput(campaign.video_URL)}" target="_blank" rel="noopener noreferrer">${sanitizeInput(campaign.video_URL)}</a>` : 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Image URL</div>
-        <div class="field-value">${campaign.image_URL ? `<a href="${sanitizeInput(campaign.image_URL)}" target="_blank" rel="noopener noreferrer">${sanitizeInput(campaign.image_URL)}</a>` : 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Stock Photo</div>
-        <div class="field-value">${sanitizeInput(campaign.stock_photo) || 'N/A'}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">30 Day Plan</div>
-        <div class="field-value">${thirtyDayDisplay}</div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">90 Day Plan</div>
-        <div class="field-value">${ninetyDayDisplay}</div>
-      </div>
-    `;    
+    `;
     campaignModal.style.display = 'block';
   }
 
@@ -1292,9 +1260,130 @@ function closeModal() {
   const rd = document.getElementById('researchDashboard');
   if (rd) rd.style.display = 'none';
 }
-  // Edit campaign (placeholder)
+  // Edit campaign — opens the editable modal
   function editCampaign(campaignId) {
-    showStatus('Edit functionality coming soon!');
+    const c = campaignById(campaignId);
+    if (!c) { showStatus('Campaign not found', true); return; }
+    openCampaignModal(c);
+  }
+
+  // Save edited campaign via /campaigns/update webhook
+  async function saveCampaign() {
+    if (!editingCampaignId) { showStatus('No campaign selected', true); return; }
+    const fields = ['name','tagline','type','status','goal_description','main_prompt','icp','keywords','campaign_URL','image_URL','video_URL','campaign_target','image_prompt','video_prompt','page_prompt','Linkedin_prompt'];
+    const payload = { campaign_id: editingCampaignId, customer_id: CUSTOMER_ID };
+    fields.forEach(f => {
+      const el = document.getElementById('e_' + f);
+      if (el) payload[f] = el.value;
+    });
+    try {
+      showStatus('Saving…');
+      const res = await apiCall(ENDPOINTS.UPDATE_CAMPAIGN, payload);
+      if (res && res.success !== false) {
+        showStatus('Campaign saved');
+        // update local copy
+        const idx = allCampaigns.findIndex(c => String(c.id) === String(editingCampaignId));
+        if (idx >= 0) allCampaigns[idx] = Object.assign({}, allCampaigns[idx], res.campaign || payload);
+        closeModal();
+        applyFilters();
+      } else {
+        showStatus('Save failed', true);
+      }
+    } catch (e) {
+      showStatus('Save error: ' + e.message, true);
+    }
+  }
+
+  // Analytics panel — live rollup from child tables (emails, victories, pages, ads, social)
+  async function openAnalytics(campaignId) {
+    const c = campaignById(campaignId);
+    if (!c) { showStatus('Campaign not found', true); return; }
+    document.getElementById('modalTitle').textContent = 'Analytics — ' + (sanitizeInput(c.name) || 'Campaign');
+    const modalBody = document.getElementById('modalBody');
+    modalBody.innerHTML = '<div class="an-loading">Loading performance…</div>';
+    campaignModal.style.display = 'block';
+
+    const cid = c.id;
+    const cname = c.name;
+    try {
+      const [pagesR, adsR, emailR, socialR, vicR] = await Promise.all([
+        supabaseClient.from('pages').select('name,views,conversions,CTR,revenue,experiment_wins,ab_variant,slug,URL').eq('campaign_id', cid),
+        supabaseClient.from('ads').select('title,platform,impressions,clicks,conversions,ctr,spend,meetings_booked,new_customers,conversion_revenue,ab_variant').eq('campaign_id', cid),
+        supabaseClient.from('email').select('subject,opens,clicks,replied_at,opened_at,clicked_at').eq('customer_id', CUSTOMER_ID).eq('campaign', cname),
+        supabaseClient.from('social').select('platform,title,impressions,engagements,clicks,shares,revenue,URL').eq('customer_id', CUSTOMER_ID).eq('campaign', cname),
+        supabaseClient.from('victories').select('company_won,estimated_annual_revenue,created_at,contact_converted').eq('customer_id', CUSTOMER_ID)
+      ]);
+      const pages = pagesR.data || [], ads = adsR.data || [], emails = emailR.data || [], social = socialR.data || [], vics = vicR.data || [];
+
+      // Email rollup
+      const eSent = emails.length;
+      const eOpen = emails.filter(e => e.opened_at || (e.opens||0) > 0).length;
+      const eClick = emails.filter(e => e.clicked_at || (e.clicks||0) > 0).length;
+      const eReply = emails.filter(e => e.replied_at).length;
+      const pct = (n,d) => d ? Math.round(n*100/d) + '%' : '—';
+
+      // Page rollup
+      const pViews = pages.reduce((s,p)=>s+(p.views||0),0);
+      const pConv = pages.reduce((s,p)=>s+(p.conversions||0),0);
+      const pRev = pages.reduce((s,p)=>s+(parseFloat(p.revenue)||0),0);
+
+      // Ad funnel rollup
+      const aImp = ads.reduce((s,a)=>s+(a.impressions||0),0);
+      const aClk = ads.reduce((s,a)=>s+(a.clicks||0),0);
+      const aConv = ads.reduce((s,a)=>s+(a.conversions||0),0);
+      const aMtg = ads.reduce((s,a)=>s+(a.meetings_booked||0),0);
+      const aCust = ads.reduce((s,a)=>s+(a.new_customers||0),0);
+      const aSpend = ads.reduce((s,a)=>s+(parseFloat(a.spend)||0),0);
+      const aRev = ads.reduce((s,a)=>s+(parseFloat(a.conversion_revenue)||0),0);
+
+      // Social rollup
+      const sImp = social.reduce((s,x)=>s+(x.impressions||0),0);
+      const sEng = social.reduce((s,x)=>s+(x.engagements||0),0);
+      const sClk = social.reduce((s,x)=>s+(x.clicks||0),0);
+
+      const esc = (v)=>sanitizeInput(v===null||v===undefined?'':String(v));
+      const box = (label, body) => `<div class="an-box"><div class="an-h">${label}</div>${body}</div>`;
+      const kv = (k,v) => `<div class="an-kv"><span>${k}</span><b>${v}</b></div>`;
+
+      // Winning page (experiment_wins or highest conversions)
+      const winPage = pages.slice().sort((a,b)=>(b.experiment_wins||0)-(a.experiment_wins||0)||(b.conversions||0)-(a.conversions||0))[0];
+      // Top email by clicks then opens
+      const topEmail = emails.slice().sort((a,b)=>((b.clicks||0)-(a.clicks||0))||((b.opens||0)-(a.opens||0)))[0];
+
+      modalBody.innerHTML = `
+        <div class="an-wrap">
+          ${box('Email', eSent ? (
+            kv('Sent', eSent) + kv('Open rate', pct(eOpen,eSent)) + kv('Click rate', pct(eClick,eSent)) + kv('Reply rate', pct(eReply,eSent)) +
+            (topEmail ? `<div class="an-note">Top: "${esc(topEmail.subject)}"</div>` : '')
+          ) : '<div class="an-empty">No campaign emails yet.</div>')}
+
+          ${box('Landing Pages', pages.length ? (
+            kv('Pages', pages.length) + kv('Views', pViews) + kv('Conversions', pConv) + kv('Conv. rate', pct(pConv,pViews)) + kv('Revenue', '$'+Math.round(pRev)) +
+            (winPage ? `<div class="an-note">Winning: ${esc(winPage.name||winPage.slug||'variant '+(winPage.ab_variant||''))} ${winPage.experiment_wins?('('+winPage.experiment_wins+' wins)'):''}</div>` : '')
+          ) : '<div class="an-empty">No pages linked. Build one from this campaign.</div>')}
+
+          ${box('LinkedIn / Ads', ads.length ? (
+            kv('Impressions', aImp) + kv('Clicks', aClk) + kv('CTR', pct(aClk,aImp)) + kv('Conversions', aConv) +
+            kv('Meetings', aMtg) + kv('New customers', aCust) + kv('Spend', '$'+Math.round(aSpend)) + kv('Revenue', '$'+Math.round(aRev)) +
+            (aSpend>0 ? kv('ROAS', (aRev/aSpend).toFixed(1)+'x') : '')
+          ) : '<div class="an-empty">No ads yet. Run these last, after free channels prove creative + audience.</div>')}
+
+          ${box('Social', social.length ? (
+            kv('Posts', social.length) + kv('Impressions', sImp) + kv('Engagements', sEng) + kv('Clicks', sClk)
+          ) : '<div class="an-empty">No social posts linked yet.</div>')}
+
+          ${box('Victories', vics.length ? (
+            kv('Total wins', vics.length) + kv('Est. annual rev', '$'+Math.round(vics.reduce((s,v)=>s+(parseFloat(v.estimated_annual_revenue)||0),0))) +
+            `<div class="an-note">${esc(vics.slice(0,3).map(v=>v.company_won).filter(Boolean).join(', '))}</div>`
+          ) : '<div class="an-empty">No victories recorded yet.</div>')}
+        </div>
+        <div class="edit-actions">
+          <button class="btn-small" onclick="openCampaignModal(campaignById('${esc(cid)}'))">Edit Campaign</button>
+          <button class="btn-small" onclick="closeModal()">Close</button>
+        </div>`;
+    } catch (e) {
+      modalBody.innerHTML = '<div class="an-empty">Could not load analytics: ' + sanitizeInput(e.message) + '</div>';
+    }
   }
 
   // Delete campaign with confirmation
@@ -1484,6 +1573,9 @@ function closeModal() {
 
   // Make functions globally available for onclick handlers
   window.openCampaignModal = openCampaignModal;
+  window.campaignById = campaignById;
+  window.saveCampaign = saveCampaign;
+  window.openAnalytics = openAnalytics;
   window.closeModal = closeModal;
   window.editCampaign = editCampaign;
   window.deleteCampaign = deleteCampaign;
