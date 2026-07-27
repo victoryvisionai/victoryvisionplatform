@@ -1,1086 +1,553 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Manage your email communications and drafts."/>
-  <meta name="author" content="Victory Vision"/>
   <title>Victory Vision AI - Messages</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
   <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/intro.min.js"></script>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f5f5f5;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0; padding: 0;
+      background: #f0f2f5;
+      color: #1a1a2e;
     }
+
+    /* ── NAVBAR ── */
     .navbar {
-      background-color: #0A3161;
+      background: #0a3161;
       color: white;
-      padding: 15px;
+      padding: 0 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      height: 56px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
+    .logo img { height: 44px; width: auto; }
     .navbar nav ul {
-      display: flex;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .navbar nav ul li {
-      margin: 0 10px;
+      display: flex; list-style: none; margin: 0; padding: 0; gap: 2px;
     }
     .navbar nav ul li a {
-      color: white;
+      color: rgba(255,255,255,0.85);
       text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: all 0.15s;
     }
-    .navbar .user-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .navbar nav ul li a:hover, .navbar nav ul li a.active {
+      color: white; background: rgba(255,255,255,0.15);
     }
+    .user-info { display: flex; align-items: center; gap: 8px; }
+    #userEmail { font-size: 12px; color: rgba(255,255,255,0.7); }
     .subscription-medallion {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: linear-gradient(45deg, #CD7F32, #A0522D);
-      color: white;
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      cursor: pointer;
-      position: relative;
-      border: none;
-      transition: all 0.3s ease;
-    }
-    .subscription-medallion.bronze {
+      padding: 4px 12px; border-radius: 12px;
+      font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; border: none; color: white;
       background: linear-gradient(45deg, #CD7F32, #A0522D);
     }
-    .subscription-medallion.silver {
-      background: linear-gradient(45deg, #C0C0C0, #808080);
+    .subscription-medallion.silver { background: linear-gradient(45deg, #C0C0C0, #808080); }
+    .subscription-medallion.gold   { background: linear-gradient(45deg, #FFD700, #FFA500); color: #333; }
+    .btn-tour {
+      background: #28a745; color: white; border: none;
+      padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
     }
-    .subscription-medallion.gold {
-      background: linear-gradient(45deg, #FFD700, #FFA500);
-    }
-    .subscription-medallion:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-    .subscription-medallion .plan-name {
-      font-weight: bold;
-    }
-    .logo img {
-      height: 60px;
-      width: auto;
-      max-height: 100px;
-    }
-    .content {
-      padding: 20px 4px;
-      max-width: 1800px;
-      margin: 0 auto;
-    }
-    .page-header {
-      margin-bottom: 30px;
-    }
-    .page-title {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #0A3161;
-      margin-bottom: 0.5rem;
-    }
-    .page-subtitle {
-      font-size: 1.1rem;
-      color: #666;
-    }
-    .messages-layout {
+
+    /* ── LAYOUT ── */
+    .app-shell {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      height: calc(100vh - 200px);
-      min-height: 600px;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: auto 1fr;
+      height: calc(100vh - 56px);
+      overflow: hidden;
     }
-    .email-list-panel {
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      grid-column: 1 / -1;
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-bottom: 1px solid #d0d4da;
+      padding: 6px 16px;
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      align-items: center;
+      gap: 6px;
     }
-    .email-reading-panel {
+    .toolbar-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border: 1px solid #c8cdd4;
+      border-radius: 4px; background: white; cursor: pointer;
+      font-size: 13px; color: #333; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .toolbar-btn:hover { background: #f0f2f5; border-color: #aaa; }
+    .toolbar-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .toolbar-btn.primary:hover { background: #0c3e7c; }
+    .toolbar-btn.danger { color: #c0392b; border-color: #e8b4b0; }
+    .toolbar-btn.danger:hover { background: #fdf0ef; }
+    .toolbar-sep { width: 1px; height: 24px; background: #d0d4da; margin: 0 4px; }
+    .toolbar-search {
+      margin-left: auto; display: flex; align-items: center;
+      border: 1px solid #c8cdd4; border-radius: 4px;
+      overflow: hidden; background: #f8f9fa;
+    }
+    .toolbar-search input {
+      border: none; background: transparent; padding: 5px 10px;
+      font-size: 13px; width: 200px; outline: none;
+    }
+    .toolbar-search span { padding: 5px 8px; color: #888; font-size: 13px; }
+
+    /* ── INBOX PANEL ── */
+    .inbox-panel {
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
+      border-right: 1px solid #d0d4da;
+      display: flex; flex-direction: column;
       overflow: hidden;
     }
-    .panel-header {
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .panel-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin: 0;
-    }
-    .filter-section {
-      background: #f8f9fa;
-      padding: 15px 20px;
-      border-bottom: 1px solid #dee2e6;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      align-items: end;
-    }
-    .form-group {
-      margin: 0;
-    }
-    .form-group label {
-      display: block;
-      margin-bottom: 3px;
-      font-weight: 500;
-      color: #333;
-      font-size: 12px;
-    }
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    .form-group button {
-      padding: 10px 16px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      background: #0A3161;
-      color: white;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    .form-group button:hover {
-      background: #083050;
-      transform: translateY(-1px);
-    }
-    .form-group button.secondary {
-      background: #6c757d;
-    }
-    .form-group button.secondary:hover {
-      background: #5a6268;
-    }
-    .form-group button.success {
-      background: #28a745;
-    }
-    .form-group button.success:hover {
-      background: #218838;
-    }
-    .email-list {
-      flex: 1;
-      overflow-y: auto;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .email-thread {
-      border-bottom: 1px solid #f1f3f4;
-    }
-    .email-item {
-      padding: 15px 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      border-left: 4px solid transparent;
-    }
-    .email-item:hover {
-      background-color: #f8f9fa;
-      transform: translateX(2px);
-    }
-    .email-item.selected {
-      background-color: #e3f2fd;
-      border-left: 4px solid #0A3161;
-      box-shadow: inset 0 0 0 1px #0A3161;
-    }
-    .email-item.unread {
-      background-color: #fff8e1;
-      font-weight: 600;
-    }
-    .email-item.draft {
-      background-color: #f3e5f5;
-      border-left: 4px solid #bb133e;
-    }
-    .email-item.sent {
-      background-color: #e8f5e8;
-    }
-    .email-item.inbound {
-      background-color: #f0f8ff;
-    }
-    .email-item.replied {
-      background-color: #f0f8f0;
-    }
-    .email-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .email-from {
-      font-weight: 600;
-      color: #0A3161;
-      font-size: 14px;
-    }
-    .email-date {
-      font-size: 11px;
-      color: #666;
-    }
-    .email-subject {
-      font-size: 13px;
-      color: #333;
-      margin-bottom: 6px;
-      font-weight: 500;
-    }
-    .email-preview {
-      font-size: 12px;
-      color: #666;
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .email-badges {
-      display: flex;
-      gap: 4px;
-      margin-top: 8px;
-    }
-    .badge {
-      font-size: 10px;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-weight: 500;
-    }
-    .badge.draft {
-      background: #bb133e;
-      color: white;
-    }
-    .badge.sent {
-      background: #28a745;
-      color: white;
-    }
-    .badge.inbound {
-      background: #17a2b8;
-      color: white;
-    }
-    .badge.replied {
-      background: #6f42c1;
-      color: white;
-    }
-    .badge.opened {
-      background: #ffc107;
-      color: #333;
-    }
-    .thread-indicator {
-      font-size: 10px;
-      color: #666;
-      margin-left: 10px;
-    }
-    .compose-section {
-      padding: 15px 20px;
-      border-top: 1px solid #dee2e6;
+    .folder-tabs {
+      display: flex; border-bottom: 1px solid #d0d4da;
       background: #f8f9fa;
     }
+    .folder-tab {
+      flex: 1; padding: 10px 8px; text-align: center;
+      font-size: 12px; font-weight: 600; color: #555;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .folder-tab:hover { color: #0a3161; background: #f0f2f5; }
+    .folder-tab.active { color: #0a3161; border-bottom-color: #0a3161; background: white; }
+    .unread-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #bb133e; color: white;
+      border-radius: 10px; font-size: 10px; font-weight: 700;
+      min-width: 17px; height: 17px; padding: 0 4px;
+      margin-left: 4px;
+    }
+
+    /* Smart filter pills */
+    .filter-pills {
+      display: flex; gap: 4px; padding: 6px 10px;
+      border-bottom: 1px solid #eee; flex-wrap: wrap;
+    }
+    .pill {
+      padding: 3px 10px; border-radius: 12px; font-size: 11px;
+      cursor: pointer; border: 1px solid #cdd0d6; background: white;
+      color: #555; transition: all 0.15s;
+    }
+    .pill:hover { border-color: #0a3161; color: #0a3161; }
+    .pill.active { background: #0a3161; color: white; border-color: #0a3161; }
+
+    /* Email list rows */
+    .email-list { flex: 1; overflow-y: auto; }
+    .email-row {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f2f5;
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 8px;
+    }
+    .email-row:hover { background: #f5f7fa; }
+    .email-row.selected { background: #dce8f8; }
+    .email-row.unread { background: #fffde7; }
+    .email-row.unread .email-row-from { font-weight: 700; }
+    .email-row.unread .email-row-subject { font-weight: 600; }
+    .email-row-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .email-row-body { min-width: 0; }
+    .email-row-from {
+      font-size: 13px; color: #222;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-subject {
+      font-size: 12px; color: #444;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-preview {
+      font-size: 11px; color: #888;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-row-meta { text-align: right; flex-shrink: 0; }
+    .email-row-date { font-size: 11px; color: #888; white-space: nowrap; }
+    .status-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: #2196F3; margin-left: 4px;
+    }
+    .email-row-flags { display: flex; gap: 3px; justify-content: flex-end; margin-top: 3px; }
+    .mini-badge {
+      font-size: 9px; padding: 1px 5px; border-radius: 8px;
+      font-weight: 600; line-height: 1.4;
+    }
+    .mini-badge.sent     { background: #e8f5e9; color: #2e7d32; }
+    .mini-badge.draft    { background: #fce4ec; color: #c62828; }
+    .mini-badge.received { background: #e3f2fd; color: #1565c0; }
+    .mini-badge.opened   { background: #fff8e1; color: #f57f17; }
+    .mini-badge.replied  { background: #f3e5f5; color: #6a1b9a; }
+    .mini-badge.scheduled { background: #e0f7fa; color: #006064; }
+    .email-list-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 200px; color: #aaa;
+      font-size: 14px; gap: 8px;
+    }
+    .email-list-empty svg { opacity: 0.4; }
+
+    /* AI auto-reply strip */
+    .autoreply-strip {
+      padding: 8px 14px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px;
+    }
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc; transition: .3s; border-radius: 22px;
+    }
+    .toggle-slider::before {
+      content: ""; position: absolute;
+      height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .toggle-slider { background: #28a745; }
+    input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+    /* ── READING PANE ── */
     .reading-pane {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
+      display: flex; flex-direction: column;
+      background: white; overflow: hidden;
     }
-    .reading-pane.empty {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: #666;
-      font-size: 1.1rem;
+    .reading-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: #bbb; gap: 12px; font-size: 14px;
     }
-    .email-view {
-      display: none;
+
+    /* Email View */
+    .email-view { flex: 1; overflow-y: auto; padding: 24px 32px; display: none; }
+    .email-view.active { display: block; }
+    .ev-subject { font-size: 1.3rem; font-weight: 700; color: #0a3161; margin-bottom: 16px; }
+    .ev-meta-table {
+      display: grid; grid-template-columns: auto 1fr;
+      gap: 4px 16px; font-size: 13px;
+      padding: 12px 0; border-top: 1px solid #e8eaed; border-bottom: 1px solid #e8eaed;
+      margin-bottom: 16px;
     }
-    .email-view.active {
-      display: block;
+    .ev-label { color: #888; font-weight: 600; }
+    .ev-value { color: #333; }
+    .ev-row { display: contents; }
+    .ev-body {
+      font-size: 14px; line-height: 1.7; color: #333;
+      background: #fafafa; border: 1px solid #e8eaed;
+      border-radius: 6px; padding: 16px; min-height: 200px;
+      overflow-x: auto;
     }
-    .email-view-header {
-      border-bottom: 2px solid #dee2e6;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+    .ev-body.plain { white-space: pre-wrap; }
+    .ev-attachments {
+      margin: 12px 0; padding: 12px;
+      background: #f8f9fa; border-radius: 6px;
+      border: 1px solid #e0e0e0;
     }
-    .email-view-subject {
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: #0A3161;
-      margin-bottom: 15px;
+    .ev-attachments h4 { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .att-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: white; border: 1px solid #d0d4da;
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 12px; cursor: pointer; margin: 3px;
+      transition: all 0.15s;
     }
-    .email-view-meta {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px 15px;
-      font-size: 13px;
-    }
-    .meta-label {
-      font-weight: 600;
-      color: #666;
-    }
-    .meta-value {
-      color: #333;
-    }
-    .email-view-body {
-      line-height: 1.6;
-      color: #333;
-      white-space: pre-wrap;
-      margin-bottom: 20px;
-      min-height: 200px;
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 6px;
-      border: 1px solid #e9ecef;
-    }
-    .attachments-section {
-      margin: 15px 0;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      border: 1px solid #dee2e6;
-    }
-    .attachment-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px;
-      background: white;
-      border-radius: 4px;
-      margin: 5px 0;
-      border: 1px solid #e9ecef;
-    }
-    .attachment-icon {
-      font-size: 20px;
-    }
-    .attachment-info {
-      flex: 1;
-    }
-    .attachment-name {
-      font-weight: 500;
-      color: #0A3161;
-    }
-    .attachment-size {
-      font-size: 11px;
-      color: #666;
-    }
-    .email-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 20px;
-      padding-top: 15px;
-      border-top: 1px solid #dee2e6;
+    .att-chip:hover { background: #0a3161; color: white; border-color: #0a3161; }
+    .ev-actions {
+      display: flex; gap: 6px; padding: 12px 32px;
+      border-top: 1px solid #e8eaed; background: #fafafa;
       flex-wrap: wrap;
     }
-    .email-actions button {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
+    .ev-btn {
+      padding: 6px 14px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
+      transition: all 0.15s; display: flex; align-items: center; gap: 5px;
     }
-    .btn-primary {
-      background: #0A3161;
-      color: white;
+    .ev-btn:hover { background: #f0f2f5; }
+    .ev-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .ev-btn.primary:hover { background: #0c3e7c; }
+    .ev-btn.danger { color: #c0392b; border-color: #e8b4b0; }
+    .ev-btn.danger:hover { background: #fdf0ef; }
+
+    /* Compose Form */
+    .compose-form { flex: 1; overflow-y: auto; display: none; padding: 20px 28px; }
+    .compose-form.active { display: block; }
+    .compose-header { font-size: 1rem; font-weight: 700; color: #0a3161; margin-bottom: 16px; border-bottom: 2px solid #0a3161; padding-bottom: 8px; }
+    .compose-field {
+      display: flex; align-items: center;
+      border-bottom: 1px solid #e8eaed; padding: 6px 0;
     }
-    .btn-primary:hover {
-      background: #083050;
-      transform: translateY(-1px);
+    .compose-field label { width: 50px; font-size: 12px; color: #888; font-weight: 600; flex-shrink: 0; }
+    .compose-field input {
+      flex: 1; border: none; outline: none; font-size: 13px;
+      font-family: inherit; background: transparent; color: #333;
     }
-    .btn-success {
-      background: #28a745;
-      color: white;
+    .compose-field .field-action { font-size: 12px; color: #0a3161; cursor: pointer; flex-shrink: 0; }
+    .compose-body {
+      width: 100%; border: none; outline: none;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      min-height: 200px; margin-top: 12px;
+      font-family: inherit; color: #333;
+      background: transparent;
     }
-    .btn-success:hover {
-      background: #218838;
-      transform: translateY(-1px);
+    .ai-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: #f0f4ff; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 14px;
+      border: 1px solid #c5d3f0;
     }
-    .btn-secondary {
-      background: #6c757d;
-      color: white;
+    .ai-bar label { font-size: 12px; font-weight: 600; color: #0a3161; white-space: nowrap; }
+    .ai-bar select {
+      flex: 1; border: 1px solid #c5d3f0; border-radius: 4px;
+      padding: 4px 8px; font-size: 12px; outline: none;
     }
-    .btn-secondary:hover {
-      background: #5a6268;
-      transform: translateY(-1px);
-    }
-    .btn-danger {
-      background: #dc3545;
-      color: white;
-    }
-    .btn-danger:hover {
-      background: #c82333;
-      transform: translateY(-1px);
-    }
-    .compose-form {
-      display: none;
-      padding: 20px;
-    }
-    .compose-form.active {
-      display: block;
-    }
-    .compose-form .form-group {
-      margin-bottom: 15px;
-    }
-    .compose-form label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #333;
-      font-size: 14px;
-    }
-    .compose-form input,
-    .compose-form textarea,
-    .compose-form select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    .compose-form textarea {
-      min-height: 200px;
-      resize: vertical;
-      font-family: inherit;
-    }
-    .compose-form .form-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-    .compose-form .form-actions button {
-      padding: 12px 20px;
-      font-size: 14px;
-      border-radius: 6px;
-      font-weight: 500;
-    }
-    .cc-bcc-section {
-      display: none;
-      margin-bottom: 15px;
-    }
-    .cc-bcc-section.active {
-      display: block;
-    }
-    .cc-bcc-toggle {
-      color: #0A3161;
-      cursor: pointer;
-      font-size: 12px;
-      text-decoration: underline;
-      margin-left: 10px;
-    }
-    .signature-section {
-      border-top: 1px solid #dee2e6;
-      padding-top: 15px;
-      margin-top: 15px;
-    }
+    .ai-btn { padding: 5px 12px; background: #0a3161; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
     .signature-preview {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #dee2e6;
-      white-space: pre-wrap;
-      font-size: 13px;
-      margin-bottom: 10px;
+      font-size: 12px; color: #888; white-space: pre-wrap;
+      border-top: 1px solid #e8eaed; padding-top: 12px; margin-top: 8px;
     }
-    .signature-edit-btn {
-      background: #17a2b8;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
+    .compose-footer {
+      border-top: 1px solid #e8eaed; padding: 12px 0 0;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
     }
-    .signature-edit-btn:hover {
-      background: #138496;
+    .cf-btn {
+      padding: 7px 16px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
+      transition: all 0.15s; display: flex; align-items: center; gap: 5px;
     }
-    .file-attachment-section {
-      background: #f8f9fa;
-      border: 2px dashed #dee2e6;
-      border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 15px;
-      text-align: center;
-      transition: all 0.3s;
+    .cf-btn:hover { background: #f0f2f5; }
+    .cf-btn.send { background: #0a3161; color: white; border-color: #0a3161; font-weight: 600; }
+    .cf-btn.send:hover { background: #0c3e7c; }
+    .attachment-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .att-remove {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #edf2ff; border: 1px solid #c5d3f0;
+      border-radius: 16px; padding: 3px 10px;
+      font-size: 12px; color: #0a3161;
     }
-    .file-attachment-section:hover {
-      border-color: #0A3161;
-      background: #e3f2fd;
+    .att-remove button {
+      background: none; border: none; cursor: pointer;
+      color: #888; font-size: 14px; line-height: 1; padding: 0;
     }
-    .file-attachment-section.dragover {
-      border-color: #28a745;
-      background: #d4edda;
+    .att-remove button:hover { color: #c0392b; }
+
+    /* ── MODALS ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      align-items: center; justify-content: center;
     }
-    .attachment-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .attached-file {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: white;
-      padding: 8px 12px;
-      border-radius: 20px;
-      border: 1px solid #dee2e6;
-      font-size: 12px;
-    }
-    .remove-attachment {
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 10px;
-    }
-    .ai-assist-section {
-      background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
-      padding: 15px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      border: 1px solid #bb133e;
-    }
-    .ai-assist-section h4 {
-      margin: 0 0 10px 0;
-      color: #0A3161;
-      font-size: 14px;
-    }
-    .ai-assist-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 8px;
-    }
-    .ai-assist-options button {
-      padding: 8px 12px;
-      font-size: 12px;
-      border: 1px solid #0A3161;
-      background: white;
-      color: #0A3161;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .ai-assist-options button:hover {
-      background: #0A3161;
-      color: white;
-    }
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      color: #666;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: #666;
-    }
-    .empty-state h3 {
-      color: #0A3161;
-      margin-bottom: 10px;
-    }
-    .status-message {
-      padding: 12px;
-      border-radius: 6px;
-      margin: 10px 0;
-      display: none;
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      max-width: 400px;
-      z-index: 1000;
-      font-weight: 500;
-    }
-    .status-success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    .status-error {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-    
-    /* Modal styles */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
-    .modal-content {
-      background-color: #fefefe;
-      margin: 5% auto;
-      padding: 0;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 800px;
-      max-height: 90vh;
-      overflow-y: auto;
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white; border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-height: 90vh; display: flex; flex-direction: column;
+      overflow: hidden;
     }
     .modal-header {
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      padding: 20px;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: linear-gradient(135deg, #0a3161, #1a4c80);
+      color: white; padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .close {
-      color: white;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
+    .modal-header h2 { margin: 0; font-size: 1rem; }
+    .modal-close {
+      background: none; border: none; color: white;
+      font-size: 20px; cursor: pointer; line-height: 1; opacity: 0.8;
     }
-    .close:hover {
-      opacity: 0.8;
+    .modal-close:hover { opacity: 1; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid #e8eaed; display: flex; justify-content: flex-end; gap: 8px; }
+    .mb-btn {
+      padding: 7px 18px; border-radius: 4px; border: 1px solid #c8cdd4;
+      font-size: 13px; cursor: pointer; background: white; color: #333;
     }
-    .modal-body {
-      padding: 20px;
+    .mb-btn:hover { background: #f0f2f5; }
+    .mb-btn.primary { background: #0a3161; color: white; border-color: #0a3161; }
+    .mb-btn.primary:hover { background: #0c3e7c; }
+
+    /* Media Selector Modal */
+    .media-modal { width: 740px; }
+    .media-filter-bar {
+      display: flex; gap: 6px; padding: 12px 20px;
+      border-bottom: 1px solid #e8eaed; align-items: center;
     }
-    .field-group {
-      margin-bottom: 20px;
+    .media-filter-bar input {
+      flex: 1; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 6px 10px; font-size: 13px; outline: none;
     }
-    .field-label {
-      font-weight: bold;
-      color: #0A3161;
-      margin-bottom: 5px;
+    .type-filter-btn {
+      padding: 5px 12px; border-radius: 16px; border: 1px solid #d0d4da;
+      font-size: 12px; cursor: pointer; background: white; color: #555;
+      transition: all 0.15s;
     }
-    .field-value {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #dee2e6;
-      white-space: pre-wrap;
+    .type-filter-btn:hover { border-color: #0a3161; color: #0a3161; }
+    .type-filter-btn.active { background: #0a3161; color: white; border-color: #0a3161; }
+    .media-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; padding: 16px 20px; overflow-y: auto; max-height: 420px;
+    }
+    .media-card {
+      border: 2px solid transparent; border-radius: 8px;
+      cursor: pointer; overflow: hidden; position: relative;
+      transition: all 0.15s; background: #f8f9fa;
+    }
+    .media-card:hover { border-color: #aaa; }
+    .media-card.selected { border-color: #0a3161; box-shadow: 0 0 0 2px rgba(10,49,97,0.2); }
+    .media-thumb {
+      width: 100%; aspect-ratio: 1;
+      object-fit: cover; display: block; background: #eee;
+    }
+    .media-thumb-placeholder {
+      width: 100%; aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; background: #f0f2f5;
+    }
+    .media-card-info {
+      padding: 6px 8px; font-size: 11px; color: #555;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .media-card-type {
+      position: absolute; top: 6px; right: 6px;
+      background: rgba(0,0,0,0.6); color: white;
+      font-size: 9px; padding: 2px 5px; border-radius: 8px; font-weight: 600;
+      text-transform: uppercase;
+    }
+    .media-card .check-overlay {
+      display: none; position: absolute; inset: 0;
+      background: rgba(10,49,97,0.15);
+      align-items: flex-start; justify-content: flex-end; padding: 8px;
+    }
+    .media-card.selected .check-overlay { display: flex; }
+    .check-circle {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #0a3161; color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .media-count-label {
+      padding: 4px 20px; font-size: 12px; color: #0a3161; font-weight: 600;
     }
 
-    /* Chat Widget Styles */
-    .vv-chat-widget {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 10000;
-      font-family: Arial, sans-serif;
-    }
-
-    .vv-chat-toggle {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
-      color: white;
-      font-size: 24px;
-    }
-
-    .vv-chat-toggle:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    }
-
-    .vv-chat-toggle.active {
-      background: linear-gradient(135deg, #dc3545, #c82333);
-    }
-
-    .vv-chat-container {
-      position: absolute;
-      bottom: 80px;
-      right: 0;
-      width: 350px;
-      height: 500px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      border: 1px solid #e0e0e0;
-    }
-
-    .vv-chat-container.open {
-      display: flex;
-    }
-
-    .vv-chat-header {
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      padding: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .vv-chat-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
-
-    .vv-chat-title {
-      flex: 1;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .vv-chat-subtitle {
-      font-size: 11px;
-      opacity: 0.8;
-    }
-
-    .vv-chat-minimize {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-size: 18px;
-      padding: 5px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-
-    .vv-chat-minimize:hover {
-      background: rgba(255,255,255,0.1);
-    }
-
-    .vv-chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
-      background: #f8f9fa;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .vv-chat-message {
-      max-width: 80%;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.4;
-      animation: messageSlideIn 0.3s ease;
-    }
-
-    @keyframes messageSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .vv-chat-message.bot {
-      background: white;
-      border: 1px solid #e0e0e0;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
-
-    .vv-chat-message.user {
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-
-    .vv-chat-input-area {
-      padding: 15px;
-      background: white;
-      border-top: 1px solid #e0e0e0;
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-    }
-
-    .vv-chat-input {
-      flex: 1;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      padding: 10px 15px;
-      font-size: 14px;
-      resize: none;
-      min-height: 20px;
-      max-height: 80px;
-      overflow-y: auto;
+    /* Schedule Modal */
+    .sched-modal { width: 380px; }
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+    .form-row input, .form-row select {
+      width: 100%; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 7px 10px; font-size: 13px; outline: none;
       font-family: inherit;
-      outline: none;
-      transition: border-color 0.2s;
     }
+    .form-row input:focus, .form-row select:focus { border-color: #0a3161; }
 
-    .vv-chat-input:focus {
-      border-color: #0A3161;
+    /* Signature Modal */
+    .sig-modal { width: 460px; }
+    .sig-textarea {
+      width: 100%; border: 1px solid #d0d4da; border-radius: 4px;
+      padding: 10px; font-size: 13px; font-family: inherit;
+      min-height: 120px; resize: vertical; outline: none;
     }
+    .sig-textarea:focus { border-color: #0a3161; }
 
-    .vv-chat-send {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      border: none;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      transition: all 0.2s;
-      flex-shrink: 0;
+    /* Details Modal */
+    .details-modal { width: 500px; }
+    .field-row {
+      display: grid; grid-template-columns: 120px 1fr;
+      gap: 4px; border-bottom: 1px solid #f0f0f0; padding: 8px 0;
+      font-size: 13px;
     }
+    .field-row .fl { color: #888; font-weight: 600; }
+    .field-row .fv { color: #333; word-break: break-word; }
 
-    .vv-chat-send:hover:not(:disabled) {
-      transform: scale(1.05);
-      background: linear-gradient(135deg, #1a4c80, #0A3161);
+    /* Status toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1a1a2e; color: white;
+      padding: 10px 18px; border-radius: 6px;
+      font-size: 13px; z-index: 9999;
+      opacity: 0; transform: translateY(10px);
+      transition: all 0.3s; pointer-events: none;
     }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #c0392b; }
 
-    .vv-chat-send:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    /* Chat widget */
+    .vv-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 500; }
+    .vv-chat-toggle {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #0a3161; border: none; color: white;
+      font-size: 22px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(10,49,97,0.4);
+      position: relative;
     }
-
-    .vv-chat-typing {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      border-bottom-left-radius: 4px;
-      align-self: flex-start;
-      max-width: 80px;
-    }
-
-    .vv-chat-typing.show {
-      display: flex;
-    }
-
-    .vv-typing-dots {
-      display: flex;
-      gap: 3px;
-    }
-
-    .vv-typing-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #0A3161;
-      animation: typingBounce 1.4s infinite ease-in-out both;
-    }
-
-    .vv-typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .vv-typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-    @keyframes typingBounce {
-      0%, 80%, 100% {
-        transform: scale(0.8);
-        opacity: 0.5;
-      }
-      40% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    .vv-chat-error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      margin-top: 5px;
-      display: none;
-    }
-
-    .vv-chat-quick-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 10px;
-    }
-
-    .vv-quick-action {
-      background: #e3f2fd;
-      border: 1px solid #0A3161;
-      color: #0A3161;
-      padding: 6px 12px;
-      border-radius: 15px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .vv-quick-action:hover {
-      background: #0A3161;
-      color: white;
-    }
-
     .vv-notification-badge {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: #dc3545;
-      color: white;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      animation: pulse 2s infinite;
+      position: absolute; top: -3px; right: -3px;
+      background: #bb133e; color: white; border-radius: 50%;
+      width: 18px; height: 18px; font-size: 10px;
+      font-weight: 700; display: none; align-items: center; justify-content: center;
     }
+    .vv-chat-container {
+      position: fixed; bottom: 84px; right: 20px;
+      width: 340px; height: 440px;
+      background: white; border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      display: none; flex-direction: column; overflow: hidden;
+      z-index: 499;
+    }
+    .vv-chat-container.open { display: flex; }
+    .vv-chat-header {
+      background: linear-gradient(135deg, #0a3161, #1a4c80);
+      color: white; padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .vv-chat-title { font-weight: 700; font-size: 14px; }
+    .vv-chat-minimize { background: none; border: none; color: white; cursor: pointer; font-size: 16px; }
+    .vv-chat-messages { flex: 1; overflow-y: auto; padding: 12px; background: #f8f9fa; }
+    .vv-chat-message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 13px; line-height: 1.4; }
+    .vv-chat-message.user { background: #0a3161; color: white; margin-left: auto; }
+    .vv-chat-message.bot { background: white; color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .vv-chat-typing { display: none; padding: 8px 12px; background: white; border-radius: 8px; width: 60px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .vv-chat-typing.show { display: block; }
+    .vv-chat-typing span { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite; }
+    .vv-chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .vv-chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+    .vv-quick-replies { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; background: white; border-top: 1px solid #eee; }
+    .vv-quick-reply { background: #f0f2f5; border: 1px solid #ddd; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; }
+    .vv-quick-reply:hover { background: #0a3161; color: white; border-color: #0a3161; }
+    .vv-chat-input-area { display: flex; gap: 8px; padding: 10px; background: white; border-top: 1px solid #eee; }
+    .vv-chat-input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; resize: none; font-family: inherit; outline: none; max-height: 80px; }
+    .vv-chat-send { background: #0a3161; color: white; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .vv-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-      }
-      70% {
-        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-      }
-      100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-      }
-    }
-    
-    footer {
-      background: #0A3161;
-      color: #fff;
-      text-align: center;
-      padding: 15px;
-      margin-top: 20px;
-    }
-    footer a {
-      color: #fff;
-      margin-right: 15px;
-      text-decoration: none;
-    }
-    
-    /* Intro.js custom styling */
-    .introjs-tooltip {
-      max-width: 350px;
-      font-size: 14px;
-    }
-
-    .introjs-button {
-      background: #0A3161 !important;
-      border: 1px solid #0A3161 !important;
-      color: white !important;
-      padding: 8px 15px !important;
-      border-radius: 4px !important;
-    }
-
-    .introjs-button:hover {
-      background: #083050 !important;
-      border-color: #083050 !important;
-    }
-
-    .introjs-skipbutton {
-      background: #6c757d !important;
-      border-color: #6c757d !important;
-    }
-
-    .introjs-progressbar {
-      background-color: #0A3161 !important;
-    }
-    
-    @media (max-width: 1024px) {
-      .messages-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-      .email-reading-panel {
-        min-height: 400px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .content {
-        padding: 10px 5px;
-      }
-      .page-title {
-        font-size: 2rem;
-      }
-      .filter-section {
-        grid-template-columns: 1fr;
-      }
-      .email-actions {
-        flex-wrap: wrap;
-      }
-      .compose-form .form-actions {
-        flex-direction: column;
-      }
-      .vv-chat-container {
-        width: 320px;
-        height: 450px;
-        bottom: 70px;
-        right: -10px;
-      }
-      .vv-chat-widget {
-        bottom: 15px;
-        right: 15px;
-      }
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .inbox-panel { max-height: 40vh; }
     }
   </style>
 </head>
 <body>
 
+<!-- NAVBAR -->
 <header class="navbar">
   <div class="logo">
-    <img src="logo.jpg" alt="Victory Vision Logo"
-         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+    <img src="logo.jpg" alt="Victory Vision"
+      onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22/><text x=%225%22 y=%2226%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
   </div>
   <nav>
     <ul>
@@ -1090,1798 +557,1585 @@
       <li><a href="pages">Pages</a></li>
       <li><a href="social">Social</a></li>
       <li><a href="contacts">Contacts</a></li>
-      <li><a href="messages">Messages</a></li>
       <li><a href="ads">Ads</a></li>
-      <li><a href="settings">⚙️</a></li>
+      <li><a href="messages" class="active">Messages</a></li>
+      <li><a href="meetings-analysis">Meetings</a></li>
+      <li><a href="ai">Analytics</a></li>
+      <li><a href="settings">Settings</a></li>
     </ul>
   </nav>
   <div class="user-info">
     <span id="userEmail"></span>
-    <button onclick="startTour()" style="background: #28a745; padding: 6px 12px; font-size: 11px; margin-left: 10px;" id="tourButton">
-      📖 Take Tour
-    </button>
-    <div id="subscriptionMedallion" class="subscription-medallion bronze">
-      <span class="plan-name">Bronze</span>
-    </div>
+    <button class="btn-tour" onclick="startTour()">📖 Tour</button>
+    <div id="subscriptionMedallion" class="subscription-medallion bronze">Bronze</div>
   </div>
 </header>
 
-<div class="content">
-  <header class="page-header">
-    <h1 class="page-title">Messages</h1>
-    <p class="page-subtitle">Manage your email communications and AI-powered outreach</p>
-  </header>
+<!-- MAIN APP SHELL -->
+<div class="app-shell">
 
-  <div class="messages-layout">
-    <!-- Email List Panel -->
-    <div class="email-list-panel" data-intro="Your email inbox and drafts are displayed here. Filter, search, and organize your communications." data-step="1">
-      <div class="panel-header">
-        <h2 class="panel-title">📧 Email List</h2>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="showComposeForm()" class="btn-success" style="padding: 10px 16px;">✏️ Compose</button>
-          <button onclick="refreshEmails()" class="btn-secondary" style="padding: 10px 16px;">🔄 Refresh</button>
-        </div>
-      </div>
-      
-      <div class="filter-section" data-intro="Filter your emails by status, contact, date range, or search for specific content." data-step="2">
-        <div class="form-group">
-          <label for="statusFilter">Status</label>
-          <select id="statusFilter">
-            <option value="">All Emails</option>
-            <option value="draft">Drafts</option>
-            <option value="sent">Sent</option>
-            <option value="inbound">Received</option>
-            <option value="replied">Replied</option>
-            <option value="opened">Opened</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="contactFilter">Contact</label>
-          <select id="contactFilter">
-            <option value="">All Contacts</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="dateFromFilter">From Date</label>
-          <input type="date" id="dateFromFilter">
-        </div>
-        <div class="form-group">
-          <label for="dateToFilter">To Date</label>
-          <input type="date" id="dateToFilter">
-        </div>
-        <div class="form-group">
-          <button onclick="applyFilters()">Apply</button>
-        </div>
-        <div class="form-group">
-          <button onclick="clearFilters()" class="secondary">Clear</button>
-        </div>
-      </div>
-      
-      <div class="email-list" id="emailList" data-intro="Click any email to view its content in the reading pane on the right. Different colors indicate email status." data-step="3">
-        <div class="loading">Loading your emails...</div>
-      </div>
-      
-      <div class="compose-section">
-        <button onclick="generateAIEmails()" class="btn-success" style="width: 100%; padding: 12px;">
-          🤖 Generate AI Email Campaign
-        </button>
-      </div>
-    </div>
-
-    <!-- Email Reading/Composing Panel -->
-    <div class="email-reading-panel" data-intro="Read email content here or compose new messages. Use AI assistance to improve your emails." data-step="4">
-      <div class="panel-header">
-        <h2 class="panel-title" id="readingPaneTitle">📖 Reading Pane</h2>
-        <div id="readingPaneActions" style="display: none;">
-          <button onclick="replyToEmail()" class="btn-primary" style="padding: 10px 16px;">↩️ Reply</button>
-          <button onclick="forwardEmail()" class="btn-secondary" style="padding: 10px 16px;">➡️ Forward</button>
-        </div>
-      </div>
-      
-      <div class="reading-pane empty" id="readingPane">
-        <div>
-          <h3>📧 Select an email to read</h3>
-          <p>Choose an email from the list to view its content here</p>
-        </div>
-      </div>
-      
-      <!-- Email View Template -->
-      <div class="email-view" id="emailViewTemplate">
-        <div class="email-view-header">
-          <div class="email-view-subject" id="viewSubject"></div>
-          <div class="email-view-meta">
-            <span class="meta-label">From:</span>
-            <span class="meta-value" id="viewFrom"></span>
-            <span class="meta-label">To:</span>
-            <span class="meta-value" id="viewTo"></span>
-            <span class="meta-label">CC:</span>
-            <span class="meta-value" id="viewCC"></span>
-            <span class="meta-label">Date:</span>
-            <span class="meta-value" id="viewDate"></span>
-            <span class="meta-label">Status:</span>
-            <span class="meta-value" id="viewStatus"></span>
-          </div>
-        </div>
-        
-        <div id="viewAttachments" class="attachments-section" style="display: none;">
-          <h4>📎 Attachments</h4>
-          <div id="attachmentsList"></div>
-        </div>
-        
-        <div class="email-view-body" id="viewBody"></div>
-        
-        <div class="email-actions">
-          <button onclick="replyToEmail()" class="btn-primary">↩️ Reply</button>
-          <button onclick="forwardEmail()" class="btn-secondary">➡️ Forward</button>
-          <button onclick="markAsRead()" class="btn-secondary">✓ Mark Read</button>
-          <button onclick="deleteEmail()" class="btn-danger">🗑️ Delete</button>
-          <button onclick="openEmailModal()" class="btn-secondary">📋 Details</button>
-        </div>
-      </div>
-      
-      <!-- Compose Form -->
-      <div class="compose-form" id="composeForm" data-intro="Compose new emails with AI assistance. Choose from different AI tones and styles to match your communication goals." data-step="5">
-        <div class="ai-assist-section">
-          <h4>🤖 AI Writing Assistant</h4>
-          <div class="ai-assist-options">
-            <button onclick="aiAssist('professional')">Professional</button>
-            <button onclick="aiAssist('friendly')">Friendly</button>
-            <button onclick="aiAssist('persuasive')">Persuasive</button>
-            <button onclick="aiAssist('follow-up')">Follow-up</button>
-            <button onclick="aiAssist('introduction')">Introduction</button>
-            <button onclick="aiAssist('thank-you')">Thank You</button>
-          </div>
-        </div>
-        
-        <form id="emailComposeForm">
-          <div class="form-group">
-            <label for="composeFrom">From</label>
-            <input type="email" id="composeFrom" readonly>
-          </div>
-          
-          <div class="form-group">
-            <label for="composeTo">To *
-              <span class="cc-bcc-toggle" onclick="toggleCCBCC()">+ CC/BCC</span>
-            </label>
-            <select id="composeTo" required>
-              <option value="">Select Contact</option>
-            </select>
-          </div>
-          
-          <div class="cc-bcc-section" id="ccBccSection">
-            <div class="form-group">
-              <label for="composeCC">CC</label>
-              <input type="email" id="composeCC" placeholder="cc@example.com">
-            </div>
-            <div class="form-group">
-              <label for="composeBCC">BCC</label>
-              <input type="email" id="composeBCC" placeholder="bcc@example.com">
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="composeSubject">Subject *</label>
-            <input type="text" id="composeSubject" required placeholder="Email subject">
-          </div>
-          
-          <div class="file-attachment-section" id="fileAttachmentArea">
-            <p>📎 <strong>Attach Files</strong></p>
-            <button type="button" onclick="showFileSelector()" style="margin: 5px;">Choose from Media Library</button>
-            <button type="button" onclick="document.getElementById('fileInput').click()" style="margin: 5px;">Upload New File</button>
-            <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileUpload(event)">
-            <p style="font-size: 12px; color: #666; margin: 5px 0 0 0;">or drag & drop files here</p>
-            <div class="attachment-list" id="attachmentList"></div>
-          </div>
-          
-          <div class="form-group">
-            <label for="composeBody">Message *</label>
-            <textarea id="composeBody" required placeholder="Write your message here..."></textarea>
-          </div>
-          
-          <div class="signature-section">
-            <label>Email Signature</label>
-            <div class="signature-preview" id="signaturePreview">
-              Best regards,<br>
-              Your Name<br>
-              Victory Vision<br>
-              email@victoryvision.com
-            </div>
-            <button type="button" class="signature-edit-btn" onclick="editSignature()">Edit Signature</button>
-          </div>
-          
-          <div class="form-actions">
-            <button type="button" onclick="saveDraft()" class="btn-secondary">💾 Save Draft</button>
-            <button type="button" onclick="scheduleEmail()" class="btn-secondary">⏰ Schedule</button>
-            <button type="submit" class="btn-success">📤 Send Email</button>
-            <button type="button" onclick="cancelCompose()" class="btn-secondary">❌ Cancel</button>
-          </div>
-        </form>
-      </div>
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="toolbar-btn primary" onclick="showComposeForm()" id="composeBtn" data-intro="Click to compose a new email" data-step="1">
+      ✉️ New Email
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="replyToEmail()" id="replyBtn" disabled>↩ Reply</button>
+    <button class="toolbar-btn" onclick="replyAllToEmail()" id="replyAllBtn" disabled>↩ Reply All</button>
+    <button class="toolbar-btn" onclick="forwardEmail()" id="fwdBtn" disabled>→ Forward</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="markAsRead()" id="markReadBtn" disabled>✓ Mark Read</button>
+    <button class="toolbar-btn danger" onclick="deleteEmail()" id="deleteBtn" disabled>🗑 Delete</button>
+    <button class="toolbar-btn" onclick="openDetailsModal()" id="detailsBtn" disabled>📋 Details</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="refreshEmails()">🔄 Refresh</button>
+    <div class="toolbar-search">
+      <span>🔍</span>
+      <input type="text" id="emailSearch" placeholder="Search messages..." oninput="applyFilters()">
     </div>
   </div>
 
-  <!-- Status Messages -->
-  <div id="statusMessage" class="status-message"></div>
-</div>
-
-<!-- Email Details Modal -->
-<div id="emailModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="modalTitle">Email Details</h2>
-      <span class="close" onclick="closeEmailModal()">&times;</span>
-    </div>
-    <div class="modal-body" id="modalBody">
-      <!-- Email details will be loaded here -->
-    </div>
-  </div>
-</div>
-
-<!-- Signature Edit Modal -->
-<div id="signatureModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Edit Email Signature</h2>
-      <span class="close" onclick="closeSignatureModal()">&times;</span>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label for="signatureText">Signature Text</label>
-        <textarea id="signatureText" rows="6" placeholder="Best regards,&#10;Your Name&#10;Victory Vision&#10;email@victoryvision.com"></textarea>
+  <!-- INBOX PANEL -->
+  <div class="inbox-panel" data-intro="Your inbox. Click a folder tab to switch views." data-step="2">
+    <!-- Folder tabs -->
+    <div class="folder-tabs">
+      <div class="folder-tab active" onclick="switchFolder('inbox')" id="tab-inbox">
+        Inbox <span class="unread-badge" id="unreadCount" style="display:none">0</span>
       </div>
-      <div style="text-align: right; margin-top: 20px;">
-        <button onclick="closeSignatureModal()" class="btn-secondary">Cancel</button>
-        <button onclick="saveSignature()" class="btn-primary" style="margin-left: 10px;">Save Signature</button>
+      <div class="folder-tab" onclick="switchFolder('sent')" id="tab-sent">Sent</div>
+      <div class="folder-tab" onclick="switchFolder('drafts')" id="tab-drafts">Drafts</div>
+      <div class="folder-tab" onclick="switchFolder('all')" id="tab-all">All</div>
+    </div>
+
+    <!-- Smart filter pills -->
+    <div class="filter-pills" data-intro="Quick filters to find emails by status." data-step="3">
+      <span class="pill active" onclick="togglePill(this,'all')">All</span>
+      <span class="pill" onclick="togglePill(this,'unread')">Unread</span>
+      <span class="pill" onclick="togglePill(this,'opened')">Opened</span>
+      <span class="pill" onclick="togglePill(this,'replied')">Replied</span>
+    </div>
+
+    <!-- Email list -->
+    <div class="email-list" id="emailList" data-intro="Click any row to read an email." data-step="4">
+      <div class="email-list-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/></svg>
+        Loading emails…
       </div>
     </div>
-  </div>
-</div>
 
-<!-- File Selector Modal -->
-<div id="fileSelectorModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Select Files from Media Library</h2>
-      <span class="close" onclick="closeFileSelector()">&times;</span>
-    </div>
-    <div class="modal-body">
-      <div id="mediaFilesList" style="max-height: 400px; overflow-y: auto;">
-        <div class="loading">Loading media files...</div>
-      </div>
-      <div style="text-align: right; margin-top: 20px;">
-        <button onclick="closeFileSelector()" class="btn-secondary">Cancel</button>
-        <button onclick="attachSelectedFiles()" class="btn-primary" style="margin-left: 10px;">Attach Selected</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Victory Vision Chat Widget -->
-<div class="vv-chat-widget" id="vvChatWidget">
-  <button class="vv-chat-toggle" id="vvChatToggle" title="Chat with Victory Vision AI">
-    <span id="vvToggleIcon">💬</span>
-    <div class="vv-notification-badge" id="vvNotificationBadge" style="display: none;">1</div>
-  </button>
-
-  <div class="vv-chat-container" id="vvChatContainer">
-    <div class="vv-chat-header">
-      <div class="vv-chat-avatar">🤖</div>
+    <!-- AI Auto-Reply -->
+    <div class="autoreply-strip">
       <div>
-        <div class="vv-chat-title">Victory Vision AI</div>
-        <div class="vv-chat-subtitle">How can I help you today?</div>
+        <strong style="color:#0a3161;">🤖 AI Auto-Reply</strong>
+        <span style="color:#888; margin-left:6px;">Auto-respond to inbound</span>
       </div>
-      <button class="vv-chat-minimize" id="vvChatMinimize" title="Minimize chat">✕</button>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoReplyToggle" onchange="toggleAutoReply(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- READING PANE -->
+  <div class="reading-pane">
+
+    <!-- Empty state -->
+    <div class="reading-empty" id="readingEmpty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.2">
+        <path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/>
+      </svg>
+      <span>Select an email to read</span>
     </div>
 
-    <div class="vv-chat-messages" id="vvChatMessages">
-      <div class="vv-chat-message bot">
-        👋 Hi! I'm your Victory Vision AI assistant. I can help you with:
-        <div class="vv-chat-quick-actions">
-          <button class="vv-quick-action" onclick="VVChat.sendQuickMessage('How do I create email campaigns?')">Email Campaigns</button>
-          <button class="vv-quick-action" onclick="VVChat.sendQuickMessage('Help with email templates')">Email Templates</button>
-          <button class="vv-quick-action" onclick="VVChat.sendQuickMessage('How to track email performance?')">Email Analytics</button>
-          <button class="vv-quick-action" onclick="VVChat.sendQuickMessage('Contact support')">Contact Support</button>
+    <!-- Email View -->
+    <div class="email-view" id="emailView">
+      <div class="ev-subject" id="evSubject"></div>
+      <div class="ev-meta-table">
+        <span class="ev-label">From</span><span class="ev-value" id="evFrom"></span>
+        <span class="ev-label">To</span><span class="ev-value" id="evTo"></span>
+        <span class="ev-label" id="evCcLabel" style="display:none">CC</span><span class="ev-value" id="evCc" style="display:none"></span>
+        <span class="ev-label">Date</span><span class="ev-value" id="evDate"></span>
+        <span class="ev-label">Status</span><span class="ev-value" id="evStatus"></span>
+        <span class="ev-row" id="evCampaignRow" style="display:none"><span class="ev-label">Campaign</span><span class="ev-value" id="evCampaign"></span></span>
+        <span class="ev-row" id="evOpensRow" style="display:none"><span class="ev-label">Opens</span><span class="ev-value" id="evOpens"></span></span>
+        <span class="ev-row" id="evOpenedAtRow" style="display:none"><span class="ev-label">Opened</span><span class="ev-value" id="evOpenedAt"></span></span>
+        <span class="ev-row" id="evClicksRow" style="display:none"><span class="ev-label">Clicks</span><span class="ev-value" id="evClicks"></span></span>
+        <span class="ev-row" id="evClickedAtRow" style="display:none"><span class="ev-label">Clicked</span><span class="ev-value" id="evClickedAt"></span></span>
+        <span class="ev-row" id="evRepliedAtRow" style="display:none"><span class="ev-label">Replied</span><span class="ev-value" id="evRepliedAt"></span></span>
+      </div>
+      <div class="ev-attachments" id="evAttachments" style="display:none">
+        <h4>📎 Attachments</h4>
+        <div id="evAttList"></div>
+      </div>
+      <div class="ev-body" id="evBody"></div>
+    </div>
+
+    <!-- Email Actions Bar (shown when email selected) -->
+    <div class="ev-actions" id="evActions" style="display:none">
+      <button class="ev-btn primary" onclick="replyToEmail()">↩ Reply</button>
+      <button class="ev-btn primary" onclick="replyAllToEmail()">↩ Reply All</button>
+      <button class="ev-btn" onclick="forwardEmail()">→ Forward</button>
+      <button class="ev-btn" onclick="markAsRead()">✓ Mark Read</button>
+      <button class="ev-btn danger" onclick="deleteEmail()">🗑 Delete</button>
+      <button class="ev-btn" onclick="openDetailsModal()">📋 Details</button>
+    </div>
+
+    <!-- Compose Form -->
+    <div class="compose-form" id="composeForm" data-intro="Compose emails with AI assistance and attach media files." data-step="5">
+      <div class="compose-header" id="composeTitle">✉️ New Email</div>
+      <div class="ai-bar">
+        <label>🤖 AI Assist:</label>
+        <select id="aiTone">
+          <option value="">Select Tone</option>
+          <option value="professional">Professional</option>
+          <option value="friendly">Friendly</option>
+          <option value="persuasive">Persuasive</option>
+          <option value="casual">Casual</option>
+        </select>
+        <button class="ai-btn" onclick="aiAssist('generate')">Generate</button>
+        <button class="ai-btn" style="background:#5c6bc0;" onclick="aiAssist('improve')">Improve</button>
+      </div>
+      <div class="compose-field">
+        <label>From</label>
+        <input type="email" id="composeFrom" readonly>
+      </div>
+      <div class="compose-field">
+        <label>To</label>
+        <input type="email" id="composeTo" placeholder="recipient@example.com" list="contactsList">
+        <datalist id="contactsList"></datalist>
+        <span class="field-action" onclick="toggleCCBCC()">Cc/Bcc</span>
+      </div>
+      <div id="ccBccFields" style="display:none">
+        <div class="compose-field">
+          <label>Cc</label>
+          <input type="email" id="composeCC" placeholder="cc@example.com">
+        </div>
+        <div class="compose-field">
+          <label>Bcc</label>
+          <input type="email" id="composeBCC" placeholder="bcc@example.com">
         </div>
       </div>
-    </div>
-
-    <div class="vv-chat-typing" id="vvChatTyping">
-      <span style="font-size: 12px; color: #666;">AI is typing</span>
-      <div class="vv-typing-dots">
-        <div class="vv-typing-dot"></div>
-        <div class="vv-typing-dot"></div>
-        <div class="vv-typing-dot"></div>
+      <div class="compose-field">
+        <label>Subject</label>
+        <input type="text" id="composeSubject" placeholder="Email subject">
+      </div>
+      <textarea class="compose-body" id="composeBody" placeholder="Type your message here…"></textarea>
+      <div class="signature-preview" id="signaturePreview" style="display:none"></div>
+      <div class="attachment-chips" id="attachmentChips"></div>
+      <div class="compose-footer">
+        <button class="cf-btn send" onclick="sendEmail()">📤 Send</button>
+        <button class="cf-btn" onclick="saveDraft()">💾 Draft</button>
+        <button class="cf-btn" onclick="openScheduleModal()">⏰ Schedule</button>
+        <button class="cf-btn" onclick="openMediaSelector()">📎 Attach Media</button>
+        <button class="cf-btn" onclick="openSignatureModal()">✍️ Signature</button>
+        <button class="cf-btn danger" id="composeDeleteBtn" onclick="deleteCurrentDraft()" style="display:none;">🗑 Delete Draft</button>
+        <button class="cf-btn" onclick="cancelCompose()" style="margin-left:auto;">✕ Cancel</button>
       </div>
     </div>
 
-    <div class="vv-chat-input-area">
-      <textarea 
-        class="vv-chat-input" 
-        id="vvChatInput" 
-        placeholder="Type your message here..."
-        rows="1"></textarea>
-      <button class="vv-chat-send" id="vvChatSend" title="Send message">➤</button>
-    </div>
-
-    <div class="vv-chat-error" id="vvChatError"></div>
   </div>
 </div>
 
-<footer>
-  <p>&copy; 2025 Victory Vision Digital Out of Home. All rights reserved.</p>
-  <nav>
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Service</a>
-  </nav>
-</footer>
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- MEDIA SELECTOR -->
+<div class="modal-overlay" id="mediaSelectorModal">
+  <div class="modal-box media-modal">
+    <div class="modal-header">
+      <h2>📎 Select Media to Attach</h2>
+      <button class="modal-close" onclick="closeMediaSelector()">×</button>
+    </div>
+    <div class="media-filter-bar">
+      <input type="text" id="mediaSearch" placeholder="Search files…" oninput="filterMedia()">
+      <button class="type-filter-btn active" onclick="setMediaType('all', this)">All</button>
+      <button class="type-filter-btn" onclick="setMediaType('image', this)">🖼 Images</button>
+      <button class="type-filter-btn" onclick="setMediaType('video', this)">🎬 Videos</button>
+      <button class="type-filter-btn" onclick="setMediaType('presentation', this)">📊 Presentations</button>
+    </div>
+    <div class="media-count-label" id="mediaCountLabel"></div>
+    <div class="media-grid" id="mediaGrid">
+      <div style="grid-column:1/-1;text-align:center;color:#aaa;padding:40px;">Loading media…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeMediaSelector()">Cancel</button>
+      <button class="mb-btn primary" onclick="attachSelectedMedia()">Attach Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE EMAIL -->
+<div class="modal-overlay" id="scheduleModal">
+  <div class="modal-box sched-modal">
+    <div class="modal-header">
+      <h2>⏰ Schedule Email</h2>
+      <button class="modal-close" onclick="closeModal('scheduleModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Send Date</label>
+        <input type="date" id="schedDate">
+      </div>
+      <div class="form-row">
+        <label>Send Time</label>
+        <input type="time" id="schedTime">
+      </div>
+      <div class="form-row">
+        <label>Timezone</label>
+        <select id="schedTZ">
+          <option value="America/New_York">Eastern (ET)</option>
+          <option value="America/Chicago">Central (CT)</option>
+          <option value="America/Denver">Mountain (MT)</option>
+          <option value="America/Los_Angeles" selected>Pacific (PT)</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeModal('scheduleModal')">Cancel</button>
+      <button class="mb-btn primary" onclick="scheduleEmail()">⏰ Schedule Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNATURE -->
+<div class="modal-overlay" id="signatureModal">
+  <div class="modal-box sig-modal">
+    <div class="modal-header">
+      <h2>✍️ Email Signature</h2>
+      <button class="modal-close" onclick="closeModal('signatureModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#666;margin:0 0 10px">This signature is saved to your profile and auto-appended to new emails.</p>
+      <textarea class="sig-textarea" id="signatureText" placeholder="Best regards,&#10;Your Name&#10;Victory Vision"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="mb-btn" onclick="closeModal('signatureModal')">Cancel</button>
+      <button class="mb-btn primary" onclick="saveSignature()">💾 Save Signature</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL DETAILS -->
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal-box details-modal">
+    <div class="modal-header">
+      <h2>📋 Email Details</h2>
+      <button class="modal-close" onclick="closeModal('detailsModal')">×</button>
+    </div>
+    <div class="modal-body" id="detailsBody"></div>
+    <div class="modal-footer">
+      <button class="mb-btn primary" onclick="closeModal('detailsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CHAT WIDGET -->
+<div class="vv-chat-widget">
+  <button class="vv-chat-toggle" id="vvChatToggle">
+    <span id="vvToggleIcon">💬</span>
+    <span class="vv-notification-badge" id="vvNotificationBadge">1</span>
+  </button>
+</div>
+<div class="vv-chat-container" id="vvChatContainer">
+  <div class="vv-chat-header">
+    <div class="vv-chat-title">Victory Vision AI</div>
+    <button class="vv-chat-minimize" id="vvChatMinimize">✕</button>
+  </div>
+  <div class="vv-chat-messages" id="vvChatMessages">
+    <div class="vv-chat-message bot">👋 Hi! I'm Victory Vision AI. How can I help with your emails today?</div>
+  </div>
+  <div class="vv-chat-typing" id="vvChatTyping"><span></span><span></span><span></span></div>
+  <div class="vv-quick-replies">
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Help me write an email')">✍️ Write email</button>
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Campaign ideas')">💡 Ideas</button>
+    <button class="vv-quick-reply" onclick="VVChat.sendQuickMessage('Best practices')">📚 Tips</button>
+  </div>
+  <div class="vv-chat-input-area">
+    <textarea class="vv-chat-input" id="vvChatInput" placeholder="Ask me anything…" rows="1"></textarea>
+    <button class="vv-chat-send" id="vvChatSend" disabled>Send</button>
+  </div>
+</div>
 
 <script>
-// Supabase configuration
-const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+/* ══════════════════════════════════════════════
+   CONFIG & STATE
+══════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// API endpoints
-const ENDPOINTS = {
-  getUserData: 'https://victoryvision.app.n8n.cloud/webhook/user/get',
-  getEmails: 'https://victoryvision.app.n8n.cloud/webhook/emails/get',
-  getDraft: 'https://victoryvision.app.n8n.cloud/webhook/emails/get-draft',
-  getContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
-  getMedia: 'https://victoryvision.app.n8n.cloud/webhook/media/get',
-  sendEmail: 'https://victoryvision.app.n8n.cloud/webhook/emails/send',
-  saveDraft: 'https://victoryvision.app.n8n.cloud/webhook/emails/draft',
-  deleteEmail: 'https://victoryvision.app.n8n.cloud/webhook/emails/delete',
-  markAsRead: 'https://victoryvision.app.n8n.cloud/webhook/emails/mark-read',
-  scheduleEmail: 'https://victoryvision.app.n8n.cloud/webhook/emails/schedule',
-  aiAssist: 'https://victoryvision.app.n8n.cloud/webhook/emails/ai-assist',
-  generateCampaign: 'https://victoryvision.app.n8n.cloud/webhook/emails/generate-campaign',
-  chatMessage: 'https://victoryvision.app.n8n.cloud/webhook/chat/message',
-  updateSignature: 'https://victoryvision.app.n8n.cloud/webhook/user/signature'
+const EP = {
+  sendEmail:    'https://victoryvision.app.n8n.cloud/webhook/emails/send',
+  saveDraft:    'https://victoryvision.app.n8n.cloud/webhook/emails/draft',
+  loadEmails:   'https://victoryvision.app.n8n.cloud/webhook/emails/get',
+  aiAssist:     'https://victoryvision.app.n8n.cloud/webhook/emails/ai-assist',
+  scheduleEmail:'https://victoryvision.app.n8n.cloud/webhook/emails/schedule',
+  deleteEmail:  'https://victoryvision.app.n8n.cloud/webhook/emails/delete',
+  markRead:     'https://victoryvision.app.n8n.cloud/webhook/emails/mark-read',
+  chatMessage:  'https://victoryvision.app.n8n.cloud/webhook/chat/message',
+  loadContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+  loadMedia:    'https://victoryvision.app.n8n.cloud/webhook/media/get',
+  getUser:      'https://victoryvision.app.n8n.cloud/webhook/user/get',
+  saveSignature:'https://victoryvision.app.n8n.cloud/webhook/user/signature',
+  aireply:      'https://victoryvision.app.n8n.cloud/webhook/emails/aireply'
 };
 
-// Global variables
-let CUSTOMER_ID = null;
-let authToken = null;
-let allEmails = [];
-let filteredEmails = [];
-let allContacts = [];
-let allMediaFiles = [];
-let selectedEmail = null;
-let currentMode = 'view'; // 'view', 'compose', 'reply'
+let authToken = null, CUSTOMER_ID = null;
+let allEmails = [], currentEmail = null;
+let mediaFiles = [], selectedMedia = [], attachedFiles = [];
+let contacts = [];
+let userSignature = '';
+let currentDraftId = null;
+let currentFolder = 'inbox';
+let currentStatusPill = 'all';
+let activeMediaType = 'all';
 
-// Draft detection - email table has NO 'draft' column; drafts are campaign='draft' with null sent_at
-function isDraft(email) {
-  if (!email) return false;
-  if (email.campaign === 'draft' && !email.sent_at) return true;
-  return !email.body || email.body.trim() === '';
-}
-let preloadedContact = null;
-let emailThreads = new Map(); // For grouping emails by thread
-let attachedFiles = [];
-let selectedMediaFiles = [];
-let userSignature = "Best regards,\nYour Name\nVictory Vision\nemail@victoryvision.com";
-
-// Tour completion tracking
-function completeTour() {
-  localStorage.setItem('vv_tour_completed_' + window.location.pathname, 'true');
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
-function hasCompletedTour() {
-  return localStorage.getItem('vv_tour_completed_' + window.location.pathname) === 'true';
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function formatDate(ds) {
+  if (!ds) return '—';
+  const d = new Date(ds), now = new Date();
+  const diff = (now - d) / 86400000;
+  if (diff < 1)   return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  if (diff < 2)   return 'Yesterday';
+  if (diff < 7)   return d.toLocaleDateString([], {weekday:'short'});
+  return d.toLocaleDateString([], {month:'short', day:'numeric'});
 }
 
-function startTour() {
-  introJs().setOptions({
-    showProgress: true,
-    showBullets: false,
-    exitOnOverlayClick: false,
-    nextLabel: 'Next →',
-    prevLabel: '← Back',
-    doneLabel: 'Complete!',
-    skipLabel: 'Skip Tour'
-  }).oncomplete(completeTour).onexit(completeTour).start();
+function avatarColor(str) {
+  const colors = ['#0a3161','#bb133e','#2e7d32','#c62828','#6a1b9a','#00695c','#e65100','#1565c0'];
+  let h = 0;
+  for (let c of (str||'?')) h = ((h<<5)-h)+c.charCodeAt(0);
+  return colors[Math.abs(h) % colors.length];
 }
 
-// Authentication
-async function checkAuthentication() {
+function initials(str) {
+  if (!str) return '?';
+  const parts = str.split(/[\s@]/);
+  return (parts[0][0]||'?').toUpperCase();
+}
+
+function getFileIcon(type) {
+  if (!type) return '📄';
+  if (type === 'image' || (typeof type === 'string' && type.startsWith('image/'))) return '🖼️';
+  if (type === 'video' || (typeof type === 'string' && type.startsWith('video/'))) return '🎬';
+  if (type === 'presentation' || type.includes('presentation') || type.includes('powerpoint')) return '📊';
+  if (type.includes('pdf')) return '📕';
+  return '📄';
+}
+
+function detectMediaCategory(file) {
+  const t = (file.type || file.media_type || '').toLowerCase();
+  const n = (file.name || '').toLowerCase();
+  if (t.startsWith('image') || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(n)) return 'image';
+  if (t.startsWith('video') || /\.(mp4|mov|avi|webm)$/.test(n)) return 'video';
+  if (t.includes('presentation') || t.includes('powerpoint') || /\.(pptx?|key)$/.test(n)) return 'presentation';
+  return 'other';
+}
+
+/* ══════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════ */
+async function checkAuth() {
   try {
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    
-    if (error) {
-      console.error('Auth error:', error);
-      return false;
-    }
-
-    if (session && session.user) {
-      CUSTOMER_ID = session.user.email;
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) {
       authToken = session.access_token;
+      CUSTOMER_ID = session.user.email;
       document.getElementById('userEmail').textContent = CUSTOMER_ID;
       return true;
     }
-
-    return false;
-  } catch (e) {
-    console.error('Auth check error:', e);
-    return false;
-  }
+  } catch(e) {}
+  return false;
 }
 
-function redirectToLogin() {
-  localStorage.removeItem('vv_session');
-  window.location.href = 'login.html';
-}
-
-// API call function
-async function apiCall(endpoint, data = {}) {
-  try {
-    const url = endpoint.includes('/user/get') ? 
-      `${endpoint}?customer_id=${encodeURIComponent(CUSTOMER_ID)}` : 
-      endpoint;
-    
-    const requestOptions = {
-      method: endpoint.includes('/user/get') ? 'GET' : 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Customer-ID': CUSTOMER_ID,
-        'Authorization': authToken ? `Bearer ${authToken}` : ''
-      }
-    };
-
-    if (!endpoint.includes('/user/get')) {
-      requestOptions.body = JSON.stringify({
-        customer_id: CUSTOMER_ID,
-        ...data
-      });
-    }
-
-    const response = await fetch(url, requestOptions);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API call failed:', error);
-    throw error;
-  }
-}
-
+/* ══════════════════════════════════════════════
+   USER DATA
+══════════════════════════════════════════════ */
 async function loadUserData() {
   try {
-    const response = await apiCall(ENDPOINTS.getUserData);
-    const userData = Array.isArray(response) ? response[0] : response;
-    
-    // Update subscription medallion
-    const medallion = document.getElementById('subscriptionMedallion');
-    const plan = userData.subscription_plan || 'bronze';
-    medallion.className = `subscription-medallion ${plan.toLowerCase()}`;
-    medallion.querySelector('.plan-name').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-    
-    // Set compose from email
-    document.getElementById('composeFrom').value = CUSTOMER_ID;
-    
-    // Load user signature
-    if (userData.email_signature) {
-      userSignature = userData.email_signature;
-      updateSignatureDisplay();
+    const r = await fetch(`${EP.getUser}?customer_id=${CUSTOMER_ID}`);
+    const data = await r.json();
+    if (data?.length) {
+      const u = data[0];
+      if (u.signature) {
+        userSignature = u.signature;
+        updateSignaturePreview();
+      }
+      if (u.vv_email) window.userVVEmail = u.vv_email;
+      // Re-entry guard for any send operation (prevents double/triple-click duplicate sends)
+      window.isSending = false;
+      if (u.subscription_plan) updateMedallion(u.subscription_plan);
+      if (u.aireply !== undefined) {
+        document.getElementById('autoReplyToggle').checked = !!u.aireply;
+      }
     }
-    
-  } catch (error) {
-    console.error('Error loading user data:', error);
-    showStatus('Error loading user data: ' + error.message, true);
-  }
+  } catch(e) {}
 }
 
-// Load contacts for dropdown population
+function updateMedallion(plan) {
+  const m = document.getElementById('subscriptionMedallion');
+  m.className = 'subscription-medallion ' + (plan||'bronze').toLowerCase();
+  m.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
+/* ══════════════════════════════════════════════
+   LOAD DATA
+══════════════════════════════════════════════ */
 async function loadContacts() {
   try {
-    const data = await apiCall(ENDPOINTS.getContacts);
-    allContacts = Array.isArray(data) ? data : (data.contacts || []);
-    
-    populateContactDropdowns();
-    
-  } catch (error) {
-    console.error('Error loading contacts:', error);
-    allContacts = [];
-  }
+    const r = await fetch(EP.loadContacts, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    contacts = Array.isArray(data) ? data : (data.contacts || []);
+    const dl = document.getElementById('contactsList');
+    dl.innerHTML = contacts.map(c => {
+      const e = c.email||'', n = c.name||c.first_name||'';
+      return `<option value="${e}">${n ? n+' <'+e+'>' : e}</option>`;
+    }).join('');
+  } catch(e) {}
 }
 
-// Load media files for attachment selection
 async function loadMediaFiles() {
   try {
-    const data = await apiCall(ENDPOINTS.getMedia);
-    allMediaFiles = Array.isArray(data) ? data : (data.files || []);
-    
-    console.log(`Loaded ${allMediaFiles.length} media files`);
-    
-  } catch (error) {
-    console.error('Error loading media files:', error);
-    allMediaFiles = [];
-  }
+    const r = await fetch(EP.loadMedia, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    mediaFiles = Array.isArray(data) ? data : (data.media || []);
+    mediaFiles.forEach(f => { f._category = detectMediaCategory(f); });
+  } catch(e) {}
 }
 
-// Populate contact dropdowns
-function populateContactDropdowns() {
-  const composeToSelect = document.getElementById('composeTo');
-  const contactFilterSelect = document.getElementById('contactFilter');
-  
-  // Clear existing options (except first)
-  composeToSelect.innerHTML = '<option value="">Select Contact</option>';
-  contactFilterSelect.innerHTML = '<option value="">All Contacts</option>';
-  
-  allContacts.forEach(contact => {
-    const displayName = contact.name && contact.email ? 
-      `${contact.name} <${contact.email}>` : 
-      (contact.email || contact.name || 'Unknown Contact');
-    
-    // Compose dropdown
-    const composeOption = document.createElement('option');
-    composeOption.value = contact.email || '';
-    composeOption.textContent = displayName;
-    composeToSelect.appendChild(composeOption);
-    
-    // Filter dropdown
-    const filterOption = document.createElement('option');
-    filterOption.value = contact.email || contact.name || '';
-    filterOption.textContent = displayName;
-    contactFilterSelect.appendChild(filterOption);
-  });
-}
-
-// Load emails from API and group by threads
 async function loadEmails() {
   try {
-    console.log('Loading emails for customer:', CUSTOMER_ID);
-    
-    const data = await apiCall(ENDPOINTS.getEmails);
-    console.log('Emails data received:', data);
-    
-    allEmails = Array.isArray(data) ? data : (data.emails || []);
-    
-    // Process emails to ensure proper structure
-    allEmails = allEmails.map(email => ({
-      ...email,
-      attachments: email.attachments || [],
-      cc: email.cc || '',
-      bcc: email.bcc || ''
-    }));
-    
-    // Group emails by subject for threading
-    groupEmailsByThread();
-    
-    // Sort by date (newest first)
-    allEmails.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    filteredEmails = [...allEmails];
-    
-    console.log(`Loaded ${allEmails.length} emails`);
-    
-    renderEmailList();
-    
-    // Auto-select the most recent unread email
-    const recentUnread = allEmails.find(email => !email.opened_at);
-    if (recentUnread) {
-      setTimeout(() => selectEmail(recentUnread.id), 500);
-    }
-    
-    showStatus(`Loaded ${allEmails.length} emails`, false);
-    
-  } catch (error) {
-    console.error('Error loading emails:', error);
-    showStatus('Error loading emails: ' + error.message, true);
-    allEmails = [];
-    filteredEmails = [];
-    renderEmailList();
-  }
-}
-
-// Group emails by thread (similar subjects)
-function groupEmailsByThread() {
-  emailThreads.clear();
-  
-  allEmails.forEach(email => {
-    const cleanSubject = (email.subject || '').replace(/^(re:|fwd?:)\s*/i, '').trim().toLowerCase();
-    
-    if (!emailThreads.has(cleanSubject)) {
-      emailThreads.set(cleanSubject, []);
-    }
-    
-    emailThreads.get(cleanSubject).push(email);
-  });
-}
-
-// Render email list with enhanced styling and threading
-function renderEmailList() {
-  const emailList = document.getElementById('emailList');
-  
-  if (filteredEmails.length === 0) {
-    emailList.innerHTML = `
-      <div class="empty-state">
-        <h3>No emails found</h3>
-        <p>Start by composing a new email or check your filters.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Group filtered emails by thread
-  const threadGroups = new Map();
-  filteredEmails.forEach(email => {
-    const cleanSubject = (email.subject || '').replace(/^(re:|fwd?:)\s*/i, '').trim().toLowerCase();
-    if (!threadGroups.has(cleanSubject)) {
-      threadGroups.set(cleanSubject, []);
-    }
-    threadGroups.get(cleanSubject).push(email);
-  });
-
-  let html = '';
-  
-  threadGroups.forEach((emails, subject) => {
-    // Sort emails in thread by date
-    emails.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
-    html += '<div class="email-thread">';
-    
-    emails.forEach((email, index) => {
-      const isSelected = selectedEmail && selectedEmail.id === email.id;
-      const emailClasses = getEmailClasses(email);
-      const threadIndicator = emails.length > 1 ? `<span class="thread-indicator">(${index + 1}/${emails.length})</span>` : '';
-      
-      html += `
-        <div class="email-item ${emailClasses} ${isSelected ? 'selected' : ''}" 
-             onclick="selectEmail('${email.id}')" 
-             data-email-id="${email.id}">
-          <div class="email-header">
-            <div class="email-from">${getEmailDisplayName(email)}${threadIndicator}</div>
-            <div class="email-date">${formatDate(email.created_at)}</div>
-          </div>
-          <div class="email-subject">${email.subject || 'No Subject'}</div>
-          <div class="email-preview">${getEmailPreview(email)}</div>
-          <div class="email-badges">
-            ${getEmailBadges(email)}
-          </div>
-        </div>
-      `;
+    const r = await fetch(EP.loadEmails, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(8000)
     });
-    
-    html += '</div>';
-  });
-
-  emailList.innerHTML = html;
-}
-
-function getEmailDisplayName(email) {
-  if (email.inbound) {
-    return email.from || 'Unknown Sender';
-  } else if (isDraft(email)) {
-    return `Draft to: ${email.to || 'Unknown'}`;
-  } else {
-    return email.to || 'Unknown Recipient';
+    if (!r.ok) { allEmails = []; renderList(); return; }
+    const text = await r.text();
+    if (!text || !text.trim()) { allEmails = []; renderList(); return; }
+    const data = JSON.parse(text);
+    console.log('[loadEmails] raw response:', JSON.stringify(data).slice(0, 500));
+    const arr = Array.isArray(data) ? data : (data.emails || []);
+    console.log('[loadEmails] arr length:', arr.length, 'first item:', arr[0] ? JSON.stringify(arr[0]).slice(0,200) : 'none');
+    // Filter warm-up + decorate with derived UI flags.
+    // The email table has no 'draft' column — we derive it from campaign/outcome='draft'.
+    // This keeps the Drafts folder filter (which checks e.draft) working without backend changes.
+    allEmails = arr.filter(e => {
+      const s = (e.subject||'').toLowerCase();
+      const tags = (e.tags||[]).map(t=>t.toLowerCase());
+      return !s.includes('warm-up') && !s.includes('warmup') && !tags.includes('warm-up') && !tags.includes('warmup') && !tags.includes('test');
+    }).map(e => ({
+      ...e,
+      draft: e.draft === true || e.campaign === 'draft' || e.outcome === 'draft',
+      replied: e.replied === true || !!e.replied_at,
+      opened: e.opened === true || !!e.opened_at
+    }));
+    console.log('[loadEmails] allEmails after filter:', allEmails.length);
+    updateUnreadCount();
+    renderList();
+  } catch(e) {
+    console.error('[loadEmails] error:', e);
+    allEmails = [];
+    renderList();
   }
 }
 
-function getEmailClasses(email) {
-  const classes = [];
-  
-  if (!email.opened_at) classes.push('unread');
-  if (email.inbound) classes.push('inbound');
-  if (isDraft(email)) classes.push('draft');
-  if (email.body && !email.inbound && !isDraft(email)) classes.push('sent');
-  if (email.replied_at) classes.push('replied');
-  
-  return classes.join(' ');
+function updateUnreadCount() {
+  const count = allEmails.filter(e => e.inbound && !e.read && !e.opened_at).length;
+  const badge = document.getElementById('unreadCount');
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+  badge.textContent = count;
 }
 
-function getEmailBadges(email) {
-  const badges = [];
-  
-  if (isDraft(email)) {
-    badges.push('<span class="badge draft">DRAFT</span>');
-  } else if (email.inbound) {
-    badges.push('<span class="badge inbound">RECEIVED</span>');
-  } else {
-    badges.push('<span class="badge sent">SENT</span>');
-  }
-  
-  if (email.replied_at) {
-    badges.push('<span class="badge replied">REPLIED</span>');
-  }
-  
-  if (email.opened_at) {
-    badges.push('<span class="badge opened">OPENED</span>');
-  }
-  
-  if (email.attachments && email.attachments.length > 0) {
-    badges.push(`<span class="badge" style="background: #17a2b8; color: white;">📎 ${email.attachments.length}</span>`);
-  }
-  
-  return badges.join('');
+/* ══════════════════════════════════════════════
+   FOLDER & FILTER LOGIC
+══════════════════════════════════════════════ */
+function switchFolder(folder) {
+  currentFolder = folder;
+  document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+folder).classList.add('active');
+  renderList();
 }
 
-function getEmailPreview(email) {
-  const body = email.body || '';
-  return body.length > 150 ? body.substring(0, 150) + '...' : body;
+function togglePill(el, status) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  currentStatusPill = status;
+  renderList();
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return 'Unknown';
-  
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  
-  return date.toLocaleDateString();
-}
+function applyFilters() { renderList(); }
 
-// FIXED: Select and display email with proper draft handling
-async function selectEmail(emailId) {
-  const email = allEmails.find(e => e.id === emailId);
-  if (!email) return;
-  
-  // If it's a draft, load the full draft content
-  if (isDraft(email)) {
-    try {
-      const draftData = await apiCall(ENDPOINTS.getDraft, { id: emailId });
-      if (draftData.success && draftData.draft) {
-        Object.assign(email, draftData.draft);
-      }
-    } catch (error) {
-      console.error('Error loading draft:', error);
+function getFilteredEmails() {
+  const search = document.getElementById('emailSearch').value.toLowerCase();
+  return allEmails.filter(e => {
+    // Folder filter
+    if (currentFolder === 'inbox')  { if (!e.inbound || e.draft) return false; }
+    if (currentFolder === 'sent')   { if (e.inbound || e.draft) return false; }
+    if (currentFolder === 'drafts') { if (!e.draft) return false; }
+    // Status pill
+    if (currentStatusPill === 'unread')  { if ((e.read || e.opened_at) || !e.inbound) return false; }
+    if (currentStatusPill === 'opened')  { if (!e.read && !e.opened_at) return false; }
+    if (currentStatusPill === 'replied') { if (!e.replied) return false; }
+    // Search
+    if (search) {
+      const hay = [(e.subject||''),(e.from||''),(e.to||''),(e.body||'')].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
     }
-  }
-  
-  selectedEmail = email;
-  
-  // Update UI
-  renderEmailList();
-  showEmailView(email);
-  
-  // Mark as read if not already and not a draft
-  if (!email.opened_at && !isDraft(email) && email.body && email.body.trim()) {
-    try {
-      await apiCall(ENDPOINTS.markAsRead, { email_id: emailId });
-      email.opened_at = new Date().toISOString();
-      renderEmailList();
-    } catch (error) {
-      console.error('Error marking email as read:', error);
-    }
-  }
+    return true;
+  }).sort((a,b) => new Date(b.created_at||b.sent_at) - new Date(a.created_at||a.sent_at));
 }
 
-// FIXED: Show email view with enhanced display
-function showEmailView(email) {
-  const readingPane = document.getElementById('readingPane');
-  const emailView = document.getElementById('emailViewTemplate');
-  const composeForm = document.getElementById('composeForm');
-  const readingPaneTitle = document.getElementById('readingPaneTitle');
-  const readingPaneActions = document.getElementById('readingPaneActions');
-  
-  // If it's a draft, show compose form instead
-  if (isDraft(email)) {
-    showDraftForEditing(email);
+/* ══════════════════════════════════════════════
+   RENDER EMAIL LIST
+══════════════════════════════════════════════ */
+function renderList() {
+  const list = document.getElementById('emailList');
+  const emails = getFilteredEmails();
+
+  if (!emails.length) {
+    list.innerHTML = `<div class="email-list-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8l9 6 9-6"/><rect x="3" y="6" width="18" height="14" rx="2"/></svg>
+      ${allEmails.length ? 'No emails match your filters' : 'No emails yet — click New Email to start!'}
+    </div>`;
     return;
   }
-  
-  // Hide compose form and show email view
-  composeForm.classList.remove('active');
-  readingPane.classList.remove('empty');
-  emailView.classList.add('active');
-  readingPaneActions.style.display = 'flex';
-  
-  // Populate email details
-  document.getElementById('viewSubject').textContent = email.subject || 'No Subject';
-  document.getElementById('viewFrom').textContent = email.from || 'Unknown';
-  document.getElementById('viewTo').textContent = email.to || 'Unknown';
-  document.getElementById('viewCC').textContent = email.cc || 'None';
-  document.getElementById('viewDate').textContent = new Date(email.created_at).toLocaleString();
-  document.getElementById('viewStatus').textContent = getEmailStatus(email);
-  document.getElementById('viewBody').textContent = email.body || 'No content';
-  
-  // Show attachments if any
-  const attachmentsSection = document.getElementById('viewAttachments');
-  const attachmentsList = document.getElementById('attachmentsList');
-  
-  if (email.attachments && email.attachments.length > 0) {
-    attachmentsSection.style.display = 'block';
-    attachmentsList.innerHTML = email.attachments.map(attachment => `
-      <div class="attachment-item">
-        <span class="attachment-icon">📎</span>
-        <div class="attachment-info">
-          <div class="attachment-name">${attachment.name}</div>
-          <div class="attachment-size">${attachment.size || 'Unknown size'}</div>
-        </div>
-        <a href="${attachment.url}" target="_blank" style="margin-left: auto; padding: 5px 10px; background: #0A3161; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Download</a>
-      </div>
-    `).join('');
+
+  // Build rows without innerHTML injection of event attrs
+  list.innerHTML = '';
+  emails.forEach(email => {
+    const isSelected = currentEmail?.id === email.id;
+    const isUnread = email.inbound && !email.read && !email.opened_at;
+    const sender = email.inbound ? (email.from||'Unknown') : (email.to||'Unknown');
+
+    const row = document.createElement('div');
+    row.className = `email-row${isSelected?' selected':''}${isUnread?' unread':''}`;
+    row.dataset.id = email.id;
+
+    // Avatar
+    const avatar = document.createElement('div');
+    avatar.className = 'email-row-avatar';
+    avatar.style.background = avatarColor(sender);
+    avatar.textContent = initials(sender);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'email-row-body';
+    body.innerHTML = `
+      <div class="email-row-from">${sender}${isUnread ? '<span class="status-dot"></span>' : ''}</div>
+      <div class="email-row-subject">${email.subject || '(No subject)'}</div>
+      <div class="email-row-preview">${((email.body_html||email.body||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()).slice(0,80)}</div>
+    `;
+
+    // Meta
+    const meta = document.createElement('div');
+    meta.className = 'email-row-meta';
+    const badges = [];
+    if (email.draft)                         badges.push('<span class="mini-badge draft">Draft</span>');
+    if (email.inbound && !email.draft)       badges.push('<span class="mini-badge received">Received</span>');
+    if (!email.inbound && !email.draft)      badges.push('<span class="mini-badge sent">Sent</span>');
+    if (email.replied)                       badges.push('<span class="mini-badge replied">Replied</span>');
+    if ((email.read || email.opened_at) && email.inbound)  badges.push('<span class="mini-badge opened">Opened</span>');
+    if (email.scheduled)                     badges.push('<span class="mini-badge scheduled">Scheduled</span>');
+    meta.innerHTML = `<div class="email-row-date">${formatDate(email.created_at||email.sent_at)}</div>
+                      <div class="email-row-flags">${badges.join('')}</div>`;
+
+    row.append(avatar, body, meta);
+    row.addEventListener('click', () => selectEmail(email.id));
+    list.appendChild(row);
+  });
+}
+
+/* ══════════════════════════════════════════════
+   SELECT / VIEW EMAIL
+══════════════════════════════════════════════ */
+function selectEmail(id) {
+  const found = allEmails.find(e => e.id === id);
+  if (!found) return;
+
+  // Drafts open directly into the compose form so user can edit and send.
+  // currentDraftId is set inside editDraft() so sendEmail() cleans up after send.
+  if (found.draft) {
+    editDraft(id);
+    return;
+  }
+
+  currentEmail = found;
+
+  // Show email view
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('composeForm').classList.remove('active');
+  document.getElementById('composeForm').style.display = 'none';
+  document.getElementById('emailView').classList.add('active');
+  document.getElementById('emailView').style.display = 'block';
+  document.getElementById('evActions').style.display = 'flex';
+
+  // Inject draft-specific action buttons (idempotent — remove old ones, add if viewing a draft)
+  const evActions = document.getElementById('evActions');
+  const oldDraftBtns = evActions.querySelectorAll('.ev-btn-draft-action');
+  oldDraftBtns.forEach(b => b.remove());
+  if (currentEmail.draft) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ev-btn primary ev-btn-draft-action';
+    editBtn.textContent = '✏️ Edit Draft';
+    editBtn.onclick = () => editDraft(currentEmail.id);
+    evActions.insertBefore(editBtn, evActions.firstChild);
+
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'ev-btn ev-btn-draft-action';
+    sendBtn.textContent = '📤 Send As-Is';
+    sendBtn.onclick = () => sendDraftAsIs(currentEmail.id);
+    evActions.insertBefore(sendBtn, evActions.children[1]);
+  }
+
+  // Populate
+  document.getElementById('evSubject').textContent = currentEmail.subject || '(No subject)';
+  document.getElementById('evFrom').textContent = currentEmail.from || '—';
+  document.getElementById('evTo').textContent = currentEmail.to || '—';
+  document.getElementById('evDate').textContent = currentEmail.created_at ? new Date(currentEmail.created_at).toLocaleString() : '—';
+
+  const statuses = [];
+  if (currentEmail.draft)   statuses.push('Draft');
+  if (currentEmail.inbound) statuses.push('Received');
+  if (currentEmail.read || currentEmail.opened_at)  statuses.push('Opened');
+  if (currentEmail.replied) statuses.push('Replied');
+  if (!currentEmail.inbound && !currentEmail.draft) statuses.push('Sent');
+  document.getElementById('evStatus').textContent = statuses.join(', ') || '—';
+
+  // Campaign
+  const campaignRow = document.getElementById('evCampaignRow');
+  if (currentEmail.campaign) {
+    document.getElementById('evCampaign').textContent = currentEmail.campaign;
+    campaignRow.style.display = '';
+  } else { campaignRow.style.display = 'none'; }
+
+  // Opens
+  const opensRow = document.getElementById('evOpensRow');
+  if (currentEmail.opens > 0) {
+    document.getElementById('evOpens').textContent = currentEmail.opens;
+    opensRow.style.display = '';
+  } else { opensRow.style.display = 'none'; }
+
+  // Opened At
+  const openedAtRow = document.getElementById('evOpenedAtRow');
+  if (currentEmail.opened_at) {
+    document.getElementById('evOpenedAt').textContent =
+      new Date(currentEmail.opened_at).toLocaleString();
+    openedAtRow.style.display = '';
+  } else { openedAtRow.style.display = 'none'; }
+
+  // Clicks
+  const clicksRow = document.getElementById('evClicksRow');
+  if (currentEmail.clicks > 0) {
+    document.getElementById('evClicks').textContent = currentEmail.clicks;
+    clicksRow.style.display = '';
+  } else { clicksRow.style.display = 'none'; }
+
+  // Clicked At
+  const clickedAtRow = document.getElementById('evClickedAtRow');
+  if (currentEmail.clicked_at) {
+    document.getElementById('evClickedAt').textContent =
+      new Date(currentEmail.clicked_at).toLocaleString();
+    clickedAtRow.style.display = '';
+  } else { clickedAtRow.style.display = 'none'; }
+
+  // Replied At
+  const repliedAtRow = document.getElementById('evRepliedAtRow');
+  if (currentEmail.replied_at) {
+    document.getElementById('evRepliedAt').textContent =
+      new Date(currentEmail.replied_at).toLocaleString();
+    repliedAtRow.style.display = '';
+  } else { repliedAtRow.style.display = 'none'; }
+
+  if (currentEmail.cc) {
+    document.getElementById('evCcLabel').style.display = '';
+    document.getElementById('evCc').style.display = '';
+    document.getElementById('evCc').textContent = currentEmail.cc;
+  }
+
+const evBody = document.getElementById('evBody');
+if (currentEmail.body_html) {
+  evBody.classList.remove('plain');
+  evBody.innerHTML = currentEmail.body_html;
+} else if (currentEmail.body) {
+  // Render plain-text body with line breaks preserved.
+  // Escape HTML first (safety), then convert newlines to <br>.
+  evBody.classList.remove('plain');
+  const escaped = String(currentEmail.body)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '<br>');
+  evBody.innerHTML = escaped;
+} else {
+  evBody.classList.add('plain');
+  evBody.textContent = '(No content)';
+}
+  // Attachments
+  const attSec = document.getElementById('evAttachments');
+  const attList = document.getElementById('evAttList');
+  if (currentEmail.attachments?.length) {
+    attList.innerHTML = currentEmail.attachments.map(a =>
+      `<span class="att-chip" onclick="downloadAtt('${a.url}','${a.name||a.filename||'file'}')">
+        ${getFileIcon(a.type)} ${a.name||a.filename||'Attachment'}
+      </span>`
+    ).join('');
+    attSec.style.display = 'block';
   } else {
-    attachmentsSection.style.display = 'none';
+    attSec.style.display = 'none';
   }
-  
-  readingPaneTitle.textContent = '📖 Reading Email';
-  currentMode = 'view';
+
+  // Enable toolbar buttons
+  setEmailBtnsEnabled(true);
+  renderList(); // re-render to show selection
+  if (currentEmail.inbound && !currentEmail.read) markAsRead();
 }
 
-// Show draft for editing
-function showDraftForEditing(email) {
-  showComposeForm();
-  
-  // Populate form with draft data
-  document.getElementById('composeTo').value = email.to || '';
-  document.getElementById('composeCC').value = email.cc || '';
-  document.getElementById('composeBCC').value = email.bcc || '';
-  document.getElementById('composeSubject').value = email.subject || '';
-  document.getElementById('composeBody').value = email.body || '';
-  
-  // Show CC/BCC if they have values
-  if (email.cc || email.bcc) {
-    toggleCCBCC(true);
-  }
-  
-  document.getElementById('readingPaneTitle').textContent = '📝 Editing Draft';
-  currentMode = 'edit-draft';
+function setEmailBtnsEnabled(on) {
+  ['replyBtn','replyAllBtn','fwdBtn','markReadBtn','deleteBtn','detailsBtn'].forEach(id => {
+    document.getElementById(id).disabled = !on;
+  });
 }
 
-function getEmailStatus(email) {
-  if (isDraft(email)) return 'Draft';
-  if (email.inbound) return 'Received';
-  if (email.replied_at) return 'Replied';
-  return 'Sent';
-}
+/* ══════════════════════════════════════════════
+   COMPOSE
+══════════════════════════════════════════════ */
+function showComposeForm(replyTo=null, forwardFrom=null, replyAll=false) {
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('evActions').style.display = 'none';
 
-// Open email modal with detailed information
-function openEmailModal() {
-  if (!selectedEmail) return;
-  
-  const email = selectedEmail;
-  
-  document.getElementById('modalTitle').textContent = email.subject || 'Email Details';
-  
-  const modalBody = document.getElementById('modalBody');
-  modalBody.innerHTML = `
-    <div class="field-group">
-      <div class="field-label">Subject</div>
-      <div class="field-value">${email.subject || 'N/A'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">From</div>
-      <div class="field-value">${email.from || 'N/A'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">To</div>
-      <div class="field-value">${email.to || 'N/A'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">CC</div>
-      <div class="field-value">${email.cc || 'None'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">BCC</div>
-      <div class="field-value">${email.bcc || 'None'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Created</div>
-      <div class="field-value">${email.created_at ? new Date(email.created_at).toLocaleString() : 'N/A'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Opened</div>
-      <div class="field-value">${email.opened_at ? new Date(email.opened_at).toLocaleString() : 'Not opened'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Replied</div>
-      <div class="field-value">${email.replied_at ? new Date(email.replied_at).toLocaleString() : 'Not replied'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Type</div>
-      <div class="field-value">${email.inbound ? 'Inbound' : isDraft(email) ? 'Draft' : 'Outbound'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Attachments</div>
-      <div class="field-value">${email.attachments && email.attachments.length > 0 ? email.attachments.map(a => a.name).join(', ') : 'None'}</div>
-    </div>
-    <div class="field-group">
-      <div class="field-label">Body</div>
-      <div class="field-value">${email.body || 'No content'}</div>
-    </div>
-  `;
-  
-  document.getElementById('emailModal').style.display = 'block';
-}
+  const form = document.getElementById('composeForm');
+  form.style.display = 'block';
+  form.classList.add('active');
 
-function closeEmailModal() {
-  document.getElementById('emailModal').style.display = 'none';
-}
-
-// Show compose form with enhanced features
-function showComposeForm(replyTo = null, forwardFrom = null) {
-  const readingPane = document.getElementById('readingPane');
-  const emailView = document.getElementById('emailViewTemplate');
-  const composeForm = document.getElementById('composeForm');
-  const readingPaneTitle = document.getElementById('readingPaneTitle');
-  const readingPaneActions = document.getElementById('readingPaneActions');
-  
-  // Hide email view and show compose form
-  emailView.classList.remove('active');
-  readingPane.classList.remove('empty');
-  composeForm.classList.add('active');
-  readingPaneActions.style.display = 'none';
-  
-  // Clear form and attachments
-  document.getElementById('emailComposeForm').reset();
-  document.getElementById('composeFrom').value = CUSTOMER_ID;
+  // Reset
+  ['composeTo','composeCC','composeBCC','composeSubject','composeBody'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('composeFrom').value = window.userVVEmail || CUSTOMER_ID;
   attachedFiles = [];
-  updateAttachmentDisplay();
-  
+  updateAttachmentChips();
+  currentDraftId = null;
+  document.getElementById('ccBccFields').style.display = 'none';
+
   if (replyTo) {
-    // Reply mode
     document.getElementById('composeTo').value = replyTo.from || '';
-    document.getElementById('composeSubject').value = 'Re: ' + (replyTo.subject || '').replace(/^re:\s*/i, '');
-    document.getElementById('composeBody').value = `\n\n--- Original Message ---\nFrom: ${replyTo.from}\nDate: ${new Date(replyTo.created_at).toLocaleString()}\nSubject: ${replyTo.subject}\n\n${replyTo.body}`;
-    readingPaneTitle.textContent = '↩️ Reply to Email';
-    currentMode = 'reply';
+    document.getElementById('composeSubject').value = 'Re: ' + (replyTo.subject||'').replace(/^re:\s*/i,'');
+    document.getElementById('composeBody').value = `\n\n\n--- Original Message ---\nFrom: ${replyTo.from}\nDate: ${new Date(replyTo.created_at).toLocaleString()}\nSubject: ${replyTo.subject}\n\n${replyTo.body}`;
+    document.getElementById('composeTitle').textContent = '↩️ Reply';
+    if (replyAll && replyTo.cc) {
+      document.getElementById('composeCC').value = replyTo.cc;
+      document.getElementById('ccBccFields').style.display = 'block';
+    }
   } else if (forwardFrom) {
-    // Forward mode
-    document.getElementById('composeSubject').value = 'Fwd: ' + (forwardFrom.subject || '').replace(/^fwd?:\s*/i, '');
-    document.getElementById('composeBody').value = `\n\n--- Forwarded Message ---\nFrom: ${forwardFrom.from}\nTo: ${forwardFrom.to}\nDate: ${new Date(forwardFrom.created_at).toLocaleString()}\nSubject: ${forwardFrom.subject}\n\n${forwardFrom.body}`;
-    readingPaneTitle.textContent = '➡️ Forward Email';
-    currentMode = 'forward';
-    
-    // Copy attachments from original email
-    if (forwardFrom.attachments && forwardFrom.attachments.length > 0) {
+    document.getElementById('composeSubject').value = 'Fwd: ' + (forwardFrom.subject||'').replace(/^fwd:\s*/i,'');
+    document.getElementById('composeBody').value = `\n\n--- Forwarded Message ---\nFrom: ${forwardFrom.from}\nDate: ${new Date(forwardFrom.created_at).toLocaleString()}\nSubject: ${forwardFrom.subject}\n\n${forwardFrom.body}`;
+    document.getElementById('composeTitle').textContent = '→ Forward';
+    if (forwardFrom.attachments?.length) {
       attachedFiles = [...forwardFrom.attachments];
-      updateAttachmentDisplay();
+      updateAttachmentChips();
     }
   } else {
-    // New compose mode
-    readingPaneTitle.textContent = '✏️ Compose New Email';
-    currentMode = 'compose';
-    
-    // Check for preloaded contact from contacts page
-    if (preloadedContact) {
-      document.getElementById('composeTo').value = preloadedContact.email || '';
-      document.getElementById('composeSubject').value = `Following up from ${preloadedContact.company || 'our conversation'}`;
-      preloadedContact = null; // Clear after use
-    }
+    document.getElementById('composeTitle').textContent = '✉️ New Email';
   }
-  
-  // Add signature to email body
-  addSignatureToBody();
+
+  applySignatureToBody();
 }
 
-// Email actions
-function replyToEmail() {
-  if (selectedEmail) {
-    showComposeForm(selectedEmail);
+function applySignatureToBody() {
+  if (!userSignature) return;
+  const ta = document.getElementById('composeBody');
+  if (!ta.value.includes(userSignature)) {
+    ta.value += '\n\n' + userSignature;
+  }
+  const preview = document.getElementById('signaturePreview');
+  preview.textContent = userSignature;
+  preview.style.display = 'block';
+}
+
+function updateSignaturePreview() {
+  const preview = document.getElementById('signaturePreview');
+  preview.textContent = userSignature || '';
+  preview.style.display = userSignature ? 'block' : 'none';
+}
+
+function cancelCompose() {
+  const form = document.getElementById('composeForm');
+  form.classList.remove('active');
+  form.style.display = 'none';
+  // Hide the Delete Draft button when compose form closes
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'none';
+  if (currentEmail) {
+    document.getElementById('emailView').style.display = 'block';
+    document.getElementById('emailView').classList.add('active');
+    document.getElementById('evActions').style.display = 'flex';
+  } else {
+    document.getElementById('readingEmpty').style.display = 'flex';
   }
 }
 
-function forwardEmail() {
-  if (selectedEmail) {
-    showComposeForm(null, selectedEmail);
+function toggleCCBCC() {
+  const f = document.getElementById('ccBccFields');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function replyToEmail()    { if (currentEmail) showComposeForm(currentEmail, null, false); }
+function replyAllToEmail() { if (currentEmail) showComposeForm(currentEmail, null, true); }
+function forwardEmail()    { if (currentEmail) showComposeForm(null, currentEmail); }
+
+/* ══════════════════════════════════════════════
+   SEND / DRAFT / SCHEDULE / DELETE
+══════════════════════════════════════════════ */
+async function sendEmail() {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks while the fetch is in flight
+  if (window.isSending) { console.log('[sendEmail] blocked: already in flight'); return; }
+  window.isSending = true;
+  const sendBtn = document.querySelector('.cf-btn.send');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; sendBtn.textContent = '⏳ Sending...'; }
+
+  const to = document.getElementById('composeTo').value.trim();
+  const subject = document.getElementById('composeSubject').value.trim();
+  if (!to) {
+    showToast('Please enter a recipient', true);
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
+    return;
+  }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: document.getElementById('composeFrom').value,
+    to, subject,
+    cc:  document.getElementById('composeCC').value || null,
+    bcc: mergedBcc,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    draft: false
+  };
+
+  try {
+    const r = await fetch(EP.sendEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast('✅ Email sent!');
+      if (currentDraftId) { await deleteEmailById(currentDraftId); currentDraftId = null; }
+      cancelCompose();
+      await loadEmails();
+    } else { showToast('Failed to send email', true); }
+  } catch(e) { showToast('Error sending email', true); }
+  finally {
+    window.isSending = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; sendBtn.textContent = '📤 Send'; }
   }
 }
 
-async function markAsRead() {
-  if (selectedEmail && !selectedEmail.opened_at && !isDraft(selectedEmail)) {
-    try {
-      await apiCall(ENDPOINTS.markAsRead, { email_id: selectedEmail.id });
-      selectedEmail.opened_at = new Date().toISOString();
-      renderEmailList();
-      showStatus('Email marked as read', false);
-    } catch (error) {
-      console.error('Error marking email as read:', error);
-      showStatus('Error marking email as read', true);
-    }
+/* ══════════════════════════════════════════════
+   EDIT DRAFT — open the existing compose form pre-populated with draft data.
+   Mirrors showComposeForm() exactly so the layout is identical to New Email.
+══════════════════════════════════════════════ */
+function editDraft(emailId) {
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) { showToast('Draft not found', true); return; }
+
+  // Same setup as showComposeForm — hide the read panes, show the compose form
+  document.getElementById('readingEmpty').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('evActions').style.display = 'none';
+
+  const form = document.getElementById('composeForm');
+  form.style.display = 'block';
+  form.classList.add('active');
+
+  // Reset everything first (so leftover state from a prior compose doesn't bleed in)
+  ['composeTo','composeCC','composeBCC','composeSubject','composeBody'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  attachedFiles = [];
+  document.getElementById('ccBccFields').style.display = 'none';
+
+  // Now populate fields from the draft row
+  document.getElementById('composeFrom').value    = draft.from || window.userVVEmail || CUSTOMER_ID;
+  document.getElementById('composeTo').value      = draft.to || '';
+  document.getElementById('composeSubject').value = draft.subject || '';
+  document.getElementById('composeCC').value      = draft.cc || '';
+  document.getElementById('composeBCC').value     = draft.bcc || '';
+  if (draft.cc || draft.bcc) {
+    document.getElementById('ccBccFields').style.display = 'block';
+  }
+
+  // Body — prefer plain body; if only body_html exists, convert <br>/<p> back to newlines
+  let bodyForTextarea = draft.body || '';
+  if (!bodyForTextarea && draft.body_html) {
+    bodyForTextarea = String(draft.body_html)
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+      .replace(/<\/?p[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"');
+  }
+  document.getElementById('composeBody').value = bodyForTextarea;
+
+  // Restore attachments — campaign_file objects with id+name+URL preserve click tracking
+  let atts = [];
+  if (Array.isArray(draft.attachments)) {
+    atts = draft.attachments;
+  } else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+  attachedFiles = atts.map(a => ({
+    id: a.id,
+    name: a.name || a.filename || 'Attachment',
+    URL: a.URL || a.url,
+    file_type: a.file_type || a.type,
+    _category: a._category || (typeof detectMediaCategory === 'function' ? detectMediaCategory(a) : 'file')
+  }));
+  updateAttachmentChips();
+
+  // Critical: tells sendEmail() / saveDraft() / scheduleEmail() that this is an existing draft
+  // — saveDraft will update this row (not create a duplicate)
+  // — sendEmail will delete this row after a successful send
+  currentDraftId = emailId;
+  currentEmail = null;
+
+  document.getElementById('composeTitle').textContent = '✏️ Edit Draft: ' + (draft.subject || '(no subject)');
+
+  // Show the Delete Draft button — only visible when editing an existing draft
+  const delBtn = document.getElementById('composeDeleteBtn');
+  if (delBtn) delBtn.style.display = 'inline-block';
+
+  // Show signature preview underneath (decorative — the actual signature gets appended at send time
+  // by the existing Render Initial Email node in the Send Now workflow, so we don't double-append here)
+  if (typeof updateSignaturePreview === 'function') updateSignaturePreview();
+}
+
+/* ══════════════════════════════════════════════
+   SEND DRAFT AS-IS — one-click send for Claude-generated drafts
+   that need no edit. Uses the existing sendEmail webhook + cleanup.
+══════════════════════════════════════════════ */
+async function sendDraftAsIs(emailId) {
+  // RE-ENTRY GUARD — prevents duplicate sends from rapid clicks
+  if (window.isSending) { console.log('[sendDraftAsIs] blocked: already in flight'); return; }
+
+  const draft = allEmails.find(e => e.id === emailId);
+  if (!draft) return;
+  if (!confirm('Send draft to ' + draft.to + ' as-is?\n\nSubject: ' + (draft.subject || '(no subject)'))) return;
+
+  window.isSending = true;
+  // Disable any visible "Send As-Is" buttons during the send
+  const sendAsIsBtns = document.querySelectorAll('[onclick*="sendDraftAsIs"]');
+  sendAsIsBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+
+  let atts = [];
+  if (Array.isArray(draft.attachments)) atts = draft.attachments;
+  else if (typeof draft.attachments === 'string' && draft.attachments.trim()) {
+    try { atts = JSON.parse(draft.attachments); } catch(e) { atts = []; }
+  }
+
+  // Ensure body_html is populated — the Send Now workflow renders body_html for the HTML email part.
+  // If the draft only has plain body, build the html version here.
+  let bodyHtml = draft.body_html || '';
+  if (!bodyHtml && draft.body) {
+    bodyHtml = String(draft.body)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n/g, '<br>');
+  }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const draftBcc = draft.bcc || null;
+  const mergedBcc = draftBcc && userBcc && !String(draftBcc).toLowerCase().includes(userBcc.toLowerCase())
+    ? (draftBcc + ', ' + userBcc)
+    : (draftBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: draft.from || window.userVVEmail || CUSTOMER_ID,
+    to:   draft.to,
+    cc:   draft.cc || null,
+    bcc:  mergedBcc,
+    subject: draft.subject || '',
+    body: draft.body || '',
+    body_html: bodyHtml,
+    attachments: atts,
+    draft: false
+  };
+
+  try {
+    const r = await fetch(EP.sendEmail, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast('✅ Sent — draft removed');
+      await deleteEmailById(emailId);
+      await loadEmails();
+    } else { showToast('Failed to send', true); }
+  } catch(e) { showToast('Error sending', true); }
+  finally {
+    window.isSending = false;
+    sendAsIsBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+  }
+}
+
+async function saveDraft() {
+  const draftData = {
+    customer_id: CUSTOMER_ID,
+    id: currentDraftId,
+    from: document.getElementById('composeFrom').value,
+    to:   document.getElementById('composeTo').value,
+    cc:   document.getElementById('composeCC').value || null,
+    bcc:  document.getElementById('composeBCC').value || null,
+    subject: document.getElementById('composeSubject').value,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    draft: true
+  };
+  try {
+    const r = await fetch(EP.saveDraft, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(draftData)
+    });
+    if (r.ok) {
+      const result = await r.json();
+      currentDraftId = result.draft_id || result.id;
+      showToast('💾 Draft saved');
+      await loadEmails();
+    } else { showToast('Failed to save draft', true); }
+  } catch(e) { showToast('Error saving draft', true); }
+}
+
+function openScheduleModal() {
+  // Pre-fill date/time to tomorrow
+  const tomorrow = new Date(Date.now() + 86400000);
+  document.getElementById('schedDate').value = tomorrow.toISOString().split('T')[0];
+  document.getElementById('schedTime').value = '09:00';
+  openModal('scheduleModal');
+}
+
+async function scheduleEmail() {
+  // RE-ENTRY GUARD — prevents duplicate scheduled-email creation from rapid clicks
+  if (window.isSending) { console.log('[scheduleEmail] blocked: already in flight'); return; }
+
+  const date = document.getElementById('schedDate').value;
+  const time = document.getElementById('schedTime').value;
+  if (!date || !time) { showToast('Please select date and time', true); return; }
+ const scheduledTime = new Date(`${date}T${time}:00`).toISOString();
+
+  window.isSending = true;
+  const scheduleBtn = document.querySelector('[onclick*="scheduleEmail"]');
+  if (scheduleBtn) { scheduleBtn.disabled = true; scheduleBtn.style.opacity = '0.5'; }
+
+  // Auto-BCC the user on every send so they have a copy in their own inbox
+  const userBcc = (CUSTOMER_ID && CUSTOMER_ID.includes('@')) ? CUSTOMER_ID : null;
+  const composedBcc = document.getElementById('composeBCC').value || null;
+  const mergedBcc = composedBcc && userBcc && !composedBcc.toLowerCase().includes(userBcc.toLowerCase())
+    ? (composedBcc + ', ' + userBcc)
+    : (composedBcc || userBcc);
+
+  const emailData = {
+    customer_id: CUSTOMER_ID,
+    from: document.getElementById('composeFrom').value,
+    to:   document.getElementById('composeTo').value,
+    cc:   document.getElementById('composeCC').value || null,
+    bcc:  mergedBcc,
+    subject: document.getElementById('composeSubject').value,
+    body: document.getElementById('composeBody').value,
+    attachments: attachedFiles,
+    scheduled_time: scheduledTime
+  };
+
+  try {
+    const r = await fetch(EP.scheduleEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify(emailData)
+    });
+    if (r.ok) {
+      showToast(`⏰ Email scheduled for ${new Date(scheduledTime).toLocaleString()}`);
+      closeModal('scheduleModal');
+      cancelCompose();
+      await loadEmails();
+    } else { showToast('Failed to schedule email', true); }
+  } catch(e) { showToast('Error scheduling email', true); }
+  finally {
+    window.isSending = false;
+    if (scheduleBtn) { scheduleBtn.disabled = false; scheduleBtn.style.opacity = '1'; }
   }
 }
 
 async function deleteEmail() {
-  if (!selectedEmail) return;
-  
-  if (!confirm('Are you sure you want to delete this email?')) {
+  // Two paths:
+  // 1. Reading an email — currentEmail is set, delete that
+  // 2. Editing a draft — currentDraftId is set (compose form is open), delete that
+  if (currentDraftId) {
+    return deleteCurrentDraft();
+  }
+  if (!currentEmail) {
+    showToast('Nothing selected to delete', true);
     return;
   }
-  
-  try {
-    await apiCall(ENDPOINTS.deleteEmail, { email_id: selectedEmail.id });
-    
-    // Remove from local arrays
-    allEmails = allEmails.filter(e => e.id !== selectedEmail.id);
-    filteredEmails = filteredEmails.filter(e => e.id !== selectedEmail.id);
-    
-    selectedEmail = null;
-    renderEmailList();
-    showEmptyReadingPane();
-    showStatus('Email deleted successfully', false);
-    
-  } catch (error) {
-    console.error('Error deleting email:', error);
-    showStatus('Error deleting email', true);
-  }
-}
-
-function showEmptyReadingPane() {
-  const readingPane = document.getElementById('readingPane');
-  const emailView = document.getElementById('emailViewTemplate');
-  const composeForm = document.getElementById('composeForm');
-  const readingPaneTitle = document.getElementById('readingPaneTitle');
-  const readingPaneActions = document.getElementById('readingPaneActions');
-  
-  emailView.classList.remove('active');
-  composeForm.classList.remove('active');
-  readingPane.classList.add('empty');
-  readingPaneActions.style.display = 'none';
-  readingPaneTitle.textContent = '📖 Reading Pane';
-}
-
-// CC/BCC toggle functionality
-function toggleCCBCC(show = null) {
-  const ccBccSection = document.getElementById('ccBccSection');
-  const isVisible = ccBccSection.classList.contains('active');
-  
-  if (show === true || (show === null && !isVisible)) {
-    ccBccSection.classList.add('active');
-  } else if (show === false || (show === null && isVisible)) {
-    ccBccSection.classList.remove('active');
-    // Clear CC/BCC fields when hiding
-    document.getElementById('composeCC').value = '';
-    document.getElementById('composeBCC').value = '';
-  }
-}
-
-// File attachment functionality
-function showFileSelector() {
-  if (allMediaFiles.length === 0) {
-    loadMediaFiles().then(() => {
-      if (allMediaFiles.length === 0) {
-        showStatus('No media files found in your library', true);
-        return;
-      }
-      displayFileSelector();
-    });
-  } else {
-    displayFileSelector();
-  }
-}
-
-function displayFileSelector() {
-  const modal = document.getElementById('fileSelectorModal');
-  const filesList = document.getElementById('mediaFilesList');
-  
-  if (allMediaFiles.length === 0) {
-    filesList.innerHTML = '<div class="empty-state"><p>No files found in your media library</p></div>';
-  } else {
-    filesList.innerHTML = allMediaFiles.map(file => `
-      <div style="display: flex; align-items: center; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; margin: 5px 0;">
-        <input type="checkbox" value="${file.id}" data-name="${file.name}" data-url="${file.secure_url || file.URL}" style="margin-right: 10px;">
-        <div style="flex: 1;">
-          <strong>${file.name}</strong><br>
-          <small style="color: #666;">${file.file_type || 'Unknown type'} • ${file.file_size || 'Unknown size'}</small>
-        </div>
-      </div>
-    `).join('');
-  }
-  
-  modal.style.display = 'block';
-}
-
-function closeFileSelector() {
-  document.getElementById('fileSelectorModal').style.display = 'none';
-  // Clear selections
-  document.querySelectorAll('#mediaFilesList input[type="checkbox"]').forEach(cb => cb.checked = false);
-}
-
-function attachSelectedFiles() {
-  const selectedCheckboxes = document.querySelectorAll('#mediaFilesList input[type="checkbox"]:checked');
-  
-  selectedCheckboxes.forEach(checkbox => {
-    const file = {
-      name: checkbox.dataset.name,
-      url: checkbox.dataset.url,
-      type: 'media-library',
-      id: checkbox.value
-    };
-    
-    // Check if already attached
-    if (!attachedFiles.find(f => f.id === file.id)) {
-      attachedFiles.push(file);
-    }
-  });
-  
-  updateAttachmentDisplay();
-  closeFileSelector();
-  showStatus(`${selectedCheckboxes.length} files attached from media library`, false);
-}
-
-function handleFileUpload(event) {
-  const files = Array.from(event.target.files);
-  
-  files.forEach(file => {
-    const attachedFile = {
-      name: file.name,
-      file: file,
-      type: 'upload',
-      id: 'upload_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-    };
-    attachedFiles.push(attachedFile);
-  });
-  
-  updateAttachmentDisplay();
-  showStatus(`${files.length} files attached for upload`, false);
-  
-  // Clear the input
-  event.target.value = '';
-}
-
-function updateAttachmentDisplay() {
-  const attachmentList = document.getElementById('attachmentList');
-  
-  if (attachedFiles.length === 0) {
-    attachmentList.innerHTML = '';
-    return;
-  }
-  
-  attachmentList.innerHTML = attachedFiles.map((file, index) => `
-    <div class="attached-file">
-      <span>📎 ${file.name}</span>
-      <button class="remove-attachment" onclick="removeAttachment(${index})" title="Remove">✕</button>
-    </div>
-  `).join('');
-}
-
-function removeAttachment(index) {
-  attachedFiles.splice(index, 1);
-  updateAttachmentDisplay();
-}
-
-// Setup drag and drop for file attachment area
-function setupFileAttachmentDragDrop() {
-  const fileArea = document.getElementById('fileAttachmentArea');
-  
-  fileArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    fileArea.classList.add('dragover');
-  });
-  
-  fileArea.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    fileArea.classList.remove('dragover');
-  });
-  
-  fileArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    fileArea.classList.remove('dragover');
-    
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileUpload({ target: { files: files } });
-    }
-  });
-}
-
-// Signature management
-function updateSignatureDisplay() {
-  document.getElementById('signaturePreview').innerHTML = userSignature.replace(/\n/g, '<br>');
-}
-
-function editSignature() {
-  document.getElementById('signatureText').value = userSignature;
-  document.getElementById('signatureModal').style.display = 'block';
-}
-
-function closeSignatureModal() {
-  document.getElementById('signatureModal').style.display = 'none';
-}
-
-async function saveSignature() {
-  const newSignature = document.getElementById('signatureText').value;
-  
-  try {
-    await apiCall(ENDPOINTS.updateSignature, { signature: newSignature });
-    userSignature = newSignature;
-    updateSignatureDisplay();
-    closeSignatureModal();
-    showStatus('Signature updated successfully', false);
-  } catch (error) {
-    console.error('Error saving signature:', error);
-    showStatus('Error saving signature', true);
-  }
-}
-
-function addSignatureToBody() {
-  const bodyTextarea = document.getElementById('composeBody');
-  const currentBody = bodyTextarea.value;
-  
-  if (!currentBody.includes(userSignature)) {
-    bodyTextarea.value = currentBody + '\n\n' + userSignature;
-  }
-}
-
-// Compose form functions
-async function saveDraft() {
-  const formData = getComposeFormData();
-  if (!formData.subject && !formData.body) {
-    showStatus('Nothing to save', true);
-    return;
-  }
-  
-  try {
-    const result = await apiCall(ENDPOINTS.saveDraft, {
-      to_email: formData.to,
-      cc_email: formData.cc,
-      bcc_email: formData.bcc,
-      subject: formData.subject,
-      body: formData.body,
-      attachments: await processAttachments()
-    });
-    
-    showStatus('Draft saved successfully', false);
-    await loadEmails();
-    
-  } catch (error) {
-    console.error('Error saving draft:', error);
-    showStatus('Error saving draft', true);
-  }
-}
-
-async function scheduleEmail() {
-  const formData = getComposeFormData();
-  if (!validateComposeForm(formData)) return;
-  
-  const scheduleTime = prompt('Enter schedule time (YYYY-MM-DD HH:MM):', 
-    new Date(Date.now() + 3600000).toISOString().slice(0, 16).replace('T', ' '));
-  
-  if (!scheduleTime) return;
-  
-  try {
-    await apiCall(ENDPOINTS.scheduleEmail, {
-      to_email: formData.to,
-      cc_email: formData.cc,
-      bcc_email: formData.bcc,
-      subject: formData.subject,
-      body: formData.body,
-      schedule_time: scheduleTime,
-      attachments: await processAttachments()
-    });
-    
-    showStatus('Email scheduled successfully', false);
-    cancelCompose();
-    await loadEmails();
-    
-  } catch (error) {
-    console.error('Error scheduling email:', error);
-    showStatus('Error scheduling email', true);
-  }
-}
-
-async function sendEmail() {
-  const formData = getComposeFormData();
-  if (!validateComposeForm(formData)) return;
-  
-  try {
-    const result = await apiCall(ENDPOINTS.sendEmail, {
-      to_email: formData.to,
-      cc_email: formData.cc,
-      bcc_email: formData.bcc,
-      subject: formData.subject,
-      body: formData.body,
-      attachments: await processAttachments(),
-      reply_to_id: currentMode === 'reply' ? selectedEmail?.id : null,
-      signature: userSignature
-    });
-    
-    showStatus('Email sent successfully!', false);
-    cancelCompose();
-    await loadEmails();
-    
-  } catch (error) {
-    console.error('Error sending email:', error);
-    showStatus('Error sending email: ' + error.message, true);
-  }
-}
-
-async function processAttachments() {
-  const processedAttachments = [];
-  
-  for (const file of attachedFiles) {
-    if (file.type === 'media-library') {
-      processedAttachments.push({
-        name: file.name,
-        url: file.url
-      });
-    } else if (file.type === 'upload') {
-      // Convert file to base64 for upload
-      const base64Data = await fileToBase64(file.file);
-      processedAttachments.push({
-        name: file.name,
-        data: base64Data
-      });
-    }
-  }
-  
-  return processedAttachments;
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-  });
-}
-
-function getComposeFormData() {
-  return {
-    to: document.getElementById('composeTo').value,
-    cc: document.getElementById('composeCC').value,
-    bcc: document.getElementById('composeBCC').value,
-    subject: document.getElementById('composeSubject').value,
-    body: document.getElementById('composeBody').value
-  };
-}
-
-function validateComposeForm(formData) {
-  if (!formData.to) {
-    showStatus('Please select a recipient', true);
-    return false;
-  }
-  if (!formData.subject) {
-    showStatus('Please enter email subject', true);
-    return false;
-  }
-  if (!formData.body) {
-    showStatus('Please enter email message', true);
-    return false;
-  }
-  return true;
-}
-
-function cancelCompose() {
-  showEmptyReadingPane();
-  currentMode = 'view';
-  attachedFiles = [];
-}
-
-// AI Assistant functions
-async function aiAssist(tone) {
-  const currentBody = document.getElementById('composeBody').value;
-  const subject = document.getElementById('composeSubject').value;
-  const recipient = document.getElementById('composeTo').value;
-  
-  try {
-    showStatus('AI is generating content...', false);
-    
-    const result = await apiCall(ENDPOINTS.aiAssist, {
-      tone: tone,
-      current_body: currentBody,
-      subject: subject,
-      recipient: recipient,
-      context: currentMode
-    });
-    
-    if (result.content) {
-      document.getElementById('composeBody').value = result.content;
-      showStatus('AI content generated successfully!', false);
-    } else {
-      throw new Error('No content generated');
-    }
-    
-  } catch (error) {
-    console.error('Error with AI assist:', error);
-    showStatus('Error generating AI content', true);
-  }
-}
-
-async function generateAIEmails() {
-  try {
-    showStatus('Generating AI email campaign...', false);
-    const result = await apiCall(ENDPOINTS.generateCampaign);
-    showStatus('AI email campaign generated! Check your drafts.', false);
-    await loadEmails();
-  } catch (error) {
-    console.error('Error generating AI campaign:', error);
-    showStatus('Error generating AI campaign', true);
-  }
-}
-
-async function refreshEmails() {
+  if (!confirm('Delete this email permanently?')) return;
+  await deleteEmailById(currentEmail.id);
+  currentEmail = null;
+  setEmailBtnsEnabled(false);
+  document.getElementById('emailView').style.display = 'none';
+  document.getElementById('emailView').classList.remove('active');
+  document.getElementById('evActions').style.display = 'none';
+  document.getElementById('readingEmpty').style.display = 'flex';
   await loadEmails();
 }
 
-function applyFilters() {
-  const status = document.getElementById('statusFilter').value;
-  const contact = document.getElementById('contactFilter').value.toLowerCase();
-  const dateFrom = document.getElementById('dateFromFilter').value;
-  const dateTo = document.getElementById('dateToFilter').value;
-
-  filteredEmails = allEmails.filter(email => {
-    if (status) {
-      switch (status) {
-        case 'draft':
-          if (!isDraft(email)) return false;
-          break;
-        case 'sent':
-          if (isDraft(email) || email.inbound) return false;
-          break;
-        case 'inbound':
-          if (!email.inbound) return false;
-          break;
-        case 'replied':
-          if (!email.replied_at) return false;
-          break;
-        case 'opened':
-          if (!email.opened_at) return false;
-          break;
-      }
-    }
-
-    if (contact) {
-      const searchableText = [email.from || '', email.to || '', email.subject || '', email.body || ''].join(' ').toLowerCase();
-      if (!searchableText.includes(contact)) return false;
-    }
-
-    if (dateFrom || dateTo) {
-      const emailDate = new Date(email.created_at);
-      if (dateFrom && emailDate < new Date(dateFrom)) return false;
-      if (dateTo && emailDate > new Date(dateTo + 'T23:59:59')) return false;
-    }
-
-    return true;
-  });
-
-  renderEmailList();
+// Delete the draft currently being edited in the compose form
+async function deleteCurrentDraft() {
+  if (!currentDraftId) {
+    showToast('No draft to delete', true);
+    return;
+  }
+  if (!confirm('Delete this draft permanently?')) return;
+  await deleteEmailById(currentDraftId);
+  currentDraftId = null;
+  cancelCompose();
+  await loadEmails();
 }
 
-function clearFilters() {
-  document.getElementById('statusFilter').value = '';
-  document.getElementById('contactFilter').value = '';
-  document.getElementById('dateFromFilter').value = '';
-  document.getElementById('dateToFilter').value = '';
-  applyFilters();
-}
-
-function showStatus(message, isError = false) {
-  const statusDiv = document.getElementById('statusMessage');
-  statusDiv.textContent = message;
-  statusDiv.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
-  statusDiv.style.display = 'block';
-  setTimeout(() => statusDiv.style.display = 'none', 5000);
-}
-
-function setupEventListeners() {
-  document.getElementById('emailComposeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await sendEmail();
-  });
-  
-  ['statusFilter', 'contactFilter', 'dateFromFilter', 'dateToFilter'].forEach(id => {
-    document.getElementById(id).addEventListener('change', applyFilters);
-  });
-  
-  window.addEventListener('click', (event) => {
-    const modals = ['emailModal', 'signatureModal', 'fileSelectorModal'];
-    modals.forEach(modalId => {
-      const modal = document.getElementById(modalId);
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
+async function deleteEmailById(emailId) {
+  try {
+    await fetch(EP.deleteEmail, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, email_id: emailId})
     });
-  });
-  
-  setupFileAttachmentDragDrop();
+    // Remove from local array immediately
+    allEmails = allEmails.filter(e => e.id !== emailId);
+    showToast('🗑️ Email deleted');
+  } catch(e) { showToast('Delete failed', true); }
 }
 
-// Victory Vision Chat Widget
+async function markAsRead() {
+  if (!currentEmail) return;
+  try {
+    await fetch(EP.markRead, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, email_id: currentEmail.id})
+    });
+    currentEmail.read = true;
+    // Update local array too
+    const idx = allEmails.findIndex(e => e.id === currentEmail.id);
+    if (idx !== -1) allEmails[idx].read = true;
+    const emailId = currentEmail.id;
+    const localEmail = allEmails.find(e => e.id === emailId);
+    if (localEmail && !localEmail.opened_at) {
+      localEmail.opened_at = new Date().toISOString();
+      localEmail.opens = (localEmail.opens || 0) + 1;
+      // Re-populate the reading pane fields
+      const openedAtRow = document.getElementById('evOpenedAtRow');
+      if (openedAtRow) {
+        document.getElementById('evOpenedAt').textContent =
+          new Date(localEmail.opened_at).toLocaleString();
+        openedAtRow.style.display = '';
+        const opensRow = document.getElementById('evOpensRow');
+        document.getElementById('evOpens').textContent = localEmail.opens;
+        opensRow.style.display = '';
+      }
+    }
+    updateUnreadCount();
+    renderList();
+  } catch(e) {}
+}
+
+async function refreshEmails() {
+  showToast('🔄 Refreshing…');
+  await loadEmails();
+  showToast('✅ Refreshed');
+}
+
+/* ══════════════════════════════════════════════
+   AI ASSIST
+══════════════════════════════════════════════ */
+async function aiAssist(action) {
+  const tone = document.getElementById('aiTone').value;
+  if (!tone) { showToast('Please select an AI tone first', true); return; }
+  showToast('🤖 AI working…');
+  try {
+    const r = await fetch(EP.aiAssist, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({
+        action, tone,
+        subject: document.getElementById('composeSubject').value,
+        body: document.getElementById('composeBody').value,
+        recipient: document.getElementById('composeTo').value,
+        customer_id: CUSTOMER_ID
+      })
+    });
+    if (r.ok) {
+      const result = await r.json();
+      const body = result.email_body_plain || result.body || result.content || '';
+      const subj = result.email_subject || result.subject || '';
+      document.getElementById('composeBody').value = body;
+      if (subj) document.getElementById('composeSubject').value = subj;
+      showToast('✨ AI applied!');
+    } else { showToast('AI assist failed', true); }
+  } catch(e) { showToast('AI assist error', true); }
+}
+
+/* ══════════════════════════════════════════════
+   AUTO REPLY
+══════════════════════════════════════════════ */
+async function toggleAutoReply(enabled) {
+  try {
+    const r = await fetch(EP.aireply, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, aireply: enabled})
+    });
+    if (r.ok) {
+      showToast(enabled ? '✅ Auto-Reply ON' : '⏸ Auto-Reply OFF');
+    } else {
+      showToast('Failed to update', true);
+      document.getElementById('autoReplyToggle').checked = !enabled;
+    }
+  } catch(e) { document.getElementById('autoReplyToggle').checked = !enabled; }
+}
+
+/* ══════════════════════════════════════════════
+   SIGNATURE
+══════════════════════════════════════════════ */
+function openSignatureModal() {
+  document.getElementById('signatureText').value = userSignature;
+  openModal('signatureModal');
+}
+
+async function saveSignature() {
+  const sig = document.getElementById('signatureText').value;
+  userSignature = sig;
+  updateSignaturePreview();
+  closeModal('signatureModal');
+  showToast('💾 Saving signature…');
+  try {
+    // Save to webhook (persists to user.signature in Supabase)
+    await fetch(EP.saveSignature, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, signature: sig})
+    });
+    showToast('✅ Signature saved');
+  } catch(e) { showToast('Signature saved locally only', false); }
+}
+
+/* ══════════════════════════════════════════════
+   MEDIA SELECTOR
+══════════════════════════════════════════════ */
+function openMediaSelector() {
+  selectedMedia = [];
+  activeMediaType = 'all';
+  document.getElementById('mediaSearch').value = '';
+  document.querySelectorAll('.type-filter-btn').forEach((b,i) => {
+    b.classList.toggle('active', i===0);
+  });
+  renderMediaGrid();
+  openModal('mediaSelectorModal');
+}
+
+function closeMediaSelector() {
+  closeModal('mediaSelectorModal');
+  selectedMedia = [];
+}
+
+function setMediaType(type, btn) {
+  activeMediaType = type;
+  document.querySelectorAll('.type-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMediaGrid();
+}
+
+function filterMedia() { renderMediaGrid(); }
+
+function renderMediaGrid() {
+  const grid = document.getElementById('mediaGrid');
+  const search = document.getElementById('mediaSearch').value.toLowerCase();
+
+  const filtered = mediaFiles.filter(f => {
+    const cat = f._category;
+    const matchType = activeMediaType === 'all' || cat === activeMediaType;
+    const matchSearch = !search || (f.name||'').toLowerCase().includes(search);
+    return matchType && matchSearch;
+  });
+
+  document.getElementById('mediaCountLabel').textContent =
+    filtered.length + ' file' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#aaa;padding:40px;">No media found</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  filtered.forEach(file => {
+    const isSelected = selectedMedia.includes(file.id);
+    const cat = file._category;
+
+    const card = document.createElement('div');
+    card.className = 'media-card' + (isSelected ? ' selected' : '');
+    card.dataset.id = file.id;
+
+    let thumbHtml = '';
+    if (cat === 'image' && file.url) {
+      thumbHtml = `<img class="media-thumb" src="${file.url}" alt="${file.name}" onerror="this.parentNode.innerHTML='<div class=\\'media-thumb-placeholder\\'>🖼️</div>'">`;
+    } else if (cat === 'video') {
+      thumbHtml = `<div class="media-thumb-placeholder">🎬</div>`;
+    } else if (cat === 'presentation') {
+      thumbHtml = `<div class="media-thumb-placeholder">📊</div>`;
+    } else {
+      thumbHtml = `<div class="media-thumb-placeholder">${getFileIcon(cat)}</div>`;
+    }
+
+    card.innerHTML = `
+      ${thumbHtml}
+      <div class="media-card-type">${cat}</div>
+      <div class="check-overlay"><div class="check-circle">✓</div></div>
+      <div class="media-card-info" title="${file.name||''}">${file.name||'Untitled'}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      const idx = selectedMedia.indexOf(file.id);
+      if (idx > -1) { selectedMedia.splice(idx,1); card.classList.remove('selected'); }
+      else { selectedMedia.push(file.id); card.classList.add('selected'); }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function attachSelectedMedia() {
+  let added = 0;
+  selectedMedia.forEach(id => {
+    const file = mediaFiles.find(f => f.id === id);
+    if (file && !attachedFiles.find(f => f.id === id)) {
+      attachedFiles.push(file);
+      added++;
+    }
+  });
+  updateAttachmentChips();
+  closeMediaSelector();
+  showToast(`📎 ${added} file(s) attached`);
+}
+
+function updateAttachmentChips() {
+  const chips = document.getElementById('attachmentChips');
+  if (!attachedFiles.length) { chips.innerHTML = ''; return; }
+  chips.innerHTML = attachedFiles.map(f =>
+    `<span class="att-remove">
+      ${getFileIcon(f._category||f.type)} ${f.name||'file'}
+      <button onclick="removeAttachment('${f.id}')">×</button>
+    </span>`
+  ).join('');
+}
+
+function removeAttachment(id) {
+  attachedFiles = attachedFiles.filter(f => f.id !== id);
+  updateAttachmentChips();
+}
+
+function downloadAtt(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ══════════════════════════════════════════════
+   DETAILS MODAL
+══════════════════════════════════════════════ */
+function openDetailsModal() {
+  if (!currentEmail) return;
+  const e = currentEmail;
+  const rows = [
+    ['Subject', e.subject||'—'],
+    ['From', e.from||'—'],
+    ['To', e.to||'—'],
+    ['CC', e.cc||'—'],
+    ['BCC', e.bcc||'—'],
+    ['Date', e.created_at ? new Date(e.created_at).toLocaleString() : '—'],
+    ['Sent At', e.sent_at ? new Date(e.sent_at).toLocaleString() : '—'],
+    ['Opened At', e.opened_at ? new Date(e.opened_at).toLocaleString() : 'Not opened'],
+    ['Replied At', e.replied_at ? new Date(e.replied_at).toLocaleString() : 'Not replied'],
+    ['Type', e.inbound ? 'Inbound' : e.draft ? 'Draft' : 'Outbound'],
+    ['Attachments', e.attachments?.length ? e.attachments.map(a=>a.name||a.filename).join(', ') : 'None']
+  ];
+  document.getElementById('detailsBody').innerHTML =
+    rows.map(([l,v]) => `<div class="field-row"><span class="fl">${l}</span><span class="fv">${v}</span></div>`).join('');
+  openModal('detailsModal');
+}
+
+/* ══════════════════════════════════════════════
+   TOUR
+══════════════════════════════════════════════ */
+function startTour() {
+  const intro = introJs();
+  intro.setOptions({ showProgress:true, showBullets:false, doneLabel:'Finish', nextLabel:'Next →', prevLabel:'← Back' });
+  intro.oncomplete(() => localStorage.setItem(`tour_msg_${CUSTOMER_ID}`,'1'));
+  intro.onexit(()    => localStorage.setItem(`tour_msg_${CUSTOMER_ID}`,'1'));
+  intro.start();
+}
+
+/* ══════════════════════════════════════════════
+   CHAT WIDGET
+══════════════════════════════════════════════ */
 class VictoryVisionChat {
   constructor() {
-    this.isOpen = false;
-    this.isTyping = false;
-    this.apiEndpoint = ENDPOINTS.chatMessage;
-    this.customerId = null;
-    this.authToken = null;
-    this.conversationId = null;
+    this.isOpen = false; this.isTyping = false;
+    this.conversationId = 'conv_' + Date.now();
     this.messageCount = 0;
-    this.init();
   }
-
   init() {
-    this.toggle = document.getElementById('vvChatToggle');
-    this.container = document.getElementById('vvChatContainer');
-    this.messages = document.getElementById('vvChatMessages');
-    this.input = document.getElementById('vvChatInput');
-    this.sendBtn = document.getElementById('vvChatSend');
-    this.minimize = document.getElementById('vvChatMinimize');
-    this.typing = document.getElementById('vvChatTyping');
-    this.error = document.getElementById('vvChatError');
-    this.notification = document.getElementById('vvNotificationBadge');
-    this.toggleIcon = document.getElementById('vvToggleIcon');
-
-    this.setupEventListeners();
-    this.getCustomerAuth();
-    this.conversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    this.setupAutoResize();
+    document.getElementById('vvChatToggle').onclick = () => this.toggle();
+    document.getElementById('vvChatMinimize').onclick = () => this.close();
+    document.getElementById('vvChatSend').onclick = () => this.send();
+    const inp = document.getElementById('vvChatInput');
+    inp.addEventListener('keypress', e => { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.send();} });
+    inp.addEventListener('input', () => { document.getElementById('vvChatSend').disabled = !inp.value.trim(); });
   }
-
-  setupEventListeners() {
-    this.toggle.addEventListener('click', () => this.toggleChat());
-    this.minimize.addEventListener('click', () => this.closeChat());
-    this.sendBtn.addEventListener('click', () => this.sendMessage());
-    this.input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.sendMessage();
-      }
-    });
-    this.input.addEventListener('input', () => {
-      this.sendBtn.disabled = !this.input.value.trim();
-    });
-  }
-
-  setupAutoResize() {
-    this.input.addEventListener('input', () => {
-      this.input.style.height = 'auto';
-      this.input.style.height = Math.min(this.input.scrollHeight, 80) + 'px';
-    });
-  }
-
-  getCustomerAuth() {
-    this.customerId = CUSTOMER_ID;
-    this.authToken = authToken;
-  }
-
-  toggleChat() {
-    if (this.isOpen) {
-      this.closeChat();
-    } else {
-      this.openChat();
-    }
-  }
-
-  openChat() {
-    this.isOpen = true;
-    this.container.classList.add('open');
-    this.toggle.classList.add('active');
-    this.toggleIcon.textContent = '✕';
-    this.input.focus();
-    this.hideNotification();
-    this.scrollToBottom();
-  }
-
-  closeChat() {
-    this.isOpen = false;
-    this.container.classList.remove('open');
-    this.toggle.classList.remove('active');
-    this.toggleIcon.textContent = '💬';
-    this.hideError();
-  }
-
-  async sendMessage() {
-    const message = this.input.value.trim();
-    if (!message || this.isTyping) return;
-
-    this.addMessage(message, 'user');
-    this.input.value = '';
-    this.input.style.height = 'auto';
-    this.sendBtn.disabled = true;
-    this.showTyping();
-
+  toggle() { this.isOpen ? this.close() : this.open(); }
+  open()   { this.isOpen=true; document.getElementById('vvChatContainer').classList.add('open'); document.getElementById('vvToggleIcon').textContent='✕'; document.getElementById('vvNotificationBadge').style.display='none'; }
+  close()  { this.isOpen=false; document.getElementById('vvChatContainer').classList.remove('open'); document.getElementById('vvToggleIcon').textContent='💬'; }
+  async send() {
+    const inp = document.getElementById('vvChatInput');
+    const msg = inp.value.trim(); if (!msg||this.isTyping) return;
+    this.addMsg(msg,'user'); inp.value=''; document.getElementById('vvChatSend').disabled=true;
+    document.getElementById('vvChatTyping').classList.add('show');
     try {
-      const response = await this.callChatAPI(message);
-      this.hideTyping();
-      
-      if (response && response.reply) {
-        this.addMessage(response.reply, 'bot');
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      this.hideTyping();
-      console.error('Chat API error:', error);
-      this.addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
-      this.showError('Failed to send message. Please try again.');
-    }
+      const r = await fetch(EP.chatMessage, {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+        body: JSON.stringify({message:msg,customer_id:CUSTOMER_ID,conversation_id:this.conversationId})
+      });
+      document.getElementById('vvChatTyping').classList.remove('show');
+      if (r.ok) { const d=await r.json(); this.addMsg(d.reply||'…','bot'); }
+      else { this.addMsg("Having trouble connecting. Try again shortly.",'bot'); }
+    } catch(e) { document.getElementById('vvChatTyping').classList.remove('show'); this.addMsg("Connection error.",'bot'); }
   }
-
-  async callChatAPI(message) {
-    const payload = {
-      message: message,
-      customer_id: this.customerId || 'anonymous',
-      conversation_id: this.conversationId,
-      timestamp: new Date().toISOString(),
-      page_url: window.location.href,
-      user_agent: navigator.userAgent
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Customer-ID': this.customerId || 'anonymous',
-      'X-Conversation-ID': this.conversationId
-    };
-
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
-    }
-
-    const response = await fetch(this.apiEndpoint, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return await response.json();
+  addMsg(text,sender) {
+    const m = document.getElementById('vvChatMessages');
+    const d = document.createElement('div');
+    d.className='vv-chat-message '+sender;
+    const tmp=document.createElement('div'); tmp.textContent=text;
+    d.innerHTML=tmp.innerHTML.replace(/\n/g,'<br>');
+    m.appendChild(d); m.scrollTop=m.scrollHeight; this.messageCount++;
   }
-
-  addMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `vv-chat-message ${sender}`;
-    messageDiv.innerHTML = this.sanitizeText(text);
-    this.messages.appendChild(messageDiv);
-    this.scrollToBottom();
-    this.messageCount++;
-    setTimeout(() => this.scrollToBottom(), 100);
-  }
-
-  sanitizeText(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, '<br>');
-  }
-
-  showTyping() {
-    this.isTyping = true;
-    this.typing.classList.add('show');
-    this.scrollToBottom();
-  }
-
-  hideTyping() {
-    this.isTyping = false;
-    this.typing.classList.remove('show');
-  }
-
-  showError(message) {
-    this.error.textContent = message;
-    this.error.style.display = 'block';
-    setTimeout(() => this.hideError(), 5000);
-  }
-
-  hideError() {
-    this.error.style.display = 'none';
-  }
-
-  showNotification() {
-    this.notification.style.display = 'flex';
-  }
-
-  hideNotification() {
-    this.notification.style.display = 'none';
-  }
-
-  scrollToBottom() {
-    this.messages.scrollTop = this.messages.scrollHeight;
-  }
-
-  sendQuickMessage(message) {
-    this.input.value = message;
-    this.sendMessage();
-  }
+  sendQuickMessage(msg) { document.getElementById('vvChatInput').value=msg; this.send(); }
 }
-
-async function init() {
-  try {
-    const isAuthenticated = await checkAuthentication();
-    console.log('Authentication status:', isAuthenticated);
-    
-    if (isAuthenticated) {
-      setupEventListeners();
-      
-      const contactData = sessionStorage.getItem('messageContact');
-      if (contactData) {
-        preloadedContact = JSON.parse(contactData);
-        sessionStorage.removeItem('messageContact');
-      }
-      
-      await Promise.all([
-        loadUserData(),
-        loadContacts(),
-        loadMediaFiles(),
-        loadEmails()
-      ]);
-      
-      if (!hasCompletedTour()) {
-        setTimeout(() => startTour(), 1000);
-      }
-      
-      if (preloadedContact) {
-        setTimeout(() => showComposeForm(), 500);
-      }
-    } else {
-      console.log('Not authenticated, redirecting to login');
-      redirectToLogin();
-    }
-  } catch (error) {
-    console.error('Error initializing:', error);
-    showStatus('Failed to initialize. Please refresh.', true);
-  }
-}
-
 const VVChat = new VictoryVisionChat();
 window.VVChat = VVChat;
 
-setInterval(async function() {
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) {
-      console.log('Session expired, redirecting to login');
-      redirectToLogin();
-    } else {
-      authToken = session.access_token;
-    }
-  } catch (e) {
-    console.error('Session check failed:', e);
+/* ══════════════════════════════════════════════
+   MODAL CLOSE ON OVERLAY CLICK
+══════════════════════════════════════════════ */
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target===ov) ov.classList.remove('open'); });
+});
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+async function init() {
+  const ok = await checkAuth();
+  if (!ok) { window.location.href='https://www.victoryvision.app'; return; }
+
+  // Check for preloaded contact from contacts page
+  const contactData = sessionStorage.getItem('messageContact');
+  if (contactData) {
+    const pc = JSON.parse(contactData);
+    sessionStorage.removeItem('messageContact');
+    setTimeout(() => {
+      showComposeForm();
+      if (pc.email) document.getElementById('composeTo').value = pc.email;
+      if (pc.company||pc.name) document.getElementById('composeSubject').value = `Re: ${pc.company||pc.name}`;
+    }, 600);
   }
+
+  VVChat.init();
+
+  await Promise.all([loadUserData(), loadContacts(), loadMediaFiles(), loadEmails()]);
+
+  if (!localStorage.getItem(`tour_msg_${CUSTOMER_ID}`)) {
+    setTimeout(startTour, 800);
+  }
+
+  // Auto-trigger tour from email link (?tour=)
+  if (new URLSearchParams(window.location.search).get('tour')) setTimeout(startTour, 1200);
+
+  // Pre-populate compose form from email link (?contact=EMAIL)
+  const _cp = new URLSearchParams(window.location.search).get('contact');
+  if (_cp) setTimeout(() => {
+    showComposeForm();
+    setTimeout(() => { const el = document.getElementById('composeTo'); if (el) el.value = _cp; }, 300);
+  }, 1500);
+}
+
+// Session refresh every 5 min
+setInterval(async() => {
+  try {
+    const { data:{session} } = await supabaseClient.auth.getSession();
+    if (!session?.user) { window.location.href='https://www.victoryvision.app'; }
+    else { authToken=session.access_token; }
+  } catch(e) {}
 }, 300000);
 
-document.addEventListener('visibilitychange', async function() {
+// Re-check on tab focus
+document.addEventListener('visibilitychange', async() => {
   if (!document.hidden) {
-    try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        redirectToLogin();
-      } else {
-        authToken = session.access_token;
-      }
-    } catch (e) {
-      console.error('Visibility auth check failed:', e);
-    }
+    const { data:{session} } = await supabaseClient.auth.getSession().catch(()=>({data:{}}));
+    if (!session?.user) { window.location.href='https://www.victoryvision.app'; }
+    else { authToken=session.access_token; }
   }
 });
 
-window.selectEmail = selectEmail;
-window.showComposeForm = showComposeForm;
-window.replyToEmail = replyToEmail;
-window.forwardEmail = forwardEmail;
-window.markAsRead = markAsRead;
-window.deleteEmail = deleteEmail;
-window.openEmailModal = openEmailModal;
-window.closeEmailModal = closeEmailModal;
-window.saveDraft = saveDraft;
-window.scheduleEmail = scheduleEmail;
-window.cancelCompose = cancelCompose;
-window.aiAssist = aiAssist;
-window.generateAIEmails = generateAIEmails;
-window.refreshEmails = refreshEmails;
-window.applyFilters = applyFilters;
-window.clearFilters = clearFilters;
-window.startTour = startTour;
-window.toggleCCBCC = toggleCCBCC;
-window.showFileSelector = showFileSelector;
-window.closeFileSelector = closeFileSelector;
-window.attachSelectedFiles = attachSelectedFiles;
-window.handleFileUpload = handleFileUpload;
-window.removeAttachment = removeAttachment;
-window.editSignature = editSignature;
-window.closeSignatureModal = closeSignatureModal;
-window.saveSignature = saveSignature;
+// Show chat notification after 12s
+setTimeout(() => {
+  if (!VVChat.isOpen) document.getElementById('vvNotificationBadge').style.display='flex';
+}, 12000);
 
 document.addEventListener('DOMContentLoaded', init);
-
-setTimeout(() => {
-  if (!VVChat.isOpen && VVChat.messageCount === 0) {
-    VVChat.showNotification();
-  }
-}, 10000);
-
 </script>
-
 </body>
 </html>
