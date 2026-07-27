@@ -1379,13 +1379,14 @@ let userData = null;
         headers['Content-Type'] = 'application/json';
         
         // Sanitize input data
-        const sanitizedData = {};
-        if (data) {
-          for (const [key, value] of Object.entries(data)) {
-            sanitizedData[key] = sanitizeInput(value);
-          }
-        }
-        
+const RAW_KEYS = new Set(['logo_file', 'file_data', 'image_file']);
+const sanitizedData = {};
+if (data) {
+  for (const [key, value] of Object.entries(data)) {
+    sanitizedData[key] = RAW_KEYS.has(key) ? value : sanitizeInput(value);
+  }
+}
+
         body = JSON.stringify({
           ...sanitizedData,
           customer_id: CUSTOMER_ID,
