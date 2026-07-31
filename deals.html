@@ -3340,15 +3340,34 @@ async function removeFromDeal() {
 
 async function enrichContact() {
   if (!currentContact) return;
-  showStatus('Enriching contact via Apollo/Hunter...', 'info');
+  showStatus('Enrichment started', 'info');
   try {
     const res = await fetch(N8N_ENDPOINTS.enrichContact, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID })
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID,
+        contact: {
+          id: currentContact.id,
+          email: currentContact.email || '',
+          linkedin: currentContact.linkedin || '',
+          name: currentContact.name || '',
+          domain: currentContact.domain || '',
+          address: currentContact.address || '',
+          tags: currentContact.tags || '',
+          notes: currentContact.notes || '',
+          industry: currentContact.industry || '',
+          title: currentContact.title || '',
+          company: currentContact.company || '',
+          annual_revenue: currentContact.annual_revenue || '',
+          employee_count: currentContact.employee_count || '',
+          client_ann_est: currentContact.client_ann_est || '',
+          conversion_revenue: currentContact.conversion_revenue || 0
+        }
+      })
     });
     if (!res.ok) throw new Error('Enrichment webhook returned ' + res.status);
-    showStatus('Enrichment kicked off. Refresh in 30s to see results.', 'success');
+    showStatus('Enrichment started', 'success');
   } catch (e) {
     showStatus('Enrichment failed: ' + e.message, 'error');
   }
