@@ -682,7 +682,13 @@
             </div>
             <div class="detail-block">
               <div class="h">📞 Title / Type / Description</div>
-              <div class="b"><b>Title:</b> ${esc(m.title)||'—'}<br><b>Type:</b> ${esc(m.type)||'—'}<br><b>Description:</b> ${esc(m.description)||'—'}<br><b>Duration:</b> ${m.duration ? Math.round(m.duration/60)+' min' : '—'}<br><b>Attendees:</b> ${esc(m.attendees_emails)||'—'}</div>
+              <div class="b"><b>Title:</b> ${esc(m.title)||'—'}<br><b>Type:</b> ${esc(m.type)||'—'}<br><b>Description:</b> ${esc(m.description)||'—'}<br><b>Duration:</b> ${(function(){
+              var a = m.duration_actual, s = m.duration;
+              if (a && s) return a + ' min actual (' + s + ' min scheduled)';
+              if (a) return a + ' min actual';
+              if (s) return s + ' min scheduled';
+              return '—';
+            })()}<br><b>Attendees:</b> ${esc(m.attendees_emails)||'—'}</div>
             </div>
             <div class="detail-block">
               <div class="h">🔗 Next Steps for This Contact</div>
