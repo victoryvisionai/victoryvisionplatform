@@ -1324,15 +1324,17 @@
   }
 
   function viewPage(url, slug, customerId) {
-    // Prefer slug-based preview (always reachable); fall back to stored URL
-    var target = slug ? buildPreviewUrl(slug, customerId) : '';
+    // Prefer the real published URL once the page is live on its own domain.
+    // Fall back to the n8n serve webhook only for unpublished drafts.
+    var target = livePageUrl(url);
+    if (!target && slug) target = buildPreviewUrl(slug, customerId);
     if (!target && url && url !== 'No URL set' && url !== 'NULL' && url !== 'null') target = url;
     if (target) window.open(target, '_blank', 'noopener,noreferrer');
     else showStatus('No URL available for this page', true);
   }
 
   function copyPageUrl(url, slug, customerId) {
-    var target = slug ? buildPreviewUrl(slug, customerId) : url;
+    var target = livePageUrl(url) || (slug ? buildPreviewUrl(slug, customerId) : url);
     if (target && target !== 'No URL set') navigator.clipboard.writeText(target).then(function() { showStatus('URL copied!'); }).catch(function() { showStatus('Failed to copy URL', true); });
     else showStatus('No URL available', true);
   }
