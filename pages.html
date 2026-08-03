@@ -1315,6 +1315,18 @@
   // Build the live-preview URL. n8n production webhooks don't support path params, so
   // slug must be a query param. Pass cid as well so duplicate slugs across customers
   // resolve to the right page (e.g. "aideal" exists for both glaze@vvdoh.com tenants).
+  // Returns the stored URL only when it is a real, absolute public address.
+  // Rejects blanks, placeholders, bare domains, and the n8n serve webhook so
+  // Copy Link never hands a prospect an internal automation URL.
+  function livePageUrl(url) {
+    if (!url) return '';
+    var u = String(url).trim();
+    if (!u || u === 'No URL set' || u === 'NULL' || u === 'null') return '';
+    if (!/^https?:\/\//i.test(u)) return '';
+    if (u.indexOf('victoryvision.app.n8n.cloud') !== -1) return '';
+    return u;
+  }
+
   function buildPreviewUrl(slug, customerId) {
     if (!slug) return '';
     var u = 'https://victoryvision.app.n8n.cloud/webhook/p?slug=' + encodeURIComponent(slug);
