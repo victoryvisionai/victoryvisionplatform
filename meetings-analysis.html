@@ -296,7 +296,7 @@
   };
 
   let CUSTOMER_ID = null, AUTH_TOKEN = null;
-  let allMeetings = [], allContacts = [], currentUser = null;
+  let allMeetings = [], allContacts = [], allPlans = [], currentUser = null;
   let activeFilter = 'all';
   let chartType, chartScore;
 
@@ -385,14 +385,160 @@
     // Newest first
     allMeetings.sort((a,b) => new Date(b.start_at || b.created_at || 0) - new Date(a.start_at || a.created_at || 0));
 
-    try { allPlans = unwrap(await api(ENDPOINTS.getPlans)) || []; } catch (e) { allPlans = []; }
-
     renderKPIs();
-    renderVictoryPath();
+    try { renderVictoryPath(); } catch (e) { console.error('VictoryPath', e); }
     renderCharts();
     renderInsights();
     renderCoachDigest();
     renderList();
+
+    // Plans load after the page is already usable. If /plans/get is missing or
+    // slow the dashboard must still render — v3 awaited this inside loadAll,
+    // which left the page stuck on "loading" when the endpoint did not answer.
+    Promise.resolve()
+      .then(function(){ return api(ENDPOINTS.getPlans); })
+      .then(function(p){ allPlans = unwrap(p) || []; })
+      .catch(function(){ allPlans = []; })
+      .then(function(){ try { renderVictoryPath(); } catch (e) { console.error('VictoryPath', e); } });
+  }
+
+  // ─── Victory Path ─────────────────────────────────────────────────────
+  // Synthesises three existing sources — the active plan (goal + deadline),
+  // held meetings (what actually happened), and contacts (close probability,
+  // meetings_to_close, next_steps) — into a short prioritised checklist.
+  function renderVictoryPath() {
+    var box = document.getElementById('victoryPath');
+    var body = document.getElementById('victoryPathBody');
+    if (!box || !body) return;
+
+    var now = Date.now();
+    var held = allMeetings.filter(function(m){ return normStatus(m.status) === 'held'; });
+    var upcoming = allMeetings.filter(function(m){
+      return new Date(m.start_at || 0).getTime() > now && normStatus(m.status) !== 'cancelled';
+    }).sort(function(a,b){ return new Date(a.start_at) - new Date(b.start_at); });
+
+    // Active plan = latest non-deprecated plan whose window covers today
+    var plan = (allPlans || []).filter(function(p){
+      return (p.status || '').toLowerCase() === 'active';
+    }).sort(function(a,b){ return new Date(b.created_at||0) - new Date(a.created_at||0); })[0] || null;
+
+    var daysLeft = null, target = null, signed = null;
+    if (plan) {
+      if (plan.end) daysLeft = Math.ceil((new Date(plan.end).getTime() - now) / 86400000);
+      target = parseInt(plan.estimate_conversions, 10);
+      signed = parseInt(plan.actual_conversions, 10);
+      if (isNaN(target)) target = null;
+      if (isNaN(signed)) signed = 0;
+    }
+
+    // Observed meetings-to-close, from contacts that actually converted
+    var closers = (allContacts || []).filter(function(c){
+      return parseInt(c.meetings_to_close,10) > 0;
+    }).map(function(c){ return parseInt(c.meetings_to_close,10); });
+    var avgToClose = closers.length
+      ? (closers.reduce(function(a,b){return a+b;},0) / closers.length)
+      : 4;
+
+    // Meetings held per contact, to know how far along each one is
+    var heldBy = {};
+    held.forEach(function(m){
+      (String(m.attendees_emails||'').split(/[,;\s]+/)).forEach(function(e){
+        e = e.trim().toLowerCase();
+        if (e && e.indexOf('@') > 0) heldBy[e] = (heldBy[e]||0) + 1;
+      });
+    });
+
+    // Contacts closest to signing
+    var ranked = (allContacts || []).map(function(c){
+      var p = parseFloat(String(c.close_probability||'').replace('%',''));
+      if (isNaN(p)) p = 0;
+      var email = String(c.email||'').toLowerCase();
+      return {
+        name: c.name || email || 'Unknown',
+        company: c.company || '',
+        prob: p,
+        met: heldBy[email] || 0,
+        next: (c.next_steps || '').split(/(?<=\.)\s+/)[0] || '',
+        tip: (c.conversion_tips || '').split(/(?<=\.)\s+/)[0] || '',
+        value: parseFloat(c.client_ann_est) || 0
+      };
+    }).filter(function(c){ return c.prob >= 50; })
+      .sort(function(a,b){ return (b.prob - a.prob) || (b.value - a.value); });
+
+    var top = ranked.slice(0, 3);
+    var pipeline = ranked.reduce(function(s,c){ return s + (c.value * c.prob / 100); }, 0);
+
+    var avgMin = (function(){
+      var d = held.map(function(m){ return m.duration_actual; }).filter(Boolean);
+      return d.length ? Math.round(d.reduce(function(a,b){return a+b;},0)/d.length) : null;
+    })();
+
+    var html = '';
+
+    // Headline: goal vs reality
+    if (plan) {
+      var needed = target != null ? Math.max(0, target - signed) : null;
+      html += '<div style="font-size:15px;margin-bottom:10px;">' +
+        '<b>Goal:</b> ' + esc(String(plan.description||'').slice(0,120)) +
+        (daysLeft != null ? ' <b>· ' + daysLeft + ' days left</b>' : '') + '</div>';
+      if (needed != null) {
+        html += '<div style="margin-bottom:12px;">You need <b>' + needed + ' more</b> to hit the goal. ' +
+          'You close in <b>' + avgToClose.toFixed(1) + ' meetings</b> on average, so that is roughly <b>' +
+          Math.ceil(needed * avgToClose) + ' meetings</b>' +
+          (daysLeft > 0 ? ' — about ' + (Math.ceil(needed*avgToClose)/Math.max(daysLeft/7,1)).toFixed(1) + ' per week.' : '.') +
+          '</div>';
+      }
+    }
+
+    // The checklist
+    if (top.length) {
+      html += '<div style="font-weight:600;margin:14px 0 6px;">Closest to a win — do these next</div><ol style="margin:0 0 4px 18px;padding:0;">';
+      top.forEach(function(c){
+        var remaining = Math.max(0, Math.ceil(avgToClose) - c.met);
+        html += '<li style="margin-bottom:9px;">' +
+          '<b>' + esc(c.name) + '</b>' + (c.company ? ' · ' + esc(c.company) : '') +
+          ' — <b>' + Math.round(c.prob) + '%</b>' +
+          (c.value ? ', $' + Math.round(c.value/1000) + 'K' : '') +
+          '<br><span style="color:#555;">' + c.met + ' meeting' + (c.met===1?'':'s') + ' held' +
+          (remaining > 0 ? ', typically ' + remaining + ' more to close' : ', at or past your average — ask for the close') + '.</span>' +
+          (c.next ? '<br><span style="color:#0C3D20;">Next: ' + esc(c.next.slice(0,150)) + '</span>' : '') +
+          (c.tip ? '<br><span style="color:#7a5b18;">Angle: ' + esc(c.tip.slice(0,150)) + '</span>' : '') +
+          '</li>';
+      });
+      html += '</ol>';
+    }
+
+    // Upcoming meetings tied to the goal
+    if (upcoming.length) {
+      html += '<div style="font-weight:600;margin:14px 0 6px;">Next ' + Math.min(3,upcoming.length) + ' meetings — prep now</div><ul style="margin:0 0 4px 18px;padding:0;">';
+      upcoming.slice(0,3).forEach(function(m){
+        var when = new Date(m.start_at);
+        var match = ranked.filter(function(c){
+          return String(m.attendees_emails||'').toLowerCase().indexOf(c.name.toLowerCase()) >= 0 ||
+                 (m.participant_name||'').toLowerCase() === c.name.toLowerCase();
+        })[0];
+        html += '<li style="margin-bottom:7px;"><b>' + esc(m.participant_name || 'Unknown') + '</b> · ' +
+          when.toLocaleDateString('en-US',{month:'short',day:'numeric'}) +
+          (match ? ' — ' + Math.round(match.prob) + '% likely, ' + match.met + ' held so far' : ' — first meeting, qualify hard') +
+          (match && match.next ? '<br><span style="color:#0C3D20;">Open with: ' + esc(match.next.slice(0,140)) + '</span>' : '') +
+          '</li>';
+      });
+      html += '</ul>';
+    }
+
+    // What the numbers say about your meeting habits
+    var facts = [];
+    if (held.length) facts.push(held.length + ' meetings held');
+    if (avgMin) facts.push('averaging ' + avgMin + ' min');
+    if (pipeline) facts.push('$' + Math.round(pipeline/1000) + 'K probability-weighted pipeline');
+    if (facts.length) {
+      html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #dde7e0;color:#555;font-size:13px;">' +
+        esc(facts.join(' · ')) + '. Longer meetings correlate with higher close rates — if a call runs under 15 minutes, treat it as a disqualification and requalify before booking another.</div>';
+    }
+
+    if (!html) { box.style.display = 'none'; return; }
+    body.innerHTML = html;
+    box.style.display = 'block';
   }
 
   // ─── KPIs ──────────────────────────────────────────────────────────────
@@ -813,6 +959,15 @@
     e.target.classList.add('active');
     activeFilter = e.target.dataset.filter;
     renderList();
+
+    // Plans load after the page is already usable. If /plans/get is missing or
+    // slow the dashboard must still render — v3 awaited this inside loadAll,
+    // which left the page stuck on "loading" when the endpoint did not answer.
+    Promise.resolve()
+      .then(function(){ return api(ENDPOINTS.getPlans); })
+      .then(function(p){ allPlans = unwrap(p) || []; })
+      .catch(function(){ allPlans = []; })
+      .then(function(){ try { renderVictoryPath(); } catch (e) { console.error('VictoryPath', e); } });
   });
 
   // ─── Boot ──────────────────────────────────────────────────────────────
