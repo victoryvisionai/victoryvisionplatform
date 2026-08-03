@@ -899,7 +899,7 @@
         var id = btn.dataset.id;
         var p = allPages.find(function(x){ return String(x.id) === String(id); }) || {};
         if (btn.dataset.act === 'view')   viewPage(p.url || '', p.slug || '', p.customer_id);
-        if (btn.dataset.act === 'copy')   copyPageUrl(p.url || '', p.slug || '', p.customer_id);
+        if (btn.dataset.act === 'copy')   copyPageUrl(p.URL || p.url || '', p.slug || '', p.customer_id);
         if (btn.dataset.act === 'edit')   openEditPageModal(p);
         if (btn.dataset.act === 'delete') deletePage(p.id);
         if (btn.dataset.act === 'publish') publishPage(p.id);
@@ -1018,7 +1018,7 @@
       '</div>' +
       '<div class="page-actions">' +
         '<button onclick="event.stopPropagation(); viewPage(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\',\'' + escHtml(page.customer_id||'') + '\')" class="btn-small secondary">👁 View</button>' +
-        '<button onclick="event.stopPropagation(); copyPageUrl(\'' + escHtml(pageUrl) + '\',\'' + escHtml(page.slug||'') + '\',\'' + escHtml(page.customer_id||'') + '\')" class="btn-small">🔗 Copy URL</button>' +
+        '<button onclick="event.stopPropagation(); copyPageUrl(\'' + escHtml(page.URL || pageUrl) + '\',\'' + escHtml(page.slug||'') + '\',\'' + escHtml(page.customer_id||'') + '\')" class="btn-small">🔗 Copy URL</button>' +
         (!isPublished ? '<button onclick="event.stopPropagation(); publishPage(\'' + page.id + '\')" class="btn-small" style="background:#28a745;">🚀 Publish</button>' : '') +
         '<button onclick="event.stopPropagation(); openEditPageById(\'' + page.id + '\')" class="btn-small">✏️ Edit</button>' +
         '<button onclick="event.stopPropagation(); deletePage(\'' + page.id + '\')" class="btn-small danger">🗑 Delete</button>' +
@@ -1346,9 +1346,34 @@
   }
 
   function copyPageUrl(url, slug, customerId) {
-    var target = livePageUrl(url) || (slug ? buildPreviewUrl(slug, customerId) : url);
-    if (target && target !== 'No URL set') navigator.clipboard.writeText(target).then(function() { showStatus('URL copied!'); }).catch(function() { showStatus('Failed to copy URL', true); });
-    else showStatus('No URL available', true);
+    var target = String(url == null ? '' : url).trim();
+    if (!target || target === 'No URL set' || target === 'NULL' || target === 'null') {
+      showStatus('No URL set for this page', true);
+      return;
+    }
+    function fallbackCopy(text) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-1000px';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        showStatus(ok ? ('Copied: ' + text) : 'Could not copy \u2014 select it manually: ' + text, !ok);
+      } catch (e) {
+        showStatus('Could not copy \u2014 select it manually: ' + text, true);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(target).then(function() {
+        showStatus('Copied: ' + target);
+      }).catch(function() { fallbackCopy(target); });
+    } else {
+      fallbackCopy(target);
+    }
   }
 
   // ─── UI helpers ───────────────────────────────────────────────────────────────
