@@ -212,6 +212,12 @@
     <div class="kpi"><div class="label">Avg Mtgs to Close</div><div class="value" id="kpiToClose">—</div><div class="delta">meetings</div></div>
   </div>
 
+  <!-- VICTORY PATH -->
+  <div class="coach-digest" id="victoryPath" style="display:none;border-left:4px solid #0C3D20;background:#f6faf7;">
+    <h3>🎯 Your Victory Path — what to do in your next meetings</h3>
+    <div id="victoryPathBody"></div>
+  </div>
+
   <!-- AI COACH DIGEST -->
   <div class="coach-digest" id="coachDigest" style="display:none;">
     <h3>💡 AI Meeting Coach — what your meetings have been teaching the platform</h3>
@@ -285,7 +291,8 @@
     sendEmail:     'https://victoryvision.app.n8n.cloud/webhook/emails/send',
     followup:      'https://victoryvision.app.n8n.cloud/webhook/emails/followup',
     updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update',
-    deleteMeeting: 'https://victoryvision.app.n8n.cloud/webhook/meetings/delete'
+    deleteMeeting: 'https://victoryvision.app.n8n.cloud/webhook/meetings/delete',
+    getPlans:      'https://victoryvision.app.n8n.cloud/webhook/plans/get'
   };
 
   let CUSTOMER_ID = null, AUTH_TOKEN = null;
@@ -378,7 +385,10 @@
     // Newest first
     allMeetings.sort((a,b) => new Date(b.start_at || b.created_at || 0) - new Date(a.start_at || a.created_at || 0));
 
+    try { allPlans = unwrap(await api(ENDPOINTS.getPlans)) || []; } catch (e) { allPlans = []; }
+
     renderKPIs();
+    renderVictoryPath();
     renderCharts();
     renderInsights();
     renderCoachDigest();
