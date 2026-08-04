@@ -107,6 +107,10 @@ function num(v){const n=parseFloat(String(v==null?'':v).replace('%',''));return 
 function e164(p){if(!p)return'';const d=String(p).replace(/[^0-9]/g,'');if(d.length===10)return'+1'+d;if(d.length===11&&d.charAt(0)==='1')return'+'+d;return d?'+'+d:'';}
 function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
 function tier(c){
+// An explicit call-list tag from the curated sheet always wins: that ordering
+// encodes mandate and engagement together and beats any derived score.
+const t=String(c.tags||'').match(/call-list-t([1-7])/);
+if(t)return Math.min(parseInt(t[1],10),4);
 const p=num(c.close_probability);
 if(c.last_clicked_date&&p>=50)return 1;
 if(p>=60||c.last_responded)return 1;
@@ -115,7 +119,9 @@ if(c.last_opened_date)return 3;
 return 4;
 }
 function score(c){
-let s=num(c.close_probability)*10;
+const t=String(c.tags||'').match(/call-list-t([1-7])/);
+let s=t?(9000-parseInt(t[1],10)*1000):0;
+s+=num(c.close_probability)*10;
 if(c.last_clicked_date){const d=days(c.last_clicked_date);s+=(d!==null&&d<7)?900:400;}
 if(c.last_responded)s+=700;
 if(c.last_opened_date)s+=150;
