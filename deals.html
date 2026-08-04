@@ -3620,5 +3620,25 @@ window.onEnrollTemplateChange = onEnrollTemplateChange;
 document.addEventListener('DOMContentLoaded', init);
 </script>
 
+<script src="https://unpkg.com/@telnyx/webrtc@2.27.8/lib/bundle.js"></script>
+<script src="vv-call.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+  var t=setInterval(function(){
+    if(typeof CUSTOMER_ID!=="undefined"&&CUSTOMER_ID&&window.VVCall){
+      clearInterval(t);
+      VVCall.init({customerId:CUSTOMER_ID,onEnd:function(){if(typeof loadDealTargets==="function")loadDealTargets();}});
+    }
+  },400);
+});
+// Card buttons call vvMakeCall; route it to the shared module.
+window.vvMakeCall=function(id){
+  var list=(typeof dealTargets!=="undefined"?dealTargets:(typeof allContacts!=="undefined"?allContacts:[]));
+  var c=list.filter(function(x){return String(x.id)===String(id);})[0];
+  if(!c){showStatus("Contact not found","error");return;}
+  if(!c.phone_number){showStatus("No phone number for this contact","error");return;}
+  VVCall.dial(c);
+};
+</script>
 </body>
 </html>
