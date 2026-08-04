@@ -3620,5 +3620,141 @@ window.onEnrollTemplateChange = onEnrollTemplateChange;
 document.addEventListener('DOMContentLoaded', init);
 </script>
 
+<!-- WebRTC calling: same script + live coach flow as calls.html -->
+<audio id="remoteAudio" autoplay playsinline></audio>
+<div id="vvCallModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;max-width:640px;width:92%;max-height:90vh;overflow-y:auto;">
+    <div style="background:linear-gradient(135deg,#0A3161,#1a5490);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+      <div><h3 style="margin:0;font-size:18px" id="vvcName">Call</h3><div style="font-size:12px;opacity:.85" id="vvcMeta">&nbsp;</div></div>
+      <span onclick="vvCloseCall()" style="cursor:pointer;font-size:26px;line-height:1">&times;</span>
+    </div>
+    <div style="padding:18px">
+      <div id="vvcStatus" style="text-align:center;color:#667;font-size:13px">Preparing...</div>
+      <div id="vvcTimer" style="text-align:center;font-size:26px;font-weight:700;color:#0A3161;margin:6px 0">00:00</div>
+      <div style="background:#f8f9fa;border:2px solid #0A3161;border-radius:8px;padding:14px;margin:14px 0">
+        <h4 style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#0A3161">Call Script</h4>
+        <div id="vvcScript" style="font-size:14px;line-height:1.7;white-space:pre-wrap;max-height:260px;overflow-y:auto">Generating...</div>
+      </div>
+      <div id="vvcCoach"></div>
+      <textarea id="vvcNotes" placeholder="Notes during the call..." style="width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px"></textarea>
+      <button onclick="vvHangup()" style="width:100%;padding:14px;margin-top:10px;background:#c0392b;color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:600;cursor:pointer">&#128222; Hang Up</button>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/@telnyx/webrtc@2.27.8/lib/bundle.js"></script>
+<script>
+(function(){
+var EPC={script:'https://victoryvision.app.n8n.cloud/webhook/call/script',
+coach:'https://victoryvision.app.n8n.cloud/webhook/call/coach',
+log:'https://victoryvision.app.n8n.cloud/webhook/calls/log',
+user:'https://victoryvision.app.n8n.cloud/webhook/user/get'};
+var cl=null,ca=null,st=null,tm=null,ct=null,rc=null,hd='',sc='',cur=null;
+function E(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function e164(p){if(!p)return'';var d=String(p).replace(/[^0-9]/g,'');if(d.length===10)return'+1'+d;if(d.length===11&&d.charAt(0)==='1')return'+'+d;return d?'+'+d:'';}
+async function loadUser(){
+  try{var r=await fetch(EPC.user+'?customer_id='+encodeURIComponent(CUSTOMER_ID),{method:'GET'});
+  var u=await r.json();var uu=Array.isArray(u)?u[0]:u;
+  window.vvNum=uu&&uu.vvnumber?uu.vvnumber:null;
+  window.vvSipU=uu&&uu.sip_username?uu.sip_username:null;
+  window.vvSipP=uu&&uu.sip_password?uu.sip_password:null;}catch(e){console.warn('user',e);}
+}
+async function initRTC(){
+  if(cl)return;
+  if(!window.vvSipU)await loadUser();
+  if(!window.vvSipU||!window.vvSipP){console.warn('Calling disabled: sip credentials missing');return;}
+  try{
+    cl=new window.TelnyxWebRTC.TelnyxRTC({login:window.vvSipU,password:window.vvSipP,ringtoneFile:null,ringbackFile:null});
+    cl.on('telnyx.error',function(e){console.error('Telnyx error:',e);});
+    cl.on('telnyx.notification',function(n){
+      var c=n&&n.call?n.call:null;if(!c)return;
+      console.log('call',n.type,'| state:',c.state,'| cause:',c.cause,'| sip:',c.sipCode);
+      if(c.state==='active'){document.getElementById('vvcStatus').textContent='Connected';startTimer();startCoach();}
+      if(c.state==='hangup'||c.state==='destroy'){
+        if(c.cause&&c.cause!=='NORMAL_CLEARING')showStatus('Call rejected: '+c.cause+(c.sipCode?' (SIP '+c.sipCode+')':''),'error');
+        finishCall();
+      }
+    });
+    await cl.connect();
+  }catch(e){console.error('rtc init',e);}
+}
+window.vvMakeCall=async function(contactId){
+  var c=(typeof dealTargets!=='undefined'?dealTargets:[]).filter(function(x){return String(x.id)===String(contactId);})[0];
+  if(!c){showStatus('Contact not found','error');return;}
+  if(!c.phone_number){showStatus('No phone number for this contact','error');return;}
+  cur=c;hd='';sc='';
+  document.getElementById('vvcName').textContent=c.name||'(no name)';
+  document.getElementById('vvcMeta').textContent=[c.title,c.company].filter(Boolean).join(' - ')||' ';
+  document.getElementById('vvcStatus').textContent='Generating script...';
+  document.getElementById('vvcTimer').textContent='00:00';
+  document.getElementById('vvcScript').textContent='Generating...';
+  document.getElementById('vvcCoach').innerHTML='';
+  document.getElementById('vvcNotes').value='';
+  document.getElementById('vvCallModal').style.display='flex';
+  try{
+    var r=await fetch(EPC.script,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customer_id:CUSTOMER_ID,phone_number:c.phone_number,contact:c})});
+    var d=await r.json();
+    var s=d&&(d.script||d.text||d.output);
+    if(s&&typeof s==='object')s=s.script||s.text||JSON.stringify(s);
+    sc=String(s||'').trim()||String(c.script||'').trim()||'Open with name, shared context, one question.';
+  }catch(e){sc=String(c.script||'')||'No script available.';}
+  document.getElementById('vvcScript').textContent=sc;
+  await initRTC();
+  if(!cl){document.getElementById('vvcStatus').textContent='Phone system not connected';return;}
+  var dest=e164(c.phone_number),from=e164(window.vvNum);
+  if(!dest||!from){document.getElementById('vvcStatus').textContent='Invalid number (caller: '+(from||'missing')+')';return;}
+  document.getElementById('vvcStatus').textContent='Calling...';
+  try{
+    ca=cl.newCall({destinationNumber:dest,callerNumber:from,audio:true,video:false,remoteElement:'remoteAudio'});
+    startListening();
+  }catch(e){document.getElementById('vvcStatus').textContent='Call failed: '+e.message;}
+};
+function startTimer(){st=Date.now();clearInterval(tm);
+  tm=setInterval(function(){var s=Math.floor((Date.now()-st)/1000);
+  document.getElementById('vvcTimer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},1000);}
+function startListening(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  try{rc=new SR();rc.continuous=true;rc.interimResults=false;rc.lang='en-US';
+  rc.onresult=function(e){for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)hd+=e.results[i][0].transcript+' ';}};
+  rc.onerror=function(e){console.warn('speech',e.error);};
+  rc.onend=function(){if(ca){try{rc.start();}catch(e){}}};
+  rc.start();}catch(e){}
+}
+function startCoach(){clearInterval(ct);ct=setInterval(askCoach,20000);setTimeout(askCoach,8000);}
+async function askCoach(){
+  if(!ca||!cur)return;
+  try{
+    var r=await fetch(EPC.coach,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customer_id:CUSTOMER_ID,contact:cur,script:sc,heard:hd,
+        elapsed_seconds:st?Math.floor((Date.now()-st)/1000):0})});
+    var d=await r.json();if(!d||!d.nudge)return;
+    var el=document.getElementById('vvcCoach');if(!el)return;
+    el.innerHTML='<div style="background:#fffbe6;border-left:3px solid #f0ad4e;padding:12px;border-radius:4px;margin-bottom:10px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9a8144">'+E(d.flag||'none')+'</div>'+
+      '<div style="font-size:15px;font-weight:600;color:#7a5b18;margin-top:4px">'+E(d.nudge)+'</div>'+
+      (d.say?'<div style="margin-top:6px;font-style:italic;color:#0A3161">"'+E(d.say)+'"</div>':'')+
+      (d.why?'<div style="margin-top:4px;font-size:11px;color:#9a8144">'+E(d.why)+'</div>':'')+'</div>'+el.innerHTML;
+    while(el.children.length>3)el.removeChild(el.lastChild);
+  }catch(e){console.warn('coach',e);}
+}
+window.vvHangup=function(){if(ca){try{ca.hangup();}catch(e){}}finishCall();};
+window.vvCloseCall=function(){if(ca){try{ca.hangup();}catch(e){}}finishCall();document.getElementById('vvCallModal').style.display='none';};
+function finishCall(){
+  clearInterval(tm);clearInterval(ct);
+  if(rc){try{rc.onend=null;rc.stop();}catch(e){}rc=null;}
+  var dur=st?Math.floor((Date.now()-st)/1000):0;
+  var n=document.getElementById('vvcNotes');
+  if(cur&&dur>0){
+    fetch(EPC.log,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customer_id:CUSTOMER_ID,contact_id:cur.id,person_called:cur.name,
+        number_called:cur.phone_number,duration_seconds:dur,notes:n?n.value:'',
+        transcript:hd,script:sc})}).then(function(){if(typeof loadDealTargets==='function')loadDealTargets();}).catch(function(){});
+  }
+  ca=null;st=null;
+  document.getElementById('vvcStatus').textContent='Call ended';
+}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(loadUser,1200);});
+})();
+</script>
 </body>
 </html>
