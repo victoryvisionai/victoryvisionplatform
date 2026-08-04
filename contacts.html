@@ -1981,8 +1981,14 @@ if (userData.column_config) {
     console.warn('Could not parse column_config:', e);
   }
 }
-window.userWebRTCUsername = userData.name ? userData.name.replace(/[\s,]+/g, '') : userData.email;
-    window.userWebRTCPassword = userData.sip_password
+// The SIP login must be the actual Telnyx credential username. Deriving it
+    // from the display name ("Andrew Glaze" -> "AndrewGlaze") was a guess, so
+    // registration failed and every call died silently after the script step.
+    window.userWebRTCUsername = userData.sip_username || null;
+    window.userWebRTCPassword = userData.sip_password || null;
+    if (!window.userWebRTCUsername || !window.userWebRTCPassword) {
+      console.warn('Calling disabled: sip_username or sip_password missing on this user.');
+    }
     // Update subscription medallion
     const medallion = document.getElementById('subscriptionMedallion');
     const plan = userData.subscription_plan || 'Bronze';
