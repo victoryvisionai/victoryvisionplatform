@@ -4894,7 +4894,10 @@ await new Promise(resolve => {
     document.getElementById('callStatus').textContent = 'Calling...';
 
     window.callStartedAt = Date.now();
-    window.currentCallScript = formattedScript || '';
+    window.currentCallScript = (function(){
+      var el = document.getElementById('callScript');
+      return el ? (el.textContent || '') : '';
+    })();
     currentCall = telnyxClient.newCall({
       destinationNumber: formatPhoneE164(contact.phone_number),
       callerNumber: formatPhoneE164(window.userVVNumber),
