@@ -4650,6 +4650,7 @@ function vvLogCall() {
   // Previously only hangupCall() logged, so any other ending wrote nothing.
   if (window.vvLogged) return;
   window.vvLogged = true;
+  setTimeout(function(){ window.vvLogged = false; }, 5000);
   var durSec = window.callStartedAt ? Math.floor((Date.now() - window.callStartedAt) / 1000) : 0;
   if (!currentCallContact || durSec <= 0) { console.warn('call log skipped: dur=' + durSec); return; }
   var notesEl = document.getElementById('callNotes');
