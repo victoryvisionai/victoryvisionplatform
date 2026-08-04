@@ -212,6 +212,24 @@
     <div class="kpi"><div class="label">Avg Mtgs to Close</div><div class="value" id="kpiToClose">—</div><div class="delta">meetings</div></div>
   </div>
 
+  <!-- TIME RANGE -->
+  <div id="timeRangeBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;">
+    <span style="font-size:12px;font-weight:700;letter-spacing:.04em;color:#666;text-transform:uppercase;">Period</span>
+    <button class="range-btn" data-range="1d">Day</button>
+    <button class="range-btn" data-range="7d">Week</button>
+    <button class="range-btn" data-range="30d">Month</button>
+    <button class="range-btn" data-range="90d">Quarter</button>
+    <button class="range-btn" data-range="365d">Year</button>
+    <button class="range-btn range-active" data-range="all">All time</button>
+    <span style="margin-left:6px;display:inline-flex;gap:6px;align-items:center;">
+      <input type="date" id="rangeFrom" style="padding:5px 7px;border:1px solid #ccc;border-radius:6px;font-size:13px;">
+      <span style="color:#888;">to</span>
+      <input type="date" id="rangeTo" style="padding:5px 7px;border:1px solid #ccc;border-radius:6px;font-size:13px;">
+      <button class="range-btn" id="rangeCustomBtn">Apply</button>
+    </span>
+    <button id="refreshCoachBtn" style="margin-left:auto;background:#0C3D20;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">↻ Refresh coaching</button>
+  </div>
+
   <!-- VICTORY PATH -->
   <div class="coach-digest" id="victoryPath" style="display:none;border-left:4px solid #0C3D20;background:#f6faf7;">
     <h3>🎯 Your Victory Path — what to do in your next meetings</h3>
@@ -223,6 +241,14 @@
     <h3>💡 AI Meeting Coach — what your meetings have been teaching the platform</h3>
     <pre id="coachDigestBody"></pre>
   </div>
+
+  <style>
+    .range-btn { background:#fff; border:1px solid #ccd5cf; color:#40514a; padding:6px 12px;
+                 border-radius:16px; font-size:13px; cursor:pointer; }
+    .range-btn:hover { border-color:#0C3D20; color:#0C3D20; }
+    .range-active { background:#0C3D20; color:#fff; border-color:#0C3D20; }
+    #refreshCoachBtn:disabled { opacity:.6; cursor:default; }
+  </style>
 
   <!-- CHARTS -->
   <div class="charts-row">
@@ -699,8 +725,84 @@
   }
 
   // ─── Meeting list ──────────────────────────────────────────────────────
+  // Period filter, applied before every other filter so KPIs, charts, the
+  // coach digest and the Victory Path all describe the same window.
+  let rangeStart = null, rangeEnd = null;
+
+  function inRange(m) {
+    if (rangeStart === null && rangeEnd === null) return true;
+    const t = new Date(m.start_at || 0).getTime();
+    if (!t) return false;
+    if (rangeStart !== null && t < rangeStart) return false;
+    if (rangeEnd !== null && t > rangeEnd) return false;
+    return true;
+  }
+
+  function setRange(key, btn) {
+    const now = Date.now();
+    const DAY = 86400000;
+    rangeEnd = null;
+    if (key === 'all') rangeStart = null;
+    else if (key === '1d') rangeStart = now - DAY;
+    else if (key === '7d') rangeStart = now - 7 * DAY;
+    else if (key === '30d') rangeStart = now - 30 * DAY;
+    else if (key === '90d') rangeStart = now - 90 * DAY;
+    else if (key === '365d') rangeStart = now - 365 * DAY;
+    document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('range-active'); });
+    if (btn) btn.classList.add('range-active');
+    const f = document.getElementById('rangeFrom'), t = document.getElementById('rangeTo');
+    if (f) f.value = ''; if (t) t.value = '';
+    redrawAll();
+  }
+
+  function applyCustomRange() {
+    const f = document.getElementById('rangeFrom'), t = document.getElementById('rangeTo');
+    const fv = f && f.value ? new Date(f.value + 'T00:00:00').getTime() : null;
+    const tv = t && t.value ? new Date(t.value + 'T23:59:59').getTime() : null;
+    if (fv === null && tv === null) { showStatus && showStatus('Pick at least one date', true); return; }
+    if (fv !== null && tv !== null && fv > tv) { showStatus && showStatus('Start date is after end date', true); return; }
+    rangeStart = fv; rangeEnd = tv;
+    document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('range-active'); });
+    const btn = document.getElementById('rangeCustomBtn');
+    if (btn) btn.classList.add('range-active');
+    redrawAll();
+  }
+
+  function redrawAll() {
+    try { renderKPIs(); } catch (e) { console.error('KPIs', e); }
+    try { renderVictoryPath(); } catch (e) { console.error('VictoryPath', e); }
+    try { renderCharts(); } catch (e) { console.error('Charts', e); }
+    try { renderInsights(); } catch (e) { console.error('Insights', e); }
+    try { renderCoachDigest(); } catch (e) { console.error('CoachDigest', e); }
+    try { renderList(); } catch (e) { console.error('List', e); }
+  }
+
+  async function refreshCoaching() {
+    const btn = document.getElementById('refreshCoachBtn');
+    const original = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
+    try {
+      const [mtgs, contacts, user] = await Promise.all([
+        api(ENDPOINTS.getMeetings).catch(function(){ return null; }),
+        api(ENDPOINTS.getContacts).catch(function(){ return null; }),
+        api(ENDPOINTS.getUser).catch(function(){ return null; })
+      ]);
+      if (mtgs) allMeetings = unwrap(mtgs) || allMeetings;
+      if (contacts) allContacts = unwrap(contacts) || allContacts;
+      if (user) { const u = unwrap(user); currentUser = (Array.isArray(u) ? u[0] : u) || currentUser; }
+      try { const p = await api(ENDPOINTS.getPlans); allPlans = unwrap(p) || allPlans; } catch (e) {}
+      redrawAll();
+      showStatus && showStatus('Coaching refreshed');
+    } catch (e) {
+      showStatus && showStatus('Could not refresh: ' + e.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+    }
+  }
+
   function filterMeetings() {
     const now = Date.now();
+    const allMeetings = window.__vvAll ? window.__vvAll() : null;
     if (activeFilter === 'all')         return allMeetings;
     if (activeFilter === 'held')        return allMeetings.filter(m => normStatus(m.status) === 'held');
     if (activeFilter === 'upcoming')    return allMeetings.filter(m => new Date(m.start_at || 0).getTime() > now);
