@@ -6,6 +6,7 @@
 <title>Victory Vision - Calls</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@telnyx/webrtc@2.27.8/lib/bundle.js"></script>
+<script src="vv-call.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f6f8;color:#222}
@@ -89,26 +90,18 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-rad
 </div>
 </div>
 <audio id="remoteAudio" autoplay playsinline></audio>
-<script>
+
+</body>
+</html><script>
 const SUPABASE_URL='https://nyyvsdkumxvuwimmucdb.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const EP={
-getContacts:'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
-getUser:'https://victoryvision.app.n8n.cloud/webhook/user/get',
-script:'https://victoryvision.app.n8n.cloud/webhook/call/script',
-coach:'https://victoryvision.app.n8n.cloud/webhook/call/coach',
-logCall:'https://victoryvision.app.n8n.cloud/webhook/calls/log'
-};
+const EP={getContacts:'https://victoryvision.app.n8n.cloud/webhook/contacts/get'};
 let sb=null,CID=null,ALL=[],VIEW=[],CUR=null,FILT='all';
-let tClient=null,tCall=null,tStart=null,tTimer=null,coachTimer=null,rec=null,heard='',curScript='';
-function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'');t.style.display='block';setTimeout(()=>t.style.display='none',4200);}
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'');t.style.display='block';setTimeout(function(){t.style.display='none';},4200);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function num(v){const n=parseFloat(String(v==null?'':v).replace('%',''));return isFinite(n)?n:0;}
-function e164(p){if(!p)return'';const d=String(p).replace(/[^0-9]/g,'');if(d.length===10)return'+1'+d;if(d.length===11&&d.charAt(0)==='1')return'+'+d;return d?'+'+d:'';}
 function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
 function tier(c){
-// An explicit call-list tag from the curated sheet always wins: that ordering
-// encodes mandate and engagement together and beats any derived score.
 const t=String(c.tags||'').match(/call-list-t([1-7])/);
 if(t)return Math.min(parseInt(t[1],10),4);
 const p=num(c.close_probability);
@@ -146,15 +139,10 @@ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const r0=await sb.auth.getSession();
 if(!r0||!r0.data||!r0.data.session){location.href='/login.html';return;}
 CID=r0.data.session.user.email;
-try{
-const r=await fetch(EP.getUser+'?customer_id='+encodeURIComponent(CID),{method:'GET'});
-const u=await r.json();const uu=Array.isArray(u)?u[0]:u;
-window.vv=uu&&uu.vvnumber?uu.vvnumber:null;
-window.sipU=uu&&uu.sip_username?uu.sip_username:null;
-window.sipP=uu&&uu.sip_password?uu.sip_password:null;
-if(window.sipU&&window.sipP)initRTC();
-else console.warn('Calling disabled: sip_username or sip_password missing.');
-}catch(e){console.warn('user load',e);}
+VVCall.init({customerId:CID,onEnd:function(){loadContacts();}});
+loadContacts();
+}
+async function loadContacts(){
 try{
 const r=await fetch(EP.getContacts,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID})});
 let c=await r.json();if(!Array.isArray(c))c=[c];
@@ -193,109 +181,12 @@ const r=document.getElementById('r_'+id);if(r)r.classList.add('sel');
 document.getElementById('pn').textContent=CUR.name||'(no name)';
 document.getElementById('pm').textContent=[CUR.title,CUR.company].filter(Boolean).join(' - ')||' ';
 document.getElementById('pb').innerHTML=
-'<button class="btn call" id="cb" onclick="startCall()">&#128222; Call '+esc(CUR.phone_number||'')+'</button>'+
-'<div id="live"></div>'+
-'<div class="sec"><h4>Call Script</h4><div class="box" id="scr">Click Call to generate a script for this person.</div></div>'+
+'<button class="btn call" onclick="VVCall.dial(CUR)">&#9742; Call '+esc(CUR.phone_number||'')+'</button>'+
 (CUR.next_steps?'<div class="sec"><h4>Outstanding Next Step</h4><div class="box">'+esc(CUR.next_steps)+'</div></div>':'')+
 (CUR.conversion_tips?'<div class="sec"><h4>What Works With Them</h4><div class="box">'+esc(CUR.conversion_tips)+'</div></div>':'')+
 (CUR.analysis?'<div class="sec"><h4>Prior Intelligence</h4><div class="box" style="max-height:320px;overflow-y:auto">'+esc(String(CUR.analysis))+'</div></div>':'')+
 (CUR.personal_summary?'<div class="sec"><h4>About Them</h4><div class="box">'+esc(CUR.personal_summary)+'</div></div>':'')+
-(CUR.company_summary?'<div class="sec"><h4>About '+esc(CUR.company||'the company')+'</h4><div class="box">'+esc(CUR.company_summary)+'</div></div>':'')+
-'<div class="sec"><h4>Call Notes</h4><textarea id="notes" placeholder="Type during the call..."></textarea></div>';
-}
-async function initRTC(){
-if(tClient)return;
-try{
-tClient=new window.TelnyxWebRTC.TelnyxRTC({login:window.sipU,password:window.sipP,ringtoneFile:null,ringbackFile:null});
-tClient.on('telnyx.ready',function(){console.log('Telnyx ready');});
-tClient.on('telnyx.error',function(e){console.error('Telnyx error:',e);toast('WebRTC error: '+(e&&e.message?e.message:'unknown'),true);});
-tClient.on('telnyx.notification',function(n){
-const c=n&&n.call?n.call:null;
-if(!c)return;
-console.log('call',n.type,'| state:',c.state,'| cause:',c.cause,'| sip:',c.sipCode);
-if(c.state==='active'){setStatus('Connected');startTimer();startCoach();}
-if(c.state==='hangup'||c.state==='destroy'){
-if(c.cause&&c.cause!=='NORMAL_CLEARING')toast('Call rejected: '+c.cause+(c.sipCode?' (SIP '+c.sipCode+')':''),true);
-endCall();
-}
-});
-await tClient.connect();
-console.log('WebRTC connected');
-}catch(e){console.error('init',e);toast('Could not connect phone: '+e.message,true);}
-}
-function setStatus(s){const el=document.getElementById('st');if(el)el.textContent=s;}
-async function startCall(){
-if(!CUR)return;
-const dest=e164(CUR.phone_number),from=e164(window.vv);
-if(!dest){toast('No valid phone number',true);return;}
-if(!from){toast('No caller number set in Settings',true);return;}
-const cb=document.getElementById('cb');if(cb){cb.disabled=true;cb.textContent='Preparing...';}
-document.getElementById('scr').textContent='Generating script...';
-try{
-const r=await fetch(EP.script,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID,phone_number:CUR.phone_number,contact:CUR})});
-const d=await r.json();
-let s=d&&(d.script||d.text||d.output);
-if(s&&typeof s==='object')s=s.script||s.text||JSON.stringify(s);
-curScript=String(s||'').trim()||String(CUR.script||'').trim()||'No script. Open with name, shared context, one question.';
-}catch(e){curScript=String(CUR.script||'')||'No script available.';}
-document.getElementById('scr').textContent=curScript;
-if(!tClient){await initRTC();}
-if(!tClient){toast('Phone not connected',true);if(cb){cb.disabled=false;cb.textContent='Call';}return;}
-document.getElementById('live').innerHTML='<div class="st" id="st">Calling...</div><div class="timer" id="tm">00:00</div><button class="btn hang" onclick="hangup()">&#128222; Hang Up</button><div id="coach"></div>';
-if(cb)cb.style.display='none';
-heard='';
-try{
-tCall=tClient.newCall({destinationNumber:dest,callerNumber:from,audio:true,video:false,remoteElement:'remoteAudio'});
-startListening();
-}catch(e){toast('Call failed: '+e.message,true);endCall();}
-}
-function startTimer(){
-if(!tStart)tStart=Date.now();clearInterval(tTimer);
-tTimer=setInterval(function(){
-const s=Math.floor((Date.now()-tStart)/1000);
-const el=document.getElementById('tm');
-if(el)el.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-},1000);
-}
-function startListening(){
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!SR){console.warn('No SpeechRecognition; coach runs on elapsed time only.');return;}
-try{
-rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-US';
-rec.onresult=function(e){for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)heard+=e.results[i][0].transcript+' ';}};
-rec.onerror=function(e){console.warn('speech',e.error);};
-rec.onend=function(){if(tCall){try{rec.start();}catch(e){}}};
-rec.start();
-}catch(e){console.warn('speech init',e);}
-}
-function startCoach(){
-clearInterval(coachTimer);
-coachTimer=setInterval(askCoach,20000);
-setTimeout(askCoach,8000);
-}
-async function askCoach(){
-if(!tCall||!CUR)return;
-try{
-const r=await fetch(EP.coach,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID,contact:CUR,script:curScript,heard:heard,elapsed_seconds:tStart?Math.floor((Date.now()-tStart)/1000):0})});
-const d=await r.json();
-if(!d||!d.nudge)return;
-const el=document.getElementById('coach');if(!el)return;
-el.innerHTML='<div class="coach"><span class="flag f-'+esc(d.flag||'none')+'">'+esc(d.flag||'none')+'</span><div class="n">'+esc(d.nudge)+'</div>'+(d.say?'<div class="s">"'+esc(d.say)+'"</div>':'')+(d.why?'<div class="w">'+esc(d.why)+'</div>':'')+'</div>'+el.innerHTML;
-while(el.children.length>4)el.removeChild(el.lastChild);
-}catch(e){console.warn('coach',e);}
-}
-function hangup(){if(tCall){try{tCall.hangup();}catch(e){}}endCall();}
-function endCall(){
-clearInterval(tTimer);clearInterval(coachTimer);
-if(rec){try{rec.onend=null;rec.stop();}catch(e){}rec=null;}
-const dur=tStart?Math.floor((Date.now()-tStart)/1000):0;
-const notes=document.getElementById('notes');
-if(CUR&&dur>0){
-fetch(EP.logCall,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID,contact_id:CUR.id,person_called:CUR.name,number_called:CUR.phone_number,duration_seconds:dur,notes:notes?notes.value:'',transcript:heard,script:curScript})}).catch(function(){});
-}
-tCall=null;tStart=null;
-const cb=document.getElementById('cb');if(cb){cb.style.display='';cb.disabled=false;cb.textContent='\u260E Call '+(CUR&&CUR.phone_number?CUR.phone_number:'');}
-const live=document.getElementById('live');if(live)live.innerHTML='';
+(CUR.company_summary?'<div class="sec"><h4>About '+esc(CUR.company||'the company')+'</h4><div class="box">'+esc(CUR.company_summary)+'</div></div>':'');
 }
 document.addEventListener('DOMContentLoaded',function(){
 document.getElementById('q').addEventListener('input',render);
