@@ -239,7 +239,7 @@ document.getElementById('live').innerHTML='<div class="st" id="st">Calling...</d
 if(cb)cb.style.display='none';
 heard='';
 try{
-tCall=tClient.newCall({destinationNumber:dest,callerNumber:from,audio:true,video:false});
+tCall=tClient.newCall({destinationNumber:dest,callerNumber:from,audio:true,video:false,remoteElement:'remoteAudio'});
 startListening();
 }catch(e){toast('Call failed: '+e.message,true);endCall();}
 }
