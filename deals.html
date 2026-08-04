@@ -3668,7 +3668,7 @@ async function initRTC(){
     cl.on('telnyx.notification',function(n){
       var c=n&&n.call?n.call:null;if(!c)return;
       console.log('call',n.type,'| state:',c.state,'| cause:',c.cause,'| sip:',c.sipCode);
-      if(c.state==='active'){document.getElementById('vvcStatus').textContent='Connected';startTimer();startCoach();}
+      if(c.state==='active'){document.getElementById('vvcStatus').textContent='Connected';if(!tm)startTimer();startCoach();}
       if(c.state==='hangup'||c.state==='destroy'){
         if(c.cause&&c.cause!=='NORMAL_CLEARING')showStatus('Call rejected: '+c.cause+(c.sipCode?' (SIP '+c.sipCode+')':''),'error');
         finishCall();
@@ -3705,11 +3705,12 @@ window.vvMakeCall=async function(contactId){
   if(!dest||!from){document.getElementById('vvcStatus').textContent='Invalid number (caller: '+(from||'missing')+')';return;}
   document.getElementById('vvcStatus').textContent='Calling...';
   try{
+    st=Date.now();
     ca=cl.newCall({destinationNumber:dest,callerNumber:from,audio:true,video:false,remoteElement:'remoteAudio'});
     startListening();
   }catch(e){document.getElementById('vvcStatus').textContent='Call failed: '+e.message;}
 };
-function startTimer(){st=Date.now();clearInterval(tm);
+function startTimer(){if(!st)st=Date.now();clearInterval(tm);
   tm=setInterval(function(){var s=Math.floor((Date.now()-st)/1000);
   document.getElementById('vvcTimer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},1000);}
 function startListening(){
