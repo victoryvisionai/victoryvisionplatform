@@ -141,7 +141,7 @@ const r0=await sb.auth.getSession();
 if(!r0||!r0.data||!r0.data.session){location.href='/login.html';return;}
 CID=r0.data.session.user.email;
 try{
-const r=await fetch(EP.getUser,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID})});
+const r=await fetch(EP.getUser+'?customer_id='+encodeURIComponent(CID),{method:'GET'});
 const u=await r.json();const uu=Array.isArray(u)?u[0]:u;
 window.vv=uu&&uu.vvnumber?uu.vvnumber:null;
 window.sipU=uu&&uu.sip_username?uu.sip_username:null;
@@ -192,7 +192,7 @@ document.getElementById('pb').innerHTML=
 '<div class="sec"><h4>Call Script</h4><div class="box" id="scr">Click Call to generate a script for this person.</div></div>'+
 (CUR.next_steps?'<div class="sec"><h4>Outstanding Next Step</h4><div class="box">'+esc(CUR.next_steps)+'</div></div>':'')+
 (CUR.conversion_tips?'<div class="sec"><h4>What Works With Them</h4><div class="box">'+esc(CUR.conversion_tips)+'</div></div>':'')+
-(CUR.analysis?'<div class="sec"><h4>Prior Intelligence</h4><div class="box">'+esc(String(CUR.analysis).slice(-1400))+'</div></div>':'')+
+(CUR.analysis?'<div class="sec"><h4>Prior Intelligence</h4><div class="box" style="max-height:320px;overflow-y:auto">'+esc(String(CUR.analysis))+'</div></div>':'')+
 (CUR.personal_summary?'<div class="sec"><h4>About Them</h4><div class="box">'+esc(CUR.personal_summary)+'</div></div>':'')+
 (CUR.company_summary?'<div class="sec"><h4>About '+esc(CUR.company||'the company')+'</h4><div class="box">'+esc(CUR.company_summary)+'</div></div>':'')+
 '<div class="sec"><h4>Call Notes</h4><textarea id="notes" placeholder="Type during the call..."></textarea></div>';
