@@ -4645,8 +4645,36 @@ function handleCallNotification(notification) {
   }
 }
 
+function vvLogCall() {
+  // Fires however the call ends - user hangup, remote hangup, or modal close.
+  // Previously only hangupCall() logged, so any other ending wrote nothing.
+  if (window.vvLogged) return;
+  window.vvLogged = true;
+  var durSec = window.callStartedAt ? Math.floor((Date.now() - window.callStartedAt) / 1000) : 0;
+  if (!currentCallContact || durSec <= 0) { console.warn('call log skipped: dur=' + durSec); return; }
+  var notesEl = document.getElementById('callNotes');
+  var scriptEl = document.getElementById('callScript');
+  console.log('logging call', durSec + 's', currentCallContact.name);
+  fetch('https://victoryvision.app.n8n.cloud/webhook/calls/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      customer_id: CUSTOMER_ID,
+      contact_id: currentCallContact.id || currentCallContact.contact_id,
+      person_called: currentCallContact.name || '',
+      number_called: currentCallContact.phone_number || '',
+      duration_seconds: durSec,
+      notes: notesEl ? notesEl.value : '',
+      script: scriptEl ? (scriptEl.textContent || '') : ''
+    })
+  }).then(function (r) { console.log('call log status', r.status); })
+    .catch(function (e) { console.warn('call log failed', e); });
+  window.callStartedAt = null;
+}
+
 function handleCallUpdate(call) {
   const state = call.state;
+  if (state === 'hangup' || state === 'destroy') { vvLogCall(); }
   
   switch(state) {
     case 'new':
