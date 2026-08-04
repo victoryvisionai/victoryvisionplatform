@@ -736,16 +736,37 @@
 
   // ─── Coach digest (running rollup from user.meeting_notes) ────────────
   function renderCoachDigest() {
-    // coach_digest is the synthesised cross-meeting analysis. meeting_notes is
-    // the append-only per-meeting log, which is what used to render here and is
-    // why this panel read as raw recaps rather than coaching.
-    const notes = (currentUser && currentUser.coach_digest)
-      || (currentUser && currentUser.meeting_notes);
-    if (notes && String(notes).trim().length > 30) {
-      document.getElementById('coachDigest').style.display = 'block';
-      // Show last 1500 chars (most recent meetings)
-      const text = String(notes);
-      document.getElementById('coachDigestBody').textContent = text.length > 1500 ? '…' + text.slice(-1500) : text;
+    // Render ONLY the synthesised digest. meeting_notes is the append-only
+    // per-meeting log; falling back to it was why raw stamped recaps appeared
+    // beneath the coaching, and why the panel opened mid-sentence.
+    const box  = document.getElementById('coachDigest');
+    const body = document.getElementById('coachDigestBody');
+    if (!box || !body) return;
+
+    const digest = currentUser && currentUser.coach_digest;
+    if (digest && String(digest).trim().length > 30) {
+      body.textContent = String(digest).trim();
+      body.style.whiteSpace = 'pre-wrap';
+      body.style.maxHeight = '520px';
+      body.style.overflowY = 'auto';
+      body.style.fontFamily = 'inherit';
+      body.style.fontSize = '14px';
+      body.style.lineHeight = '1.55';
+      body.style.margin = '0';
+      var when = currentUser.coach_digest_at;
+      var stamp = document.getElementById('coachDigestStamp');
+      if (!stamp) {
+        stamp = document.createElement('div');
+        stamp.id = 'coachDigestStamp';
+        stamp.style.cssText = 'font-size:11px;color:#8a8a8a;margin-top:8px;';
+        body.parentNode.appendChild(stamp);
+      }
+      stamp.textContent = when ? ('Generated ' + new Date(when).toLocaleString()) : '';
+      box.style.display = 'block';
+    } else {
+      body.textContent = 'No coaching digest yet. Click "Refresh coaching" to generate one from your analysed meetings.';
+      body.style.whiteSpace = 'pre-wrap';
+      box.style.display = 'block';
     }
   }
 
