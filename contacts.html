@@ -4893,9 +4893,12 @@ await new Promise(resolve => {
 
     document.getElementById('callStatus').textContent = 'Calling...';
 
+    window.callStartedAt = Date.now();
+    window.currentCallScript = formattedScript || '';
     currentCall = telnyxClient.newCall({
       destinationNumber: formatPhoneE164(contact.phone_number),
       callerNumber: formatPhoneE164(window.userVVNumber),
+      remoteElement: 'remoteAudio',
       audio: true,
       video: false
     });
