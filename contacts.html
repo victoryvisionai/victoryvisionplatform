@@ -4735,8 +4735,39 @@ function attachRemoteAudio(call) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-     phone_number: contact.phone_number,
-      customer_id: CUSTOMER_ID
+        customer_id: CUSTOMER_ID,
+        phone_number: contact.phone_number,
+        // The generator previously received only a phone number and a tenant id,
+        // so it had no idea who was being called and produced generic objection
+        // lists instead of a script. Send the full contact context.
+        contact: {
+          id: contact.id,
+          name: contact.name || '',
+          first_name: contact.first_name || '',
+          email: contact.email || '',
+          title: contact.title || '',
+          company: contact.company || '',
+          industry: contact.industry || '',
+          linkedin: contact.linkedin || '',
+          city: contact.city || '',
+          tags: contact.tags || '',
+          notes: contact.notes || '',
+          analysis: contact.analysis || '',
+          next_steps: contact.next_steps || '',
+          conversion_tips: contact.conversion_tips || '',
+          close_probability: contact.close_probability || '',
+          client_ann_est: contact.client_ann_est || '',
+          meetings_to_close: contact.meetings_to_close || '',
+          meeting_date: contact.meeting_date || '',
+          last_emailed_date: contact.last_emailed_date || '',
+          last_opened_date: contact.last_opened_date || '',
+          last_clicked_date: contact.last_clicked_date || '',
+          last_responded: contact.last_responded || '',
+          personal_summary: contact.personal_summary || '',
+          company_summary: contact.company_summary || '',
+          personal_priorities: contact.personal_priorities || '',
+          company_priorities: contact.company_priorities || ''
+        }
       })
     });
     
@@ -4807,11 +4838,35 @@ await new Promise(resolve => {
   }, 100);
 });
     
-    // STEP 5: Initialize Telnyx and make the call
-    await initializeTelnyxWebRTC();
-    
+    // STEP 5: Initialize Telnyx and make the call.
+    // Failures here used to be invisible: the countdown finished and nothing
+    // happened, because initializeTelnyxWebRTC only console.warns and newCall
+    // throws into the outer catch with no dedicated message.
+    try {
+      await initializeTelnyxWebRTC();
+    } catch (initErr) {
+      console.error('Telnyx init failed:', initErr);
+      document.getElementById('callStatus').textContent = 'Phone system failed to connect';
+      showStatus('Could not connect to the phone system: ' + (initErr && initErr.message ? initErr.message : 'unknown error'), true);
+      return;
+    }
+
+    if (!telnyxClient) {
+      document.getElementById('callStatus').textContent = 'Phone system not connected';
+      showStatus('Phone system not connected. Check that a SIP credential is set in Settings.', true);
+      return;
+    }
+
+    var callerNum = formatPhoneE164(window.userVVNumber);
+    var destNum = formatPhoneE164(contact.phone_number);
+    if (!callerNum || !destNum) {
+      document.getElementById('callStatus').textContent = 'Invalid number';
+      showStatus('Invalid number \u2014 caller: ' + (callerNum || 'missing') + ', destination: ' + (destNum || 'missing'), true);
+      return;
+    }
+
     document.getElementById('callStatus').textContent = 'Calling...';
-    
+
     currentCall = telnyxClient.newCall({
       destinationNumber: formatPhoneE164(contact.phone_number),
       callerNumber: formatPhoneE164(window.userVVNumber),
