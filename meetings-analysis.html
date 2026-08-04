@@ -411,12 +411,31 @@
     // Newest first
     allMeetings.sort((a,b) => new Date(b.start_at || b.created_at || 0) - new Date(a.start_at || a.created_at || 0));
 
-    renderKPIs();
-    try { renderVictoryPath(); } catch (e) { console.error('VictoryPath', e); }
-    renderCharts();
-    renderInsights();
-    renderCoachDigest();
-    renderList();
+    // Every panel is isolated: renderCharts/renderInsights/renderCoachDigest
+    // previously ran unguarded ahead of renderList, so a single throw left the
+    // page stuck on "Loading meetings" forever.
+    redrawAll();
+
+    // Period filter + refresh coaching controls. These live here rather than in
+    // the deferred plans block so they are bound as soon as the page renders.
+    document.querySelectorAll('.range-btn[data-range]').forEach(function(b){
+      if (b.dataset.vvBound) return;
+      b.dataset.vvBound = '1';
+      b.addEventListener('click', function(){ setRange(b.dataset.range, b); });
+    });
+    var _cb = document.getElementById('rangeCustomBtn');
+    if (_cb && !_cb.dataset.vvBound) { _cb.dataset.vvBound = '1'; _cb.addEventListener('click', applyCustomRange); }
+    var _rb = document.getElementById('refreshCoachBtn');
+    if (_rb && !_rb.dataset.vvBound) { _rb.dataset.vvBound = '1'; _rb.addEventListener('click', refreshCoaching); }
+
+    // Period filter + refresh coaching controls
+    document.querySelectorAll('.range-btn[data-range]').forEach(function(b){
+      b.addEventListener('click', function(){ setRange(b.dataset.range, b); });
+    });
+    var cb = document.getElementById('rangeCustomBtn');
+    if (cb) cb.addEventListener('click', applyCustomRange);
+    var rb = document.getElementById('refreshCoachBtn');
+    if (rb) rb.addEventListener('click', refreshCoaching);
 
     // Plans load after the page is already usable. If /plans/get is missing or
     // slow the dashboard must still render — v3 awaited this inside loadAll,
@@ -438,8 +457,9 @@
     if (!box || !body) return;
 
     var now = Date.now();
-    var held = allMeetings.filter(function(m){ return normStatus(m.status) === 'held'; });
-    var upcoming = allMeetings.filter(function(m){
+    var scoped = allMeetings.filter(inRange);
+    var held = scoped.filter(function(m){ return normStatus(m.status) === 'held'; });
+    var upcoming = scoped.filter(function(m){
       return new Date(m.start_at || 0).getTime() > now && normStatus(m.status) !== 'cancelled';
     }).sort(function(a,b){ return new Date(a.start_at) - new Date(b.start_at); });
 
@@ -802,14 +822,15 @@
 
   function filterMeetings() {
     const now = Date.now();
-    const allMeetings = window.__vvAll ? window.__vvAll() : null;
-    if (activeFilter === 'all')         return allMeetings;
-    if (activeFilter === 'held')        return allMeetings.filter(m => normStatus(m.status) === 'held');
-    if (activeFilter === 'upcoming')    return allMeetings.filter(m => new Date(m.start_at || 0).getTime() > now);
-    if (activeFilter === 'no_show')     return allMeetings.filter(m => normStatus(m.status) === 'no_show');
-    if (activeFilter === 'high_score')  return allMeetings.filter(m => (m.score||0) >= 7);
-    if (activeFilter === 'needs_followup') return allMeetings.filter(m => m.followup && String(m.followup).trim());
-    return allMeetings;
+    // Period filter first, so every downstream panel sees the same window.
+    const base = allMeetings.filter(inRange);
+    if (activeFilter === 'all')         return base;
+    if (activeFilter === 'held')        return base.filter(m => normStatus(m.status) === 'held');
+    if (activeFilter === 'upcoming')    return base.filter(m => new Date(m.start_at || 0).getTime() > now);
+    if (activeFilter === 'no_show')     return base.filter(m => normStatus(m.status) === 'no_show');
+    if (activeFilter === 'high_score')  return base.filter(m => (m.score||0) >= 7);
+    if (activeFilter === 'needs_followup') return base.filter(m => m.followup && String(m.followup).trim());
+    return base;
   }
 
   // Collapse any residual duplicates (same person + same start time) → keep richest
@@ -1061,6 +1082,15 @@
     e.target.classList.add('active');
     activeFilter = e.target.dataset.filter;
     renderList();
+
+    // Period filter + refresh coaching controls
+    document.querySelectorAll('.range-btn[data-range]').forEach(function(b){
+      b.addEventListener('click', function(){ setRange(b.dataset.range, b); });
+    });
+    var cb = document.getElementById('rangeCustomBtn');
+    if (cb) cb.addEventListener('click', applyCustomRange);
+    var rb = document.getElementById('refreshCoachBtn');
+    if (rb) rb.addEventListener('click', refreshCoaching);
 
     // Plans load after the page is already usable. If /plans/get is missing or
     // slow the dashboard must still render — v3 awaited this inside loadAll,
