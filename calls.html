@@ -250,7 +250,7 @@ startListening();
 }catch(e){toast('Call failed: '+e.message,true);endCall();}
 }
 function startTimer(){
-tStart=Date.now();clearInterval(tTimer);
+if(!tStart)tStart=Date.now();clearInterval(tTimer);
 tTimer=setInterval(function(){
 const s=Math.floor((Date.now()-tStart)/1000);
 const el=document.getElementById('tm');
