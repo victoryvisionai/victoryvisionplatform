@@ -318,7 +318,8 @@
     followup:      'https://victoryvision.app.n8n.cloud/webhook/emails/followup',
     updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update',
     deleteMeeting: 'https://victoryvision.app.n8n.cloud/webhook/meetings/delete',
-    getPlans:      'https://victoryvision.app.n8n.cloud/webhook/plans/get'
+    getPlans:      'https://victoryvision.app.n8n.cloud/webhook/plans/get',
+    coachRefresh:  'https://victoryvision.app.n8n.cloud/webhook/meetings/coach-refresh'
   };
 
   let CUSTOMER_ID = null, AUTH_TOKEN = null;
@@ -802,6 +803,15 @@
     const original = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
     try {
+      // Regenerate the coaching digest server-side first, then re-read.
+      try {
+        await fetch(ENDPOINTS.coachRefresh, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_id: CUSTOMER_ID })
+        });
+      } catch (e) { console.warn('coach refresh', e); }
+
       const [mtgs, contacts, user] = await Promise.all([
         api(ENDPOINTS.getMeetings).catch(function(){ return null; }),
         api(ENDPOINTS.getContacts).catch(function(){ return null; }),
