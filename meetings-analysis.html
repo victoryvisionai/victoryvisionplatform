@@ -736,7 +736,11 @@
 
   // ─── Coach digest (running rollup from user.meeting_notes) ────────────
   function renderCoachDigest() {
-    const notes = currentUser && currentUser.meeting_notes;
+    // coach_digest is the synthesised cross-meeting analysis. meeting_notes is
+    // the append-only per-meeting log, which is what used to render here and is
+    // why this panel read as raw recaps rather than coaching.
+    const notes = (currentUser && currentUser.coach_digest)
+      || (currentUser && currentUser.meeting_notes);
     if (notes && String(notes).trim().length > 30) {
       document.getElementById('coachDigest').style.display = 'block';
       // Show last 1500 chars (most recent meetings)
