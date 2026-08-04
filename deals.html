@@ -2206,7 +2206,7 @@ function renderPipelineCard(c, stage) {
   const actionsHtml = !isTerminal ? `
     <div class="pipeline-card-actions">
       ${c.email && c.email !== 'N/A' ? `<button class="qa-btn" onclick="event.stopPropagation(); quickEmailFromCard('${esc(c.id)}')" title="Email">✉️</button>` : ''}
-      <button class="qa-btn" onclick="event.stopPropagation(); quickLogCallFromCard('${esc(c.id)}')" title="Log call">📞</button>
+      <button class="qa-btn" onclick="event.stopPropagation(); vvMakeCall('${esc(c.id)}')" title="Call with AI script">📞</button>
       <button class="qa-btn" onclick="event.stopPropagation(); openEnrollModal('${esc(c.id)}')" title="Enroll in VV Campaign">⚡</button>
       ${nextStageKey ? `<button class="qa-btn advance" onclick="event.stopPropagation(); moveContactToStage('${esc(c.id)}', '${esc(nextStageKey)}')" title="Advance to ${esc(getStageLabel(nextStageKey))}">→ ${esc(getStageLabel(nextStageKey))}</button>` : ''}
     </div>
