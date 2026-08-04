@@ -4615,7 +4615,27 @@ async function initializeTelnyxWebRTC() {
   }
 }
 function handleCallNotification(notification) {
-  console.log('Call notification:', notification);
+  // Telnyx puts the real failure reason on the call object. Logging only
+  // {type, call} discarded it, so a server-side rejection looked like the call
+  // simply stopping after ~3s with no explanation.
+  var _c = notification && notification.call ? notification.call : null;
+  if (_c) {
+    console.log('Call notification:', notification.type,
+      '| state:', _c.state,
+      '| cause:', _c.cause,
+      '| causeCode:', _c.causeCode,
+      '| sipCode:', _c.sipCode || _c.sipReason || '(none)');
+    if (_c.cause && _c.cause !== 'NORMAL_CLEARING') {
+      var el = document.getElementById('callStatus');
+      if (el) el.textContent = 'Call failed: ' + _c.cause;
+      if (typeof showStatus === 'function') {
+        showStatus('Telnyx rejected the call: ' + _c.cause +
+          (_c.causeCode ? ' (code ' + _c.causeCode + ')' : ''), true);
+      }
+    }
+  } else {
+    console.log('Call notification:', notification);
+  }
   
   if (notification.type === 'callUpdate') {
     handleCallUpdate(notification.call);
