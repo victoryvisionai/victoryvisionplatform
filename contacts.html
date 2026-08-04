@@ -4745,7 +4745,15 @@ function attachRemoteAudio(call) {
 // STEP 3: Update script in modal
 if (scriptData.success && scriptElement) {
   // Add formatting in frontend since we stripped it all
-  let formattedScript = scriptData.script
+  // The script endpoint returns either a string or an object depending on the
+  // generator path taken, and calling .replace on an object threw
+  // "scriptData.script.replace is not a function", killing the modal.
+  let rawScript = scriptData.script;
+  if (rawScript && typeof rawScript === 'object') {
+    rawScript = rawScript.script || rawScript.text || rawScript.output
+             || rawScript.content || JSON.stringify(rawScript, null, 2);
+  }
+  let formattedScript = String(rawScript == null ? '' : rawScript)
     // Split into sections and add structure
     .replace(/OPENING:/gi, '\n\n📞 OPENING:\n')
     .replace(/KEY TALKING POINTS:/gi, '\n\n💡 KEY TALKING POINTS:\n')
