@@ -4975,27 +4975,30 @@ async function hangupCall() {
   try {
     currentCall.hangup();
     
-    const notes = document.getElementById('callNotes').value.trim();
-   if (notes && currentCallContact) {
-      try {
-        await fetch('https://nyyvsdkumxvuwimmucdb.supabase.co/functions/v1/journey-append', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contact_id: currentCallContact.contact_id || currentCallContact.id,
-            event: {
-              type: 'call_outbound',
-              actor: 'user',
-              campaign: null,
-              summary: 'Call: ' + notes.slice(0, 240),
-              data: { notes: notes }
-            }
-          })
-        });
-      } catch (e) {
-        console.warn('Journey append failed', e);
-      }
+    // Log through /webhook/calls/log so the calls row, the customer_journey
+    // append, last_called, number_call_attempts and users.call_notes all land in
+    // one transaction. The previous journey-append ran only when notes were
+    // typed, wrote no calls row, and used a bare await inside a non-async
+    // function, which threw a SyntaxError and killed hangup entirely.
+    var notesEl = document.getElementById('callNotes');
+    var notes = notesEl ? notesEl.value.trim() : '';
+    var durSec = window.callStartedAt ? Math.floor((Date.now() - window.callStartedAt) / 1000) : 0;
+    if (currentCallContact) {
+      fetch('https://victoryvision.app.n8n.cloud/webhook/calls/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: CUSTOMER_ID,
+          contact_id: currentCallContact.id || currentCallContact.contact_id,
+          person_called: currentCallContact.name || '',
+          number_called: currentCallContact.phone_number || '',
+          duration_seconds: durSec,
+          notes: notes,
+          script: window.currentCallScript || ''
+        })
+      }).catch(function (e) { console.warn('call log failed', e); });
     }
+    window.callStartedAt = null;
     
     showStatus('Call ended', false);
   } catch (error) {
