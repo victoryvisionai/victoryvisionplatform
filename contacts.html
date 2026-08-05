@@ -5502,20 +5502,33 @@ async function confirmNewsletter() {
 // Shared calling module. Overrides the page-local makeCallToContact so the
 // modal, script, live coach, timer, speech capture and logging all come from
 // vv-call.js. Three separate copies is why fixing one page broke another.
-document.addEventListener("DOMContentLoaded",function(){
-  var t=setInterval(function(){
-    if(typeof CUSTOMER_ID!=="undefined"&&CUSTOMER_ID&&window.VVCall){
+// Override immediately at parse time. Doing this inside DOMContentLoaded meant
+// the page-local makeCallToContact (assigned to window further up) was still in
+// place when the button was wired, so clicking Call ran the old code: it showed
+// the script and then never dialled.
+window.makeCallToContact = function (id) {
+  if (!window.VVCall) { console.warn("VVCall not loaded"); return; }
+  var cid = (typeof CUSTOMER_ID !== "undefined" && CUSTOMER_ID) ? CUSTOMER_ID : null;
+  if (!cid) { console.warn("CUSTOMER_ID not ready"); return; }
+  if (!window._vvInit) {
+    window._vvInit = true;
+    VVCall.init({ customerId: cid, onEnd: function () { if (typeof loadContacts === "function") loadContacts(); } });
+  }
+  var list = (typeof allContacts !== "undefined" ? allContacts : []);
+  var c = list.filter(function (x) { return String(x.id) === String(id); })[0];
+  if (!c) { if (typeof showStatus === "function") showStatus("Contact not found", true); return; }
+  if (!c.phone_number) { if (typeof showStatus === "function") showStatus("No phone number for this contact", true); return; }
+  VVCall.dial(c);
+};
+// Warm up the connection once the page has a customer id.
+document.addEventListener("DOMContentLoaded", function () {
+  var t = setInterval(function () {
+    if (typeof CUSTOMER_ID !== "undefined" && CUSTOMER_ID && window.VVCall && !window._vvInit) {
       clearInterval(t);
-      VVCall.init({customerId:CUSTOMER_ID,onEnd:function(){if(typeof loadContacts==="function")loadContacts();}});
-      window.makeCallToContact=function(id){
-        var list=(typeof allContacts!=="undefined"?allContacts:[]);
-        var c=list.filter(function(x){return String(x.id)===String(id);})[0];
-        if(!c){showStatus("Contact not found",true);return;}
-        if(!c.phone_number){showStatus("No phone number for this contact",true);return;}
-        VVCall.dial(c);
-      };
+      window._vvInit = true;
+      VVCall.init({ customerId: CUSTOMER_ID, onEnd: function () { if (typeof loadContacts === "function") loadContacts(); } });
     }
-  },400);
+  }, 400);
 });
 </script>
 </body>
