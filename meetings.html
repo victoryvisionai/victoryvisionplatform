@@ -737,6 +737,20 @@ async function joinMeeting(invite) {
       }
     }
 
+    // Only Daily rooms can be joined. Calendar-synced meetings store a Google
+    // Calendar URL in room_url; handing that to DailyIframe produced a 403 and
+    // the page spun on "Joining meeting..." forever with no error shown.
+    var _url = String(invite.room_url || '');
+    if (_url.indexOf('daily.co') === -1) {
+      loadingState.style.display = 'none';
+      var _msg = _url
+        ? 'This meeting is hosted outside Victory Vision, so it cannot be joined or recorded here.'
+        : 'This meeting has no Victory Vision room.';
+      alert(_msg + (_url ? '\n\nOpen the original invite instead:\n' + _url : ''));
+      if (_url) window.open(_url, '_blank');
+      return;
+    }
+
     // Initialize Daily.co call frame
     callFrame = DailyIframe.createFrame(dailyContainer, {
       showLeaveButton: false,
