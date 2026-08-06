@@ -57,8 +57,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(-
 a{color:inherit}
 header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
-.logo{font-weight:800;font-size:20px;color:var(--navy);letter-spacing:-.02em}
-.logo span{color:var(--gold)}
+.logo{display:inline-block;line-height:0}
+.logo img{height:44px;width:auto;display:block;border-radius:5px}
+@media(max-width:900px){.logo img{height:36px}}
 .navlinks{display:flex;gap:26px;align-items:center}
 .navlinks a{text-decoration:none;font-size:14px;font-weight:500;color:var(--slate)}
 .navlinks a:hover{color:var(--navy)}
@@ -111,7 +112,7 @@ footer a{color:#8FA3BC;text-decoration:none;margin-right:16px}
 
 <header>
 <div class="wrap nav">
-  <div class="logo">VICTORY<span>VISION</span></div>
+  <a href="/" class="logo"><img src="/logo.jpg" alt="Victory Vision"></a>
   <nav class="navlinks">
     <a href="#who">Who it is for</a>
     <a href="#how">How it works</a>
@@ -250,7 +251,7 @@ footer a{color:#8FA3BC;text-decoration:none;margin-right:16px}
 <footer>
 <div class="wrap fgrid">
   <div>
-    <div class="logo" style="color:#fff;margin-bottom:8px">VICTORY<span>VISION</span></div>
+    <img src="/logo.jpg" alt="Victory Vision" style="height:56px;width:auto;border-radius:6px;margin-bottom:10px"/>
     <div>AI sales desk for search, capital markets, insurance and professional services.</div>
   </div>
   <div>
