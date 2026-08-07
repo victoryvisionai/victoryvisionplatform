@@ -691,18 +691,19 @@
       </div>
       <div class="compose-field">
         <label>To</label>
-        <input type="email" id="composeTo" placeholder="recipient@example.com" list="contactsList">
+        <input type="email" id="composeTo" multiple placeholder="name@company.com, second@company.com" list="contactsList">
+        <div style="font-size:11px;color:#888;margin-top:2px">Separate multiple recipients with a comma. Autocomplete fills the last address you are typing.</div>
         <datalist id="contactsList"></datalist>
         <span class="field-action" onclick="toggleCCBCC()">Cc/Bcc</span>
       </div>
       <div id="ccBccFields" style="display:none">
         <div class="compose-field">
           <label>Cc</label>
-          <input type="email" id="composeCC" placeholder="cc@example.com">
+          <input type="email" id="composeCC" multiple placeholder="cc@company.com, second@company.com" list="contactsList">
         </div>
         <div class="compose-field">
           <label>Bcc</label>
-          <input type="email" id="composeBCC" placeholder="bcc@example.com">
+          <input type="email" id="composeBCC" multiple placeholder="bcc@company.com, second@company.com" list="contactsList">
         </div>
       </div>
       <div class="compose-field">
