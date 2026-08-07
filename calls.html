@@ -166,9 +166,10 @@ const q=(document.getElementById('q').value||'').toLowerCase();
 VIEW=ALL.filter(function(c){return pass(c)&&(!q||String(c.name||'').toLowerCase().indexOf(q)>=0||String(c.company||'').toLowerCase().indexOf(q)>=0);});
 document.getElementById('count').textContent=VIEW.length+' of '+ALL.length+' callable';
 const tb=document.getElementById('rows');
-if(!VIEW.length){tb.innerHTML='<tr><td colspan="6" class="empty">No matches.</td></tr>';return;}
-tb.innerHTML=VIEW.slice(0,200).map(function(c){return '<tr onclick="pick(\''+c.id+'\')" id="r_'+c.id+'">'+
-'<td><span class="tier t'+c._t+'">T'+c._t+'</span></td>'+
+if(!VIEW.length){tb.innerHTML='<tr><td colspan="7" class="empty">No matches.</td></tr>';return;}
+tb.innerHTML=VIEW.slice(0,200).map(function(c){return '<tr id="r_'+c.id+'">'+
+'<td onclick="event.stopPropagation()"><input type="checkbox" class="selbox" data-id="'+c.id+'"></td>'+
+'<td onclick="pick(\''+c.id+'\')"><span class="tier t'+c._t+'">T'+c._t+'</span></td>'+
 '<td><b>'+esc(c.name||'(no name)')+'</b><br><span class="sig">'+esc(c.title||'')+'</span></td>'+
 '<td>'+esc(c.company||'')+'</td>'+
 '<td><b>'+(num(c.close_probability)||0)+'%</b>'+(c.client_ann_est?'<br><span class="sig">$'+Math.round(num(c.client_ann_est)/1000)+'K</span>':'')+'</td>'+
