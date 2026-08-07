@@ -235,6 +235,9 @@
     logCall();
     call = null; startedAt = null;
     setStatus('Call ended');
+    // Close the modal shortly after the call ends. Previously only the X
+    // dismissed it, so hanging up left the window sitting open over the page.
+    setTimeout(hideModal, 1200);
   }
 
   // ---------- public ----------
@@ -306,6 +309,7 @@
     hangup: function () {
       if (call) { try { call.hangup(); } catch (e) {} }
       finish();
+      hideModal();
     },
 
     close: hideModal,
