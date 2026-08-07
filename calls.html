@@ -9,23 +9,36 @@
 <script src="vv-call.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f6f8;color:#222}
+body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f6f8;color:#222}
+.vvnav{background:#0A3161;padding:0 20px}
+.vvnav ul{list-style:none;margin:0 auto;padding:0;max-width:1400px;display:flex;flex-wrap:wrap;gap:2px}
+.vvnav li{margin:0}
+.vvnav a{display:block;color:#cdd8e6;text-decoration:none;padding:12px 14px;font-size:13px;font-weight:500}
+.vvnav a:hover{background:#1a5490;color:#fff}
+.vvnav a.active{background:#fff;color:#0A3161;font-weight:700}
 .wrap{max-width:1400px;margin:0 auto;padding:20px}
 h1{color:#0A3161;font-size:26px;margin:0 0 4px}
-.sub{color:#667;font-size:14px;margin-bottom:18px}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.sub{color:#667;font-size:14px;margin-bottom:16px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.05em;color:#667;text-transform:uppercase}
 .chip{background:#fff;border:1px solid #ccd5cf;color:#40514a;padding:6px 12px;border-radius:16px;font-size:13px;cursor:pointer}
 .chip:hover{border-color:#0A3161;color:#0A3161}
 .chip.on{background:#0A3161;color:#fff;border-color:#0A3161}
-input[type=text]{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;min-width:220px}
+select.sel,input[type=text]{padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;background:#fff}
+input[type=text]{min-width:200px}
+.modebar{background:#eef3f8;border:1px solid #d6e0ea;border-radius:8px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:14px}
+.modebar label{font-size:13px;cursor:pointer;display:flex;gap:5px;align-items:center}
+.btn{background:#0A3161;color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
 .layout{display:grid;grid-template-columns:1fr 420px;gap:18px;align-items:start}
 @media(max-width:1050px){.layout{grid-template-columns:1fr}}
 .card{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.09);overflow:hidden}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#0A3161;color:#fff;text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}
 td{padding:9px 8px;border-bottom:1px solid #eef1f4;vertical-align:top}
-tr:hover td{background:#f7fbff;cursor:pointer}
+tr:hover td{background:#f7fbff}
 tr.sel td{background:#e8f2ff}
+.nm{cursor:pointer}
 .tier{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
 .t1{background:#c0392b}.t2{background:#e67e22}.t3{background:#2980b9}.t4{background:#7f8c8d}
 .sig{font-size:11px;color:#666}
@@ -35,172 +48,309 @@ tr.sel td{background:#e8f2ff}
 .ph{background:linear-gradient(135deg,#0A3161,#1a5490);color:#fff;padding:14px 16px}
 .ph h3{margin:0;font-size:17px}
 .ph .m{font-size:12px;opacity:.85;margin-top:2px}
-.pb{padding:16px;max-height:calc(100vh - 200px);overflow-y:auto}
+.pb{padding:16px;max-height:calc(100vh - 220px);overflow-y:auto}
 .sec{margin-bottom:14px}
 .sec h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#0A3161}
 .box{background:#f8f9fa;border-left:3px solid #0A3161;padding:10px;border-radius:4px;font-size:13px;line-height:1.55;white-space:pre-wrap}
-.btn{width:100%;padding:12px;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px}
-.call{background:#27ae60;color:#fff}
-.hang{background:#c0392b;color:#fff}
-.btn:disabled{opacity:.5;cursor:default}
-.coach{background:#fffbe6;border-left:3px solid #f0ad4e;padding:12px;border-radius:4px;margin-bottom:10px}
-.coach .n{font-size:15px;font-weight:600;color:#7a5b18}
-.coach .s{margin-top:6px;font-size:14px;color:#0A3161;font-style:italic}
-.coach .w{margin-top:4px;font-size:11px;color:#9a8144}
-.flag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:6px}
-.f-listen{background:#e74c3c;color:#fff}.f-ask{background:#3498db;color:#fff}
-.f-close{background:#27ae60;color:#fff}.f-slow_down{background:#e67e22;color:#fff}.f-none{background:#bdc3c7;color:#fff}
-.timer{font-size:26px;font-weight:700;text-align:center;margin:6px 0}
-.st{text-align:center;font-size:13px;color:#667;margin-bottom:8px}
-textarea{width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit}
+.callbtn{width:100%;padding:12px;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;background:#27ae60;color:#fff;margin-bottom:10px}
 .empty{padding:50px 20px;text-align:center;color:#889}
-.toast{position:fixed;top:16px;right:16px;background:#0A3161;color:#fff;padding:12px 18px;border-radius:6px;z-index:999;display:none;max-width:380px;font-size:14px}
+.toast{position:fixed;top:16px;right:16px;background:#0A3161;color:#fff;padding:12px 18px;border-radius:6px;z-index:9999;display:none;max-width:380px;font-size:14px}
 .toast.err{background:#c0392b}
-.vvnav{background:#0A3161;padding:0 20px}.vvnav ul{list-style:none;margin:0 auto;padding:0;max-width:1400px;display:flex;flex-wrap:wrap;gap:2px}.vvnav li{margin:0}.vvnav a{display:block;color:#cdd8e6;text-decoration:none;padding:12px 14px;font-size:13px;font-weight:500}.vvnav a:hover{background:#1a5490;color:#fff}.vvnav a.active{background:#fff;color:#0A3161;font-weight:700}</style>
+</style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
-<nav class="vvnav"><ul><li><a href="/ai">AI</a></li><li><a href="/meetings-analysis">Meetings</a></li><li><a href="/calls" class="active">Calls</a></li><li><a href="/deals">Deals</a></li><li><a href="/messages">Messages</a></li><li><a href="/contacts">Contacts</a></li><li><a href="/social">Social</a></li><li><a href="/ads">Ads</a></li><li><a href="/campaigns">Campaigns</a></li><li><a href="/media">Media</a></li><li><a href="/pages">Pages</a></li><li><a href="/companyprofile">Profile</a></li><li><a href="/settings">Settings</a></li></ul></nav>
+
+<nav class="vvnav"><ul>
+<li><a href="/ai">AI</a></li><li><a href="/meetings-analysis">Meetings</a></li>
+<li><a href="/calls" class="active">Calls</a></li><li><a href="/deals">Deals</a></li>
+<li><a href="/messages">Messages</a></li><li><a href="/contacts">Contacts</a></li>
+<li><a href="/social">Social</a></li><li><a href="/ads">Ads</a></li>
+<li><a href="/campaigns">Campaigns</a></li><li><a href="/media">Media</a></li>
+<li><a href="/pages">Pages</a></li><li><a href="/companyprofile">Profile</a></li>
+<li><a href="/settings">Settings</a></li>
+</ul></nav>
+
 <div class="wrap">
 <h1>&#128222; Calls</h1>
-<div class="sub">Ranked by tier and engagement. Click a prospect to load prep, then call.</div>
-<div class="bar">
-<button class="chip on" data-f="all">All</button>
-<button class="chip" data-f="t1">Tier 1</button>
-<button class="chip" data-f="hot">Clicked</button>
-<button class="chip" data-f="opened">Opened</button>
-<button class="chip" data-f="never">Never contacted</button>
-<button class="chip" data-f="due">Follow-up due</button>
-<input type="text" id="q" placeholder="Search name or company...">
-<span id="count" class="sig"></span>
-</div>
-<div class="layout">
-<div class="card">
-<table>
-<thead><tr>
-<th style="width:52px">Tier</th><th>Name</th><th>Company</th>
-<th style="width:78px">Close</th><th style="width:120px">Signals</th><th style="width:104px">Phone</th>
-</tr></thead>
-<tbody id="rows"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
-</table>
-</div>
-<div class="card panel">
-<div class="ph"><h3 id="pn">Select a prospect</h3><div class="m" id="pm">&nbsp;</div></div>
-<div class="pb" id="pb"><div class="empty">Pick someone from the list.</div></div>
-</div>
-</div>
-</div>
-<audio id="remoteAudio" autoplay playsinline></audio>
+<div class="sub">Ranked by tier and engagement. Click a name to load prep, then call. Or select several and enroll them in AI calling.</div>
 
-</body>
-</html><script>
+<div class="bar">
+  <span class="lbl">Segment</span>
+  <button class="chip f on" data-f="all">All</button>
+  <button class="chip f" data-f="t1">Tier 1</button>
+  <button class="chip f" data-f="hot">Clicked</button>
+  <button class="chip f" data-f="opened">Opened</button>
+  <button class="chip f" data-f="never">Never contacted</button>
+  <button class="chip f" data-f="due">Follow-up due</button>
+  <input type="text" id="q" placeholder="Search name or company...">
+</div>
+
+<div class="bar">
+  <span class="lbl">Last called</span>
+  <button class="chip rc on" data-rc="any">Any</button>
+  <button class="chip rc" data-rc="none">Never called</button>
+  <button class="chip rc" data-rc="7">1 wk+</button>
+  <button class="chip rc" data-rc="30">1 mo+</button>
+  <button class="chip rc" data-rc="90">3 mo+</button>
+  <button class="chip rc" data-rc="180">6 mo+</button>
+  <button class="chip rc" data-rc="callback">Needs callback</button>
+  <select class="sel" id="dealSel"><option value="">All deals</option></select>
+  <select class="sel" id="tagSel"><option value="">All tags</option></select>
+  <span id="count" class="sig"></span>
+</div>
+
+<div class="modebar">
+  <span class="lbl">Call mode</span>
+  <label><input type="radio" name="cm" value="human" checked> I make the call</label>
+  <label><input type="radio" name="cm" value="handoff"> AI opens, hands to me</label>
+  <label><input type="radio" name="cm" value="ai"> AI runs the whole call</label>
+  <span style="margin-left:auto;font-size:13px" id="selCount">0 selected</span>
+  <button class="btn" id="enrollBtn" disabled>Enroll in AI calls</button>
+</div>
+
+<div class="layout">
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th style="width:28px"><input type="checkbox" id="selAll"></th>
+        <th style="width:48px">Tier</th><th>Name</th><th>Company</th>
+        <th style="width:70px">Close</th><th style="width:112px">Signals</th><th style="width:100px">Phone</th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card panel">
+    <div class="ph"><h3 id="pn">Select a prospect</h3><div class="m" id="pm">&nbsp;</div></div>
+    <div class="pb" id="pb"><div class="empty">Pick someone from the list.</div></div>
+  </div>
+</div>
+</div>
+
+<script>
 const SUPABASE_URL='https://nyyvsdkumxvuwimmucdb.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-const EP={getContacts:'https://victoryvision.app.n8n.cloud/webhook/contacts/get'};
-let sb=null,CID=null,ALL=[],VIEW=[],CUR=null,FILT='all';
-function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'');t.style.display='block';setTimeout(function(){t.style.display='none';},4200);}
+const EP={
+  getContacts:'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+  enrollAI:'https://victoryvision.app.n8n.cloud/webhook/calls/enroll-ai'
+};
+let sb=null,CID=null,ALL=[],VIEW=[],CUR=null;
+let FILT='all',RC='any',DEAL='',TAG='';
+const PICKED=new Set();
+
+function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'');t.style.display='block';setTimeout(function(){t.style.display='none';},4500);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function num(v){const n=parseFloat(String(v==null?'':v).replace('%',''));return isFinite(n)?n:0;}
 function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
+
 function tier(c){
-const t=String(c.tags||'').match(/call-list-t([1-7])/);
-if(t)return Math.min(parseInt(t[1],10),4);
-const p=num(c.close_probability);
-if(c.last_clicked_date&&p>=50)return 1;
-if(p>=60||c.last_responded)return 1;
-if(c.last_clicked_date||p>=35)return 2;
-if(c.last_opened_date)return 3;
-return 4;
+  const t=String(c.tags||'').match(/call-list-t([1-7])/);
+  if(t)return Math.min(parseInt(t[1],10),4);
+  const p=num(c.close_probability);
+  if(c.last_clicked_date&&p>=50)return 1;
+  if(p>=60||c.last_responded)return 1;
+  if(c.last_clicked_date||p>=35)return 2;
+  if(c.last_opened_date)return 3;
+  return 4;
 }
 function score(c){
-const t=String(c.tags||'').match(/call-list-t([1-7])/);
-let s=t?(9000-parseInt(t[1],10)*1000):0;
-s+=num(c.close_probability)*10;
-if(c.last_clicked_date){const d=days(c.last_clicked_date);s+=(d!==null&&d<7)?900:400;}
-if(c.last_responded)s+=700;
-if(c.last_opened_date)s+=150;
-if(c.meeting_date)s+=250;
-s+=Math.min(num(c.client_ann_est)/1000,500);
-if(c.next_steps)s+=120;
-const la=days(c.last_called);
-if(la!==null&&la<3)s-=800;
-return s;
+  const t=String(c.tags||'').match(/call-list-t([1-7])/);
+  let s=t?(9000-parseInt(t[1],10)*1000):0;
+  s+=num(c.close_probability)*10;
+  if(c.last_clicked_date){const d=days(c.last_clicked_date);s+=(d!==null&&d<7)?900:400;}
+  if(c.last_responded)s+=700;
+  if(c.last_opened_date)s+=150;
+  if(c.meeting_date)s+=250;
+  s+=Math.min(num(c.client_ann_est)/1000,500);
+  if(c.next_steps)s+=120;
+  const la=days(c.last_called);
+  if(la!==null&&la<3)s-=800;
+  return s;
 }
 function sigs(c){
-let h='';
-if(c.last_clicked_date)h+='<span class="dot g"></span>Clicked '+days(c.last_clicked_date)+'d<br>';
-else if(c.last_opened_date)h+='<span class="dot y"></span>Opened '+days(c.last_opened_date)+'d<br>';
-else if(c.last_emailed_date)h+='<span class="dot r"></span>Emailed '+days(c.last_emailed_date)+'d<br>';
-if(c.last_responded)h+='<span class="dot g"></span>Replied<br>';
-if(c.last_called)h+='<span class="sig">Called '+days(c.last_called)+'d ago</span>';
-return h||'<span class="sig">No activity</span>';
+  let h='';
+  if(c.last_clicked_date)h+='<span class="dot g"></span>Clicked '+days(c.last_clicked_date)+'d<br>';
+  else if(c.last_opened_date)h+='<span class="dot y"></span>Opened '+days(c.last_opened_date)+'d<br>';
+  else if(c.last_emailed_date)h+='<span class="dot r"></span>Emailed '+days(c.last_emailed_date)+'d<br>';
+  if(c.last_responded)h+='<span class="dot g"></span>Replied<br>';
+  if(c.last_called)h+='<span class="sig">Called '+days(c.last_called)+'d ago</span>';
+  else h+='<span class="sig">Never called</span>';
+  return h;
 }
+// Deal tags look like deal:forge52:candidate - the middle segment is the deal.
+function dealsOf(c){
+  const out=[];
+  String(c.tags||'').split(',').forEach(function(t){
+    const m=t.trim().match(/^deal:([a-z0-9-]+)/i);
+    if(m)out.push(m[1]);
+  });
+  return out;
+}
+function plainTags(c){
+  return String(c.tags||'').split(',').map(function(t){return t.trim();})
+    .filter(function(t){return t&&t.indexOf('deal:')!==0&&t.indexOf('call-list-t')!==0;});
+}
+
 async function boot(){
-sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
-const r0=await sb.auth.getSession();
-if(!r0||!r0.data||!r0.data.session){location.href='/login.html';return;}
-CID=r0.data.session.user.email;
-VVCall.init({customerId:CID,onEnd:function(){loadContacts();}});
-loadContacts();
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+  const r0=await sb.auth.getSession();
+  if(!r0||!r0.data||!r0.data.session){location.href='/login.html';return;}
+  CID=r0.data.session.user.email;
+  if(window.VVCall)VVCall.init({customerId:CID,onEnd:function(){load();}});
+  load();
 }
-async function loadContacts(){
-try{
-const r=await fetch(EP.getContacts,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID})});
-let c=await r.json();if(!Array.isArray(c))c=[c];
-ALL=c.filter(function(x){return x&&x.phone_number&&String(x.phone_number).replace(/[^0-9]/g,'').length>=10;});
-ALL.forEach(function(x){x._t=tier(x);x._s=score(x);});
-ALL.sort(function(a,b){return a._t-b._t||b._s-a._s;});
-render();
-}catch(e){document.getElementById('rows').innerHTML='<tr><td colspan="6" class="empty">Could not load contacts.</td></tr>';}
+
+async function load(){
+  try{
+    const r=await fetch(EP.getContacts,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:CID})});
+    let c=await r.json();if(!Array.isArray(c))c=[c];
+    ALL=c.filter(function(x){return x&&x.phone_number&&String(x.phone_number).replace(/[^0-9]/g,'').length>=10;});
+    ALL.forEach(function(x){x._t=tier(x);x._s=score(x);});
+    ALL.sort(function(a,b){return a._t-b._t||b._s-a._s;});
+    buildDropdowns();
+    render();
+  }catch(e){document.getElementById('rows').innerHTML='<tr><td colspan="7" class="empty">Could not load contacts.</td></tr>';}
 }
-function pass(c){
-if(FILT==='t1')return c._t===1;
-if(FILT==='hot')return !!c.last_clicked_date;
-if(FILT==='opened')return !!c.last_opened_date&&!c.last_clicked_date;
-if(FILT==='never')return !c.last_emailed_date&&!c.last_called;
-if(FILT==='due')return !!c.next_steps;
-return true;
+
+function buildDropdowns(){
+  const dm={},tm={};
+  ALL.forEach(function(c){
+    dealsOf(c).forEach(function(d){dm[d]=(dm[d]||0)+1;});
+    plainTags(c).forEach(function(t){tm[t]=(tm[t]||0)+1;});
+  });
+  const ds=document.getElementById('dealSel');
+  ds.innerHTML='<option value="">All deals</option>'+Object.keys(dm).sort().map(function(d){
+    return '<option value="'+esc(d)+'">'+esc(d)+' ('+dm[d]+')</option>';}).join('');
+  const ts=document.getElementById('tagSel');
+  ts.innerHTML='<option value="">All tags</option>'+Object.keys(tm).sort()
+    .filter(function(t){return tm[t]>1;})
+    .map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+' ('+tm[t]+')</option>';}).join('');
+}
+
+function passSeg(c){
+  if(FILT==='t1')return c._t===1;
+  if(FILT==='hot')return !!c.last_clicked_date;
+  if(FILT==='opened')return !!c.last_opened_date&&!c.last_clicked_date;
+  if(FILT==='never')return !c.last_emailed_date&&!c.last_called;
+  if(FILT==='due')return !!c.next_steps;
+  return true;
+}
+function passRecency(c){
+  if(RC==='any')return true;
+  if(RC==='none')return !c.last_called;
+  if(RC==='callback')return /callback|call back|follow up|call him|call her|call them/i.test(String(c.next_steps||''));
+  const d=days(c.last_called);
+  if(d===null)return true;
+  return d>=parseInt(RC,10);
 }
 function render(){
-const q=(document.getElementById('q').value||'').toLowerCase();
-VIEW=ALL.filter(function(c){return pass(c)&&(!q||String(c.name||'').toLowerCase().indexOf(q)>=0||String(c.company||'').toLowerCase().indexOf(q)>=0);});
-document.getElementById('count').textContent=VIEW.length+' of '+ALL.length+' callable';
-const tb=document.getElementById('rows');
-if(!VIEW.length){tb.innerHTML='<tr><td colspan="7" class="empty">No matches.</td></tr>';return;}
-tb.innerHTML=VIEW.slice(0,200).map(function(c){return '<tr id="r_'+c.id+'">'+
-'<td onclick="event.stopPropagation()"><input type="checkbox" class="selbox" data-id="'+c.id+'"></td>'+
-'<td onclick="pick(\''+c.id+'\')"><span class="tier t'+c._t+'">T'+c._t+'</span></td>'+
-'<td><b>'+esc(c.name||'(no name)')+'</b><br><span class="sig">'+esc(c.title||'')+'</span></td>'+
-'<td>'+esc(c.company||'')+'</td>'+
-'<td><b>'+(num(c.close_probability)||0)+'%</b>'+(c.client_ann_est?'<br><span class="sig">$'+Math.round(num(c.client_ann_est)/1000)+'K</span>':'')+'</td>'+
-'<td>'+sigs(c)+'</td>'+
-'<td class="sig">'+esc(c.phone_number||'')+'</td></tr>';}).join('');
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  VIEW=ALL.filter(function(c){
+    if(!passSeg(c)||!passRecency(c))return false;
+    if(DEAL&&dealsOf(c).indexOf(DEAL)<0)return false;
+    if(TAG&&plainTags(c).indexOf(TAG)<0)return false;
+    if(q&&String(c.name||'').toLowerCase().indexOf(q)<0&&String(c.company||'').toLowerCase().indexOf(q)<0)return false;
+    return true;
+  });
+  document.getElementById('count').textContent=VIEW.length+' of '+ALL.length+' callable';
+  const tb=document.getElementById('rows');
+  if(!VIEW.length){tb.innerHTML='<tr><td colspan="7" class="empty">No matches.</td></tr>';updateSel();return;}
+  tb.innerHTML=VIEW.slice(0,250).map(function(c){
+    return '<tr id="r_'+c.id+'">'+
+    '<td><input type="checkbox" class="cb" data-id="'+c.id+'"'+(PICKED.has(String(c.id))?' checked':'')+'></td>'+
+    '<td class="nm"><span class="tier t'+c._t+'">T'+c._t+'</span></td>'+
+    '<td class="nm"><b>'+esc(c.name||'(no name)')+'</b><br><span class="sig">'+esc(c.title||'')+'</span></td>'+
+    '<td class="nm">'+esc(c.company||'')+'</td>'+
+    '<td class="nm"><b>'+(num(c.close_probability)||0)+'%</b>'+(c.client_ann_est?'<br><span class="sig">$'+Math.round(num(c.client_ann_est)/1000)+'K</span>':'')+'</td>'+
+    '<td class="nm">'+sigs(c)+'</td>'+
+    '<td class="sig nm">'+esc(c.phone_number||'')+'</td></tr>';
+  }).join('');
+  Array.prototype.forEach.call(tb.querySelectorAll('.nm'),function(td){
+    td.addEventListener('click',function(){pick(td.parentNode.id.slice(2));});
+  });
+  Array.prototype.forEach.call(tb.querySelectorAll('.cb'),function(b){
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(b.checked)PICKED.add(b.dataset.id);else PICKED.delete(b.dataset.id);
+      updateSel();
+    });
+  });
+  updateSel();
 }
+function updateSel(){
+  document.getElementById('selCount').textContent=PICKED.size+' selected';
+  const mode=document.querySelector('input[name=cm]:checked').value;
+  document.getElementById('enrollBtn').disabled=(PICKED.size===0||mode==='human');
+}
+
 function pick(id){
-CUR=ALL.filter(function(c){return String(c.id)===String(id);})[0];if(!CUR)return;
-const prev=document.querySelectorAll('tr.sel');for(let i=0;i<prev.length;i++)prev[i].classList.remove('sel');
-const r=document.getElementById('r_'+id);if(r)r.classList.add('sel');
-document.getElementById('pn').textContent=CUR.name||'(no name)';
-document.getElementById('pm').textContent=[CUR.title,CUR.company].filter(Boolean).join(' - ')||' ';
-document.getElementById('pb').innerHTML=
-'<button class="btn call" onclick="VVCall.dial(CUR)">&#9742; Call '+esc(CUR.phone_number||'')+'</button>'+
-(CUR.next_steps?'<div class="sec"><h4>Outstanding Next Step</h4><div class="box">'+esc(CUR.next_steps)+'</div></div>':'')+
-(CUR.conversion_tips?'<div class="sec"><h4>What Works With Them</h4><div class="box">'+esc(CUR.conversion_tips)+'</div></div>':'')+
-(CUR.analysis?'<div class="sec"><h4>Prior Intelligence</h4><div class="box" style="max-height:320px;overflow-y:auto">'+esc(String(CUR.analysis))+'</div></div>':'')+
-(CUR.personal_summary?'<div class="sec"><h4>About Them</h4><div class="box">'+esc(CUR.personal_summary)+'</div></div>':'')+
-(CUR.company_summary?'<div class="sec"><h4>About '+esc(CUR.company||'the company')+'</h4><div class="box">'+esc(CUR.company_summary)+'</div></div>':'');
+  CUR=ALL.filter(function(c){return String(c.id)===String(id);})[0];if(!CUR)return;
+  Array.prototype.forEach.call(document.querySelectorAll('tr.sel'),function(r){r.classList.remove('sel');});
+  const r=document.getElementById('r_'+id);if(r)r.classList.add('sel');
+  document.getElementById('pn').textContent=CUR.name||'(no name)';
+  document.getElementById('pm').textContent=[CUR.title,CUR.company].filter(Boolean).join(' - ')||' ';
+  document.getElementById('pb').innerHTML=
+    '<button class="callbtn" id="cbn">&#9742; Call '+esc(CUR.phone_number||'')+'</button>'+
+    (CUR.next_steps?'<div class="sec"><h4>Outstanding Next Step</h4><div class="box">'+esc(CUR.next_steps)+'</div></div>':'')+
+    (CUR.conversion_tips?'<div class="sec"><h4>What Works With Them</h4><div class="box">'+esc(CUR.conversion_tips)+'</div></div>':'')+
+    (CUR.analysis?'<div class="sec"><h4>Prior Intelligence</h4><div class="box" style="max-height:300px;overflow-y:auto">'+esc(String(CUR.analysis))+'</div></div>':'')+
+    (CUR.personal_summary?'<div class="sec"><h4>About Them</h4><div class="box">'+esc(CUR.personal_summary)+'</div></div>':'')+
+    (CUR.company_summary?'<div class="sec"><h4>About '+esc(CUR.company||'the company')+'</h4><div class="box">'+esc(CUR.company_summary)+'</div></div>':'');
+  document.getElementById('cbn').addEventListener('click',function(){
+    if(window.VVCall)VVCall.dial(CUR);else toast('Calling module not loaded',true);
+  });
 }
+
+async function enroll(){
+  const mode=document.querySelector('input[name=cm]:checked').value;
+  if(mode==='human'){toast('Switch to an AI mode to enroll contacts',true);return;}
+  const ids=Array.from(PICKED);
+  if(!ids.length)return;
+  const picked=ALL.filter(function(c){return ids.indexOf(String(c.id))>=0;});
+  if(!confirm('Enroll '+picked.length+' contact(s) in '+(mode==='ai'?'full AI calls':'AI calls with handoff to you')+'?'))return;
+  const b=document.getElementById('enrollBtn');
+  b.disabled=true;b.textContent='Enrolling...';
+  try{
+    const r=await fetch(EP.enrollAI,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customer_id:CID,mode:mode,
+        contacts:picked.map(function(c){return {id:c.id,name:c.name,company:c.company,title:c.title,
+          phone_number:c.phone_number,next_steps:c.next_steps,conversion_tips:c.conversion_tips,
+          close_probability:c.close_probability,tags:c.tags};})})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json().catch(function(){return {};});
+    toast('Enrolled '+picked.length+' contact(s)'+(d.queued?' - '+d.queued+' queued':''));
+    PICKED.clear();render();
+  }catch(e){toast('Enrollment failed: '+e.message,true);}
+  finally{b.textContent='Enroll in AI calls';updateSel();}
+}
+
 document.addEventListener('DOMContentLoaded',function(){
-document.getElementById('q').addEventListener('input',render);
-const chips=document.querySelectorAll('.chip[data-f]');
-for(let i=0;i<chips.length;i++){
-chips[i].addEventListener('click',function(){
-const all=document.querySelectorAll('.chip');
-for(let j=0;j<all.length;j++)all[j].classList.remove('on');
-this.classList.add('on');FILT=this.getAttribute('data-f');render();
-});
-}
-boot();
+  document.getElementById('q').addEventListener('input',render);
+  Array.prototype.forEach.call(document.querySelectorAll('.chip.f'),function(b){
+    b.addEventListener('click',function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.chip.f'),function(x){x.classList.remove('on');});
+      b.classList.add('on');FILT=b.dataset.f;render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.chip.rc'),function(b){
+    b.addEventListener('click',function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.chip.rc'),function(x){x.classList.remove('on');});
+      b.classList.add('on');RC=b.dataset.rc;render();
+    });
+  });
+  document.getElementById('dealSel').addEventListener('change',function(){DEAL=this.value;render();});
+  document.getElementById('tagSel').addEventListener('change',function(){TAG=this.value;render();});
+  document.getElementById('selAll').addEventListener('change',function(){
+    const on=this.checked;
+    VIEW.slice(0,250).forEach(function(c){if(on)PICKED.add(String(c.id));else PICKED.delete(String(c.id));});
+    render();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=cm]'),function(r){
+    r.addEventListener('change',updateSel);
+  });
+  document.getElementById('enrollBtn').addEventListener('click',enroll);
+  boot();
 });
 </script>
 </body>
