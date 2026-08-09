@@ -2980,14 +2980,8 @@ function showContactDetails(contactId, event) {
   modalTitle.textContent = contact.name || 'Contact Details';
   
   modalBody.innerHTML = `
-    <div class="contact-details">
-      ${Object.entries(contact).map(([key, value]) => {
-        if (!value || key === 'id' || key === 'contact_id' || value === 'null' || value === '') return '';
-      if (key === 'customer_journey') return '';
-        const label = availableColumns[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        return renderDetailField(label, value, key === 'linkedin' || key === 'email');
-      }).join('')}
-       ${renderJourneyDetailField(contact.customer_journey)}
+    <div class="contact-details-v2">
+      ${renderContactSections(contact)}
     </div>
     
     <div class="modal-actions">
@@ -3001,6 +2995,210 @@ function showContactDetails(contactId, event) {
   `;
   
   modal.style.display = 'block';
+}
+
+/* ══════════════════════════════════════════════
+   CONTACT MODAL v2 — grouped sections instead of a flat grid of ~35
+   identical boxes. Reads journey / deals / plain_tags from contacts_v.
+══════════════════════════════════════════════ */
+
+const CM_SECTIONS = [
+  { key: 'reach',   title: 'Reach',        open: true,
+    fields: ['email','phone_number','linkedin','linkedin_connection','location','address','domain','industry','employee_count','annual_revenue'] },
+  { key: 'intel',   title: 'Intelligence', open: true,
+    fields: ['next_steps','conversion_tips','personal_priorities','company_priorities','personal_summary','company_summary','company_description','analysis','script'] },
+  { key: 'engage',  title: 'Engagement',   open: false,
+    fields: ['last_emailed_date','last_opened_date','last_clicked_date','last_responded','last_called','meeting_date','number_emails_sent','num_emails_opened','num_links_clicked','number_call_attempts','links_clicked','newsletter','newsletter_drip_step'] },
+  { key: 'system',  title: 'System',       open: false,
+    fields: ['cus_id','created','source','type','server_id','li_urn','retargetable','sms_opt_in','counter','campaigns','campaigns_log','scores','enrichment','attribution','newsletter_drip_log','newsletter_drip','newsletter_opted_in_at','newsletter_drip_paused','newsletter_drip_last_sent','logo_url','past_ad','distance_billboard','client_won_date','aiemail','customer_id','conversion_revenue'] }
+];
+
+/* Shown in the header strip, never as a plain field. */
+const CM_HEADER_FIELDS = ['name','first_name','title','company','close_probability','meetings_to_close','client_ann_est'];
+/* Rendered by dedicated blocks. */
+const CM_HANDLED = ['id','contact_id','tags','customer_journey','journey','journey_count','deals','plain_tags'];
+
+function cmEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function cmIsEmpty(v) {
+  if (v === null || v === undefined) return true;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    return t === '' || t === 'null' || t === 'NULL' || t === 'undefined' || t === '[object Object]';
+  }
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === 'object') return Object.keys(v).length === 0;
+  return false;
+}
+
+/* Objects/arrays used to render as "[object Object]" — SCORES was the worst
+   offender. Render them as readable key/value lines or pretty JSON. */
+function cmFormatValue(key, value) {
+  if (typeof value === 'object' && value !== null) {
+    if (Array.isArray(value)) {
+      return '<pre class="cm-json">' + cmEsc(JSON.stringify(value, null, 2)) + '</pre>';
+    }
+    const rows = Object.entries(value)
+      .filter(([, v]) => !cmIsEmpty(v))
+      .map(([k, v]) => '<div class="cm-kv"><span>' + cmEsc(k.replace(/_/g, ' ')) + '</span><b>' +
+        cmEsc(typeof v === 'object' ? JSON.stringify(v) : v) + '</b></div>').join('');
+    return rows || '<pre class="cm-json">' + cmEsc(JSON.stringify(value, null, 2)) + '</pre>';
+  }
+  const s = String(value);
+  if (/^https?:\/\//i.test(s)) {
+    return '<a href="' + cmEsc(s) + '" target="_blank" rel="noopener">' + cmEsc(s.length > 60 ? s.slice(0,60) + '…' : s) + '</a>';
+  }
+  if (key === 'email') return '<a href="mailto:' + cmEsc(s) + '">' + cmEsc(s) + '</a>';
+  if (key === 'phone_number') return '<a href="tel:' + cmEsc(s) + '">' + cmEsc(s) + '</a>';
+  return cmEsc(s).replace(/\n/g, '<br>');
+}
+
+function cmLabel(key) {
+  return (typeof availableColumns !== 'undefined' && availableColumns[key])
+    || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function cmField(contact, key) {
+  const v = contact[key];
+  if (cmIsEmpty(v)) return '';
+  const long = typeof v === 'string' && v.length > 180;
+  return '<div class="cm-field' + (long ? ' cm-wide' : '') + '">' +
+           '<div class="cm-field-label">' + cmEsc(cmLabel(key)) + '</div>' +
+           '<div class="cm-field-value">' + cmFormatValue(key, v) + '</div>' +
+         '</div>';
+}
+
+function cmDealChips(deals) {
+  if (!Array.isArray(deals) || !deals.length) {
+    return '<div class="cm-empty">Not attached to any deal.</div>';
+  }
+  const STAGE_COLOR = {
+    'candidate':'#8a8a8a', 'soft-touch':'#4a7ab5', 'live':'#0a3161',
+    'pitched':'#b5820a', 'soft-circle':'#1e7a4a', 'committed':'#0f5c33',
+    'signed':'#0f5c33', 'closed':'#444', 'declined':'#bb133e', 'no-fit':'#bb133e'
+  };
+  return '<div class="cm-deals">' + deals.map(d => {
+    const c = STAGE_COLOR[d.stage] || '#555';
+    const status = d.deal_status ? '<span class="cm-deal-status">' + cmEsc(d.deal_status) + '</span>' : '';
+    const target = d.target ? '<div class="cm-deal-target">' + cmEsc(d.target) + '</div>' : '';
+    return '<div class="cm-deal">' +
+             '<div class="cm-deal-top">' +
+               '<span class="cm-deal-name">' + cmEsc(d.campaign_name || d.slug) + '</span>' +
+               '<span class="cm-stage" style="background:' + c + '">' + cmEsc(d.stage) + '</span>' +
+               status +
+             '</div>' + target +
+           '</div>';
+  }).join('') + '</div>';
+}
+
+function cmTagChips(tags) {
+  if (!Array.isArray(tags) || !tags.length) return '';
+  return '<div class="cm-tags">' + tags.map(t =>
+    '<span class="cm-tag">' + cmEsc(t) + '</span>').join('') + '</div>';
+}
+
+function cmHeader(contact) {
+  const bits = [contact.title, contact.company].filter(Boolean).map(cmEsc).join(' · ');
+  const cp = contact.close_probability;
+  const metrics = [
+    !cmIsEmpty(cp) ? '<div class="cm-metric"><b>' + cmEsc(cp) + '%</b><span>Close probability</span></div>' : '',
+    !cmIsEmpty(contact.meetings_to_close) ? '<div class="cm-metric"><b>' + cmEsc(contact.meetings_to_close) + '</b><span>Meetings to close</span></div>' : '',
+    !cmIsEmpty(contact.client_ann_est) ? '<div class="cm-metric"><b>$' + cmEsc(Number(contact.client_ann_est).toLocaleString()) + '</b><span>Est. annual value</span></div>' : '',
+    !cmIsEmpty(contact.type) ? '<div class="cm-metric"><b>' + cmEsc(contact.type) + '</b><span>Status</span></div>' : ''
+  ].join('');
+  return '<div class="cm-header">' +
+           '<div class="cm-header-main">' +
+             '<div class="cm-name">' + cmEsc(contact.name || '—') + '</div>' +
+             (bits ? '<div class="cm-sub">' + bits + '</div>' : '') +
+             cmTagChips(contact.plain_tags) +
+           '</div>' +
+           (metrics ? '<div class="cm-metrics">' + metrics + '</div>' : '') +
+         '</div>';
+}
+
+function cmSection(title, inner, open, count) {
+  if (!inner || !inner.trim()) return '';
+  const badge = (count !== undefined && count !== null) ? '<span class="cm-count">' + count + '</span>' : '';
+  return '<details class="cm-section"' + (open ? ' open' : '') + '>' +
+           '<summary>' + cmEsc(title) + badge + '</summary>' +
+           '<div class="cm-section-body">' + inner + '</div>' +
+         '</details>';
+}
+
+function renderContactSections(contact) {
+  const used = new Set([].concat(CM_HEADER_FIELDS, CM_HANDLED));
+  CM_SECTIONS.forEach(s => s.fields.forEach(f => used.add(f)));
+
+  let out = cmHeader(contact);
+
+  out += cmSection('Deals', cmDealChips(contact.deals), true,
+                   Array.isArray(contact.deals) ? contact.deals.length : 0);
+
+  CM_SECTIONS.forEach(s => {
+    const inner = s.fields.map(f => cmField(contact, f)).join('');
+    out += cmSection(s.title, inner ? '<div class="cm-grid">' + inner + '</div>' : '', s.open);
+  });
+
+  // Anything on the row we did not explicitly place, so new columns never vanish.
+  const leftovers = Object.keys(contact)
+    .filter(k => !used.has(k))
+    .map(k => cmField(contact, k)).join('');
+  out += cmSection('Other', leftovers ? '<div class="cm-grid">' + leftovers + '</div>' : '', false);
+
+  out += cmSection('Journey', renderJourneyTimeline(contact.journey), true,
+                   contact.journey_count != null ? contact.journey_count
+                     : (Array.isArray(contact.journey) ? contact.journey.length : 0));
+  return out;
+}
+
+function renderJourneyTimeline(journey) {
+  const events = Array.isArray(journey) ? journey : [];
+  if (!events.length) return '<div class="cm-empty">No touchpoints yet.</div>';
+
+  const ICONS = {
+    email_outbound:'✉️', inbound_email:'📥', email_opened:'👁️', email_clicked:'🔗',
+    sms:'💬', sms_outbound:'💬', call:'📞', call_held:'📞', call_analysed:'🎧',
+    meeting_scheduled:'📅', meeting_held:'📅', page_viewed:'🌐',
+    campaign_enrolled:'🎯', deal_stage_changed:'📈', deal_renamed:'🏷️',
+    deal_mapped:'🏷️', segment_tagged:'🧩', legacy_journey:'📜', legacy_note:'📜',
+    requirement_clarified:'❓', victory:'🏆'
+  };
+  const ACTOR = {
+    platform: { c:'#0a3161', label:'Platform' },
+    contact:  { c:'#bb133e', label:'Contact'  },
+    user:     { c:'#6c757d', label:'You'      }
+  };
+
+  return '<div class="cm-timeline">' + events.map(e => {
+    const a = ACTOR[e.actor] || { c:'#555', label: e.actor || '' };
+    const icon = ICONS[e.type] || '•';
+    let when = '';
+    if (e.ts) {
+      const d = new Date(e.ts);
+      if (!isNaN(d.getTime())) {
+        when = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) +
+               ' · ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      }
+    }
+    const typeLabel = String(e.type || '').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+    const camp = e.campaign ? '<span class="cm-ev-campaign">' + cmEsc(e.campaign) + '</span>' : '';
+    const summary = cmEsc(e.summary || '').replace(/\n/g, '<br>');
+    return '<div class="cm-ev">' +
+             '<div class="cm-ev-icon">' + icon + '</div>' +
+             '<div class="cm-ev-body">' +
+               '<div class="cm-ev-top">' +
+                 '<span class="cm-ev-type" style="color:' + a.c + '">' + cmEsc(typeLabel) + '</span>' +
+                 '<span class="cm-ev-actor" style="border-color:' + a.c + ';color:' + a.c + '">' + cmEsc(a.label) + '</span>' +
+                 camp +
+                 (when ? '<span class="cm-ev-when">' + when + '</span>' : '') +
+               '</div>' +
+               (summary ? '<div class="cm-ev-summary">' + summary + '</div>' : '') +
+             '</div>' +
+           '</div>';
+  }).join('') + '</div>';
 }
 
 function renderDetailField(label, value, isLink = false) {
