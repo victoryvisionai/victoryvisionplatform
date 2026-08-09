@@ -1668,10 +1668,13 @@
         <label>Analysis Focus (optional)</label>
         <textarea id="learnPrompt" placeholder="e.g., 'What made this post perform well?' or leave blank for auto-analysis" style="height: 80px;"></textarea>
       </div>
+      <div class="form-group">
+        <div id="learnResult" style="display:none;"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeLearnModal()">Cancel</button>
-      <button class="btn-primary" onclick="startLearnAnalysis()">🔍 Analyze Post</button>
+      <button class="btn-primary" id="startLearnBtn" onclick="startLearnAnalysis()">🔍 Analyze Post</button>
     </div>
   </div>
 </div>
@@ -1815,6 +1818,19 @@
       <button class="file-browser-close" onclick="closeFileBrowser()">×</button>
     </div>
     <div class="file-browser-body">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:center;padding:0 0 14px 0;margin-bottom:14px;border-bottom:1px solid #e5e5e5;">
+        <input type="text" id="fileBrowserSearch" placeholder="Search files by name or campaign..." oninput="applyFileBrowserFilter()" style="padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+        <select id="fileBrowserType" onchange="applyFileBrowserFilter()" style="padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+          <option value="">All types</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="fileBrowserCampaign" onchange="applyFileBrowserFilter()" style="padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+          <option value="">All campaigns</option>
+        </select>
+        <span id="fileBrowserCount" style="font-size:12px;color:#666;white-space:nowrap;"></span>
+      </div>
       <div class="file-grid" id="fileGrid">
         <!-- Campaign files will be loaded here -->
       </div>
@@ -2570,6 +2586,73 @@ function renderPostList(posts) {
     }
   }
 
+  // ---- Learn: inline feedback helpers ----
+  function learnEscape(s) {
+    return String(s == null ? `` : s).replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`);
+  }
+
+  function renderLearnResult(result) {
+    const box = document.getElementById(`learnResult`);
+    if (!box) return;
+    const learning = learnEscape(result.learning || ``).trim();
+    const bullets = learning
+      ? learning.split(`\n`).filter(l => l.trim()).map(l => `<li>${l.replace(/^[-•*]\s*/, ``)}</li>`).join(``)
+      : `<li>Analysis complete.</li>`;
+    const notes = learnEscape(result.social_notes || ``);
+    const count = result.log_entries ? ` (${result.log_entries} entries logged)` : ``;
+    box.style.display = `block`;
+    box.innerHTML = `
+      <div style="border:1px solid #c3e6cb;background:#f4fbf6;border-radius:6px;padding:14px;">
+        <div style="font-weight:600;color:#0A3161;margin-bottom:8px;">✅ What this post taught us</div>
+        <ul style="margin:0 0 12px 18px;padding:0;line-height:1.5;">${bullets}</ul>
+        <div style="font-size:12px;color:#555;">Appended to your Social Notes${count}.</div>
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-size:12px;color:#0A3161;">View full Social Notes</summary>
+          <pre style="white-space:pre-wrap;font-family:inherit;font-size:12px;background:#fff;border:1px solid #ddd;border-radius:4px;padding:10px;max-height:300px;overflow:auto;margin-top:8px;">${notes}</pre>
+        </details>
+      </div>`;
+  }
+
+  // ---- File browser filtering ----
+  function getFilteredBrowserFiles() {
+    const qEl = document.getElementById(`fileBrowserSearch`);
+    const tEl = document.getElementById(`fileBrowserType`);
+    const cEl = document.getElementById(`fileBrowserCampaign`);
+    const q = (qEl ? qEl.value : ``).trim().toLowerCase();
+    const t = tEl ? tEl.value : ``;
+    const c = cEl ? cEl.value : ``;
+    return (campaignFiles || []).filter(f => {
+      const mime = (f.mime_type || ``).toLowerCase();
+      if (t === `image` && !mime.includes(`image`)) return false;
+      if (t === `video` && !mime.includes(`video`)) return false;
+      if (t === `other` && (mime.includes(`image`) || mime.includes(`video`))) return false;
+      if (c && (f.campaign_name || ``) !== c) return false;
+      if (!q) return true;
+      return [f.name, f.campaign_name, f.description, f.tags]
+        .filter(Boolean).join(` `).toLowerCase().includes(q);
+    });
+  }
+
+  function populateFileBrowserFilters() {
+    const sel = document.getElementById(`fileBrowserCampaign`);
+    if (!sel) return;
+    const current = sel.value;
+    const names = Array.from(new Set((campaignFiles || []).map(f => f.campaign_name).filter(Boolean))).sort();
+    sel.innerHTML = `<option value="">All campaigns</option>` +
+      names.map(n => `<option value="${learnEscape(n)}">${learnEscape(n)}</option>`).join(``);
+    if (current && names.indexOf(current) > -1) sel.value = current;
+  }
+
+  function applyFileBrowserFilter() {
+    const keep = selectedFiles.slice();
+    openFileBrowser();
+    selectedFiles = keep;
+    keep.forEach(function (id) {
+      const card = document.querySelector(`[data-file-id="${id}"]`);
+      if (card) card.classList.add(`selected`);
+    });
+  }
+
   async function startLearnAnalysis() {
     if (!selectedPostForLearn) {
       showStatus('Please select a post first', true);
@@ -2577,7 +2660,15 @@ function renderPostList(posts) {
     }
 
     try {
-      showStatus('Starting AI analysis... (results in 3-8 minutes)', false);
+      showStatus('Analyzing this post…', false);
+      var learnBtn = document.getElementById('startLearnBtn');
+      var learnBtnLabel = learnBtn ? learnBtn.innerHTML : '';
+      var learnBox = document.getElementById('learnResult');
+      if (learnBtn) { learnBtn.innerHTML = '⏳ Analyzing…'; learnBtn.disabled = true; }
+      if (learnBox) {
+        learnBox.style.display = 'block';
+        learnBox.innerHTML = '<div style="border:1px solid #ddd;background:#f8f9fa;border-radius:6px;padding:14px;color:#666;">Reading the post and updating your Social Notes…</div>';
+      }
       
       const prompt = document.getElementById('learnPrompt').value || 
         `Analyze what made this ${selectedPostForLearn.platform} post perform well. Focus on content, timing, platform fit, and engagement drivers.`;
@@ -2594,15 +2685,20 @@ function renderPostList(posts) {
         analysis_prompt: prompt
       });
 
-      if (result.success !== false) {
-        showStatus('Analysis queued! Notes will update in 3-8 minutes', true);
-        closeLearnModal();
+      if (learnBtn) { learnBtn.innerHTML = learnBtnLabel; learnBtn.disabled = false; }
+
+      if (result && result.success !== false && (result.learning || result.social_notes)) {
+        renderLearnResult(result);
+        showStatus('Social Notes updated.', false);
         document.getElementById('learnPrompt').value = '';
       } else {
+        if (learnBox) learnBox.innerHTML = '<div style="border:1px solid #f5c6cb;background:#fdf3f4;border-radius:6px;padding:14px;color:#dc3545;">No analysis came back. Try again.</div>';
         showStatus('Error starting analysis. Try again.', true);
       }
     } catch (error) {
       console.error('Error starting learn analysis:', error);
+      if (typeof learnBtn !== 'undefined' && learnBtn) { learnBtn.innerHTML = learnBtnLabel; learnBtn.disabled = false; }
+      if (typeof learnBox !== 'undefined' && learnBox) { learnBox.innerHTML = '<div style="border:1px solid #f5c6cb;background:#fdf3f4;border-radius:6px;padding:14px;color:#dc3545;">Analysis failed. Try again.</div>'; }
       showStatus('Error: ' + error.message, true);
     }
   }
@@ -3168,16 +3264,21 @@ async function deleteDraft() {
     const modal = document.getElementById('fileBrowserModal');
     const fileGrid = document.getElementById('fileGrid');
     
-    if (campaignFiles.length === 0) {
+    populateFileBrowserFilters();
+    const files = getFilteredBrowserFiles();
+    const fbCount = document.getElementById('fileBrowserCount');
+    if (fbCount) fbCount.textContent = files.length + ' of ' + (campaignFiles || []).length + ' files';
+
+    if (files.length === 0) {
       fileGrid.innerHTML = `
         <div style="text-align: center; padding: 40px; color: #605e5c; grid-column: 1 / -1;">
           <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
-          <div>No files available</div>
+          <div>${(campaignFiles || []).length ? 'No files match this filter' : 'No files available'}</div>
           <div style="font-size: 12px; margin-top: 5px;">Upload files through the Media page first</div>
         </div>
       `;
     } else {
-      fileGrid.innerHTML = campaignFiles.map(file => {
+      fileGrid.innerHTML = files.map(file => {
         const isImage = file.mime_type && file.mime_type.includes('image');
         const isVideo = file.mime_type && file.mime_type.includes('video');
         
