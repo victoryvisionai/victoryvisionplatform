@@ -718,6 +718,9 @@
         <button class="cf-btn" onclick="saveDraft()">💾 Draft</button>
         <button class="cf-btn" onclick="openScheduleModal()">⏰ Schedule</button>
         <button class="cf-btn" onclick="openMediaSelector()">📎 Attach Media</button>
+        <button class="cf-btn" onclick="document.getElementById('desktopFileInput').click()">📁 Upload from Desktop</button>
+        <input type="file" id="desktopFileInput" multiple style="display:none"
+               onchange="uploadDesktopFiles(this.files); this.value='';">
         <button class="cf-btn" onclick="openSignatureModal()">✍️ Signature</button>
         <button class="cf-btn danger" id="composeDeleteBtn" onclick="deleteCurrentDraft()" style="display:none;">🗑 Delete Draft</button>
         <button class="cf-btn" onclick="cancelCompose()" style="margin-left:auto;">✕ Cancel</button>
@@ -869,6 +872,7 @@ const EP = {
   chatMessage:  'https://victoryvision.app.n8n.cloud/webhook/chat/message',
   loadContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
   loadMedia:    'https://victoryvision.app.n8n.cloud/webhook/media/get',
+  uploadMedia:  'https://victoryvision.app.n8n.cloud/webhook/media/upload',
   getUser:      'https://victoryvision.app.n8n.cloud/webhook/user/get',
   saveSignature:'https://victoryvision.app.n8n.cloud/webhook/user/signature',
   aireply:      'https://victoryvision.app.n8n.cloud/webhook/emails/aireply'
@@ -1938,6 +1942,94 @@ function renderMediaGrid() {
     grid.appendChild(card);
   });
 }
+
+/* ══════════════════════════════════════════════
+   DESKTOP UPLOAD — send local files through the existing media/upload
+   webhook (multipart/form-data, binary field "file"), then attach the
+   campaigns_files row it returns. Same shape as a media-library pick, so
+   everything downstream (chips, send payload) works unchanged.
+══════════════════════════════════════════════ */
+const DESKTOP_UPLOAD_MAX_BYTES = 20 * 1024 * 1024; // Gmail caps at 25MB before base64 inflation
+
+function categoryFromMime(mime, ext) {
+  const m = (mime || '').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m.startsWith('video/')) return 'video';
+  if (m.includes('presentation') || ext === 'pptx' || ext === 'ppt') return 'presentation';
+  return 'document';
+}
+
+async function uploadOneDesktopFile(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  fd.append('customer_id', CUSTOMER_ID);
+  fd.append('file_type', categoryFromMime(file.type, ext));
+
+  const r = await fetch(EP.uploadMedia, {
+    method: 'POST',
+    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {},
+    body: fd
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+  const raw = await r.json();
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || !row.URL) throw new Error('upload returned no URL');
+  return row;
+}
+
+async function uploadDesktopFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  const tooBig = files.filter(f => f.size > DESKTOP_UPLOAD_MAX_BYTES);
+  if (tooBig.length) {
+    showToast(`Too large (20MB max): ${tooBig.map(f => f.name).join(', ')}`, true);
+  }
+  const queue = files.filter(f => f.size <= DESKTOP_UPLOAD_MAX_BYTES);
+  if (!queue.length) return;
+
+  showToast(`⏳ Uploading ${queue.length} file(s)…`);
+  let ok = 0;
+  for (const f of queue) {
+    try {
+      const row = await uploadOneDesktopFile(f);
+      if (!attachedFiles.find(a => a.id === row.id)) {
+        row._category = categoryFromMime(row.mime_type, row.file_type);
+        attachedFiles.push(row);
+        ok++;
+      }
+      updateAttachmentChips();
+    } catch (e) {
+      console.error('[uploadDesktopFiles]', f.name, e);
+      showToast(`Failed to upload ${f.name}`, true);
+    }
+  }
+  if (ok) showToast(`📎 ${ok} file(s) attached`);
+}
+
+/* Drag and drop anywhere on the compose form. */
+function initComposeDropzone() {
+  const zone = document.getElementById('composeBody') ? document.getElementById('composeBody').closest('.compose-form') || document.getElementById('composeBody') : null;
+  if (!zone || zone._dropWired) return;
+  zone._dropWired = true;
+  ['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+    e.preventDefault(); e.stopPropagation();
+    zone.style.outline = '2px dashed #0a3161';
+  }));
+  ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation();
+    zone.style.outline = '';
+  }));
+  zone.addEventListener('drop', e => {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      uploadDesktopFiles(e.dataTransfer.files);
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', initComposeDropzone);
 
 function attachSelectedMedia() {
   let added = 0;
