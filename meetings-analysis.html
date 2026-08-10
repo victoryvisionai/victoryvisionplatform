@@ -976,7 +976,7 @@
             </div>
             <div class="detail-block">
               <div class="h">👤 Contact Analysis</div>
-              <div class="b">${contact && contact.analysis ? esc(String(contact.analysis).slice(-1200)) : '<span style="color:#94a3b8;">No contact-side analysis yet.</span>'}
+              <div class="b" style="white-space:pre-wrap; max-height:340px; overflow-y:auto;">${contact && contact.analysis ? esc(String(contact.analysis)) : '<span style="color:#94a3b8;">No contact-side analysis yet.</span>'}
               ${contact ? `<div style="margin-top:8px; font-size:11px; color:#64748b;">
                 Probability: <b>${esc(contact.close_probability||'unknown')}</b> ·
                 Mtgs to close: <b>${esc(contact.meetings_to_close||'—')}</b> ·
