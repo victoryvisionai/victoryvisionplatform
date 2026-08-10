@@ -1959,6 +1959,53 @@ function categoryFromMime(mime, ext) {
   return 'document';
 }
 
+// Pull a campaigns_files-shaped row out of whatever the webhook returns.
+// n8n may reply with the row, an array of rows, a {data:[...]} wrapper, or —
+// when the webhook responds on receipt rather than from the Respond node —
+// an acknowledgement like {"message":"Workflow was started"} with no row at all.
+function extractUploadedRow(raw) {
+  const candidates = [];
+  const walk = (v, depth) => {
+    if (!v || depth > 3) return;
+    if (Array.isArray(v)) { v.forEach(x => walk(x, depth + 1)); return; }
+    if (typeof v !== 'object') return;
+    if (v.URL || v.url || v.secure_url || v.source_URL) candidates.push(v);
+    ['data', 'json', 'body', 'result', 'row'].forEach(k => { if (v[k]) walk(v[k], depth + 1); });
+  };
+  walk(raw, 0);
+  if (!candidates.length) return null;
+  const row = candidates[0];
+  row.URL = row.URL || row.url || row.secure_url || row.source_URL;
+  return row;
+}
+
+// Fallback when the upload response carries no row: the workflow still created
+// it, so look it up in the media library by filename.
+async function findUploadedRowByName(originalName) {
+  const stem = String(originalName).replace(/\.[^.]+$/, '').toLowerCase();
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await new Promise(res => setTimeout(res, 2500));
+    try {
+      const r = await fetch(EP.loadMedia, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: CUSTOMER_ID })
+      });
+      if (!r.ok) continue;
+      const rows = await r.json();
+      const list = Array.isArray(rows) ? rows : (rows && rows.data) || [];
+      const hit = list
+        .filter(f => f && (f.URL || f.url))
+        .find(f => {
+          const n = String(f.name || '').toLowerCase();
+          return n === stem || n.includes(stem.slice(0, 24)) || stem.includes(n.slice(0, 24));
+        });
+      if (hit) { hit.URL = hit.URL || hit.url; return hit; }
+    } catch (e) { /* keep polling */ }
+  }
+  return null;
+}
+
 async function uploadOneDesktopFile(file) {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   const fd = new FormData();
@@ -1973,9 +2020,23 @@ async function uploadOneDesktopFile(file) {
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-  const raw = await r.json();
-  const row = Array.isArray(raw) ? raw[0] : raw;
-  if (!row || !row.URL) throw new Error('upload returned no URL');
+  const text = await r.text();
+  let raw = null;
+  try { raw = text ? JSON.parse(text) : null; } catch (e) {
+    console.warn('[uploadOneDesktopFile] non-JSON response:', text.slice(0, 400));
+  }
+
+  let row = extractUploadedRow(raw);
+  if (!row) {
+    console.warn('[uploadOneDesktopFile] no row in response, polling media library. Raw:',
+      (text || '').slice(0, 400));
+    row = await findUploadedRowByName(file.name);
+  }
+  if (!row) throw new Error('upload finished but the file did not appear in your media library');
+
+  // Keep the original filename so the recipient sees it, not the Cloudinary id.
+  if (!row.name || /^[a-z0-9]{16,}$/i.test(String(row.name))) row.name = file.name;
+  if (!/\.[a-z0-9]{2,5}$/i.test(row.name) && ext) row.name = row.name + '.' + ext;
   return row;
 }
 
