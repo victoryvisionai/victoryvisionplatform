@@ -271,8 +271,15 @@
     }
 
     /* ── AI Live Coach Panel (host-only) ───────────────────────── */
+    .video-stage { position: relative; }
+    .video-stage:fullscreen,
+    .video-stage:-webkit-full-screen { background: #000; width: 100vw; height: 100vh; }
+    .video-stage:fullscreen #videoContainer,
+    .video-stage:-webkit-full-screen #videoContainer { width: 100%; height: 100%; }
+    .coach-panel.dragging { user-select: none; }
+    .coach-header { cursor: move; }
     .coach-panel {
-      position: fixed;
+      position: absolute;
       top: 80px;
       right: 16px;
       width: 300px;
@@ -433,7 +440,10 @@
       <button id="backBtn" class="back-btn">Back to Email Entry</button>
     </div>
 
-    <!-- Video Container -->
+    <!-- Video Container. Wrapper exists so fullscreen applies to video + coach
+         panel together. Requesting fullscreen on the Daily iframe alone hides
+         every sibling element, which is why the coach panel disappeared. -->
+    <div id="videoStage" class="video-stage">
     <div id="videoContainer" class="video-container">
       <div id="dailyContainer" style="width: 100%; height: 100%;"></div>
     </div>
@@ -448,10 +458,12 @@
       <div class="coach-tips" id="coachTips"></div>
       <div class="coach-privacy">Only you see these. Tips are generated from the live transcript.</div>
     </div>
+    </div>
   </div>
 
   <!-- Meeting Controls -->
   <div id="meetingControls" class="meeting-controls">
+    <button id="maximizeBtn" class="control-btn" onclick="toggleStageFullscreen()">Maximize</button>
     <button id="muteBtn" class="control-btn">Mute</button>
     <button id="videoBtn" class="control-btn">Video</button>
     <button id="leaveBtn" class="control-btn danger">Leave Meeting</button>
@@ -754,7 +766,7 @@ async function joinMeeting(invite) {
     // Initialize Daily.co call frame
     callFrame = DailyIframe.createFrame(dailyContainer, {
       showLeaveButton: false,
-      showFullscreenButton: true,
+      showFullscreenButton: false, // replaced by our own control so the coach panel survives fullscreen
       showLocalVideo: true,
       showParticipantsBar: true,
     });
@@ -776,6 +788,7 @@ async function joinMeeting(invite) {
     // error in the panel rather than silently failing inside Daily.
     if (isHost) {
       startCoach(invite, { hostToken, contactEmail });
+      initCoachDrag();
 
       // Start cloud recording (owner-only) so meetingsTranscript has a recording to fetch
       // post-meeting. enable_recording:'cloud' on the room only enables the capability —
@@ -801,6 +814,102 @@ async function joinMeeting(invite) {
     meetingsList.style.display = 'block';
   }
 }
+
+/* ══════════════════════════════════════════════
+   FULLSCREEN + DRAGGABLE COACH PANEL
+   Daily's own fullscreen button puts the cross-origin iframe into fullscreen,
+   which hides every sibling in the document — the coach panel included, and no
+   z-index can beat that. Instead we fullscreen the wrapper that holds both.
+══════════════════════════════════════════════ */
+function toggleStageFullscreen() {
+  const stage = document.getElementById('videoStage');
+  const btn = document.getElementById('maximizeBtn');
+  if (!stage) return;
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fsEl) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
+  }
+  if (btn) btn.textContent = fsEl ? 'Maximize' : 'Exit Full Screen';
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('maximizeBtn');
+  const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (btn) btn.textContent = on ? 'Exit Full Screen' : 'Maximize';
+  // Keep the panel inside the viewport when the stage size changes.
+  clampCoachPanel();
+});
+
+function clampCoachPanel() {
+  const panel = document.getElementById('coachPanel');
+  const stage = document.getElementById('videoStage');
+  if (!panel || !stage || panel.style.display === 'none') return;
+  const s = stage.getBoundingClientRect();
+  const p = panel.getBoundingClientRect();
+  if (!p.width) return;
+  let left = p.left - s.left;
+  let top  = p.top  - s.top;
+  left = Math.max(0, Math.min(left, s.width  - p.width));
+  top  = Math.max(0, Math.min(top,  s.height - p.height));
+  panel.style.left = left + 'px';
+  panel.style.top = top + 'px';
+  panel.style.right = 'auto';
+}
+
+function initCoachDrag() {
+  const panel = document.getElementById('coachPanel');
+  if (!panel || panel._dragWired) return;
+  const header = panel.querySelector('.coach-header');
+  if (!header) return;
+  panel._dragWired = true;
+
+  let startX = 0, startY = 0, baseLeft = 0, baseTop = 0, dragging = false;
+
+  header.addEventListener('pointerdown', (e) => {
+    // Let the hide button work normally.
+    if (e.target.closest('.coach-toggle')) return;
+    const stage = document.getElementById('videoStage');
+    const s = stage.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
+    baseLeft = p.left - s.left;
+    baseTop  = p.top  - s.top;
+    panel.style.left = baseLeft + 'px';
+    panel.style.top = baseTop + 'px';
+    panel.style.right = 'auto';
+    startX = e.clientX; startY = e.clientY;
+    dragging = true;
+    panel.classList.add('dragging');
+    header.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  header.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const stage = document.getElementById('videoStage');
+    const s = stage.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
+    let left = baseLeft + (e.clientX - startX);
+    let top  = baseTop  + (e.clientY - startY);
+    left = Math.max(0, Math.min(left, s.width  - p.width));
+    top  = Math.max(0, Math.min(top,  s.height - p.height));
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+  });
+
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove('dragging');
+    try { header.releasePointerCapture(e.pointerId); } catch (err) {}
+  };
+  header.addEventListener('pointerup', stop);
+  header.addEventListener('pointercancel', stop);
+}
+
+window.addEventListener('resize', clampCoachPanel);
+document.addEventListener('DOMContentLoaded', initCoachDrag);
 
 /* ══════════════════════════════════════════════
    AI LIVE COACH (host-only)
