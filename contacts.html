@@ -3132,7 +3132,42 @@ function cmIsEmpty(v) {
 
 /* Objects/arrays used to render as "[object Object]" — SCORES was the worst
    offender. Render them as readable key/value lines or pretty JSON. */
+/* Dates arrive in three shapes: 2026-05-20, 2026-07-18T19:15:37+00:00 and
+   2026-07-15 00:00:00+00. Render them all as August 10, 2026 9:55 AM,
+   dropping the time when the source had none. */
+const CM_DATE_KEYS = /(_at|_date|date|created|responded|opened|clicked|emailed|called|won|updated|meeting)$/i;
+
+function cmFormatDate(value) {
+  const s = String(value).trim();
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const midnight = /^\d{4}-\d{2}-\d{2}[T ]00:00:00/.test(s);
+  const d = new Date(dateOnly ? s + 'T12:00:00' : s);
+  if (isNaN(d.getTime())) return null;
+  const datePart = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  if (dateOnly || midnight) return datePart;
+  const timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return datePart + ' ' + timePart;
+}
+
+function cmLooksLikeDate(key, value) {
+  if (typeof value !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}([T ]|$)/.test(value.trim())) return false;
+  return CM_DATE_KEYS.test(key) || /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}|$)/.test(value.trim());
+}
+
 function cmFormatValue(key, value) {
+  if (cmLooksLikeDate(key, value)) {
+    const pretty = cmFormatDate(value);
+    if (pretty) return cmEsc(pretty);
+  }
+  // An image URL sitting in a text field renders as a thumbnail, not a raw link.
+  if (typeof value === 'string' && /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(value.trim())) {
+    return '<img src="' + cmEsc(value.trim()) + '" alt="" style="max-height:48px;max-width:160px;border-radius:4px;border:1px solid #e2e8f0;">';
+  }
+  return cmFormatValueRaw(key, value);
+}
+
+function cmFormatValueRaw(key, value) {
   if (typeof value === 'object' && value !== null) {
     if (Array.isArray(value)) {
       return '<pre class="cm-json">' + cmEsc(JSON.stringify(value, null, 2)) + '</pre>';
