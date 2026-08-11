@@ -144,7 +144,24 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function num(v){const n=parseFloat(String(v==null?'':v).replace('%',''));return isFinite(n)?n:0;}
 function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
 
+function excluded(c){
+  const tg=String(c.tags||'');
+  if(/do-not-call/.test(tg))return 'Do not call';
+  const hold=tg.match(/hold-until:(\d{4}-\d{2}-\d{2})/);
+  if(hold&&new Date(hold[1])>new Date())return 'On hold until '+hold[1];
+  if(!c.phone_number)return 'No phone number';
+  if(c.meeting_date){
+    const d=days(c.meeting_date);
+    if(d===null||d<0)return 'Meeting booked';
+    if(d<14)return 'Met '+d+'d ago';
+  }
+  const lc=days(c.last_called);
+  if(lc!==null&&lc<3)return 'Called '+lc+'d ago';
+  return null;
+}
+
 function tier(c){
+  if(excluded(c))return 9;
   const t=String(c.tags||'').match(/call-list-t([1-7])/);
   if(t)return Math.min(parseInt(t[1],10),4);
   const p=num(c.close_probability);
