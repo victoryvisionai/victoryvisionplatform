@@ -1344,18 +1344,28 @@
 
 <div style="margin: 20px 0;">
 <label>Preferred Area Code</label>
-<select id="smsAreaCode" style="width: 100%; padding: 10px;">
-  <option value="628">628 - San Francisco</option>
-  <option value="929">929 - New York</option>
-  <option value="424">424 - Los Angeles</option>
-  <option value="872">872 - Chicago</option>
-  <option value="832">832 - Houston</option>
-  <option value="678">678 - Atlanta</option>
-  <option value="857">857 - Boston</option>
-  <option value="253">253 - Seattle</option>
-  <option value="720">720 - Denver</option>
-  <option value="725">725 - Las Vegas</option>
-</select>
+<div style="font-size:11px;color:#666;margin-bottom:6px;">
+  Enter up to three in order of preference. We try the first, then fall back.
+  A local area code lifts answer rates, so pick codes your prospects recognise.
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+  <div>
+    <input type="text" id="smsAreaCode" inputmode="numeric" pattern="[0-9]{3}" maxlength="3"
+           placeholder="1st choice" oninput="validateAreaCodes()"
+           style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;">
+  </div>
+  <div>
+    <input type="text" id="smsAreaCode2" inputmode="numeric" pattern="[0-9]{3}" maxlength="3"
+           placeholder="2nd choice" oninput="validateAreaCodes()"
+           style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;">
+  </div>
+  <div>
+    <input type="text" id="smsAreaCode3" inputmode="numeric" pattern="[0-9]{3}" maxlength="3"
+           placeholder="3rd choice" oninput="validateAreaCodes()"
+           style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;">
+  </div>
+</div>
+<div id="areaCodeHint" style="font-size:11px;margin-top:6px;min-height:15px;"></div>
 </div>
         <div id="smsSetupProgress" style="display: none;">
   <div class="loading-domains">
@@ -2403,6 +2413,37 @@ function connectCalendly() {
     const email = ((document.getElementById('teamInviteEmail')||{}).value || '');
     const base = first || (email.split('@')[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     hint.textContent = base ? ('Will be assigned: ' + base + '@' + dom + ' (initials added if taken)') : '';
+  }
+
+  // Three ordered area-code choices. Telnyx often has no inventory in a given
+  // code, so a single choice fails outright; fallbacks avoid a dead end.
+  function areaCodeValues() {
+    return ['smsAreaCode', 'smsAreaCode2', 'smsAreaCode3']
+      .map(function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; })
+      .filter(function (v) { return /^[0-9]{3}$/.test(v); });
+  }
+
+  function validateAreaCodes() {
+    const hint = document.getElementById('areaCodeHint');
+    if (!hint) return;
+    const raw = ['smsAreaCode', 'smsAreaCode2', 'smsAreaCode3']
+      .map(function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; })
+      .filter(Boolean);
+    const valid = areaCodeValues();
+    const dupes = valid.length !== new Set(valid).size;
+    if (raw.length && raw.length !== valid.length) {
+      hint.style.color = '#dc3545';
+      hint.textContent = 'Each area code must be exactly 3 digits.';
+    } else if (dupes) {
+      hint.style.color = '#dc3545';
+      hint.textContent = 'Enter three different area codes.';
+    } else if (!valid.length) {
+      hint.style.color = '#666';
+      hint.textContent = 'At least one area code is required.';
+    } else {
+      hint.style.color = '#1e7a4a';
+      hint.textContent = 'Trying in order: ' + valid.join(', ');
+    }
   }
 
   function showTeamsInvite() {
