@@ -161,7 +161,8 @@ function score(c){
   if(c.last_clicked_date){const d=days(c.last_clicked_date);s+=(d!==null&&d<7)?900:400;}
   if(c.last_responded)s+=700;
   if(c.last_opened_date)s+=150;
-  if(c.meeting_date)s+=250;
+  if(excluded(c))s-=100000;            // keep excluded contacts off the top of the list
+  if(c.meeting_date)s-=250;            // a booked meeting is a reason NOT to cold call
   s+=Math.min(num(c.client_ann_est)/1000,500);
   if(c.next_steps)s+=120;
   const la=days(c.last_called);
