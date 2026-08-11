@@ -1016,16 +1016,26 @@
       <div class="modal-content" style="max-width:480px;">
         <div class="modal-header"><h2>👥 Invite Team Member</h2><span class="close" onclick="document.getElementById('teamsInviteModal').style.display='none'">&times;</span></div>
         <div class="modal-body">
-          <p style="color:#666;">Team members share your workspace and credit pool. Gold plan includes up to 5 seats.</p>
-          <label>Email address</label>
-          <input type="email" id="teamInviteEmail" placeholder="colleague@company.com" style="margin:8px 0 4px;">
+          <p style="color:#666;">Team members share your workspace. Credits are tracked per person, not pooled.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div><label>First name</label>
+              <input type="text" id="teamInviteFirst" placeholder="Eric" style="margin:8px 0 4px;width:100%;"></div>
+            <div><label>Last name</label>
+              <input type="text" id="teamInviteLast" placeholder="Lowery" style="margin:8px 0 4px;width:100%;"></div>
+          </div>
+          <label>Personal email (where the invite is sent, and their login)</label>
+          <input type="email" id="teamInviteEmail" placeholder="colleague@icloud.com" style="margin:8px 0 4px;"
+                 oninput="previewTeamAlias()">
+          <label>Company sending address</label>
+          <input type="text" id="teamInviteVvEmail" placeholder="auto" style="margin:8px 0 4px;">
+          <div id="teamAliasHint" style="font-size:11px;color:#666;margin-bottom:6px;"></div>
           <label>Role</label>
           <select id="teamInviteRole" style="width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:4px;">
-            <option value="member">Member (full access)</option>
-            <option value="viewer">Viewer (read-only)</option>
-            <option value="admin">Admin (manage billing)</option>
+            <option value="member">Member — sees only what is assigned to them</option>
+            <option value="owner">Owner — full access</option>
           </select>
           <button onclick="sendTeamInvite()" class="success" style="width:100%;margin-top:12px;">Send Invite</button>
+          <div id="teamInviteResult" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -2382,7 +2392,21 @@ function connectCalendly() {
   }
 
   // ── Teams invite ──────────────────────────────────────────────────────────
+  // firstname@vv_domain, adding last-name initials until unique. Server does the
+  // authoritative allocation; this is only a preview so the owner is not surprised.
+  function previewTeamAlias() {
+    const hint = document.getElementById('teamAliasHint');
+    const dom = (currentUser && currentUser.vv_domain) || '';
+    if (!hint) return;
+    if (!dom) { hint.textContent = 'No sending domain connected — no company address will be assigned.'; return; }
+    const first = ((document.getElementById('teamInviteFirst')||{}).value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const email = ((document.getElementById('teamInviteEmail')||{}).value || '');
+    const base = first || (email.split('@')[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    hint.textContent = base ? ('Will be assigned: ' + base + '@' + dom + ' (initials added if taken)') : '';
+  }
+
   function showTeamsInvite() {
+    setTimeout(previewTeamAlias, 50);
     const plan = (currentUser && currentUser.subscription_plan || 'bronze').toLowerCase();
     if (!['silver','gold','enterprise'].includes(plan)) {
       showStatus('Team invites require Silver or Gold plan.', true);
@@ -2396,7 +2420,28 @@ function connectCalendly() {
     const role  = document.getElementById('teamInviteRole').value;
     if (!email) { showStatus('Please enter an email address.', true); return; }
     try {
-      await apiCall('https://victoryvision.app.n8n.cloud/webhook/user/invite', { invite_email: email, role });
+      const first = (document.getElementById('teamInviteFirst')||{}).value || '';
+      const last  = (document.getElementById('teamInviteLast')||{}).value || '';
+      const vv    = (document.getElementById('teamInviteVvEmail')||{}).value || '';
+      const res = await apiCall('https://victoryvision.app.n8n.cloud/webhook/team/invite', {
+        invite_email: email, role,
+        first_name: first.trim(), last_name: last.trim(),
+        vv_email: vv.trim()
+      });
+      if (res && res.ok === false) { showStatus(res.error || 'Invite failed.', true); return; }
+      if (res && Array.isArray(res.manual_steps)) {
+        showStatus('Invite sent. ' + res.manual_steps.length + ' setup steps remain — see the checklist.', false);
+        const box = document.getElementById('teamInviteResult');
+        if (box) {
+          box.style.display = 'block';
+          box.innerHTML = '<div style="border:1px solid #c3e6cb;background:#f4fbf6;border-radius:6px;padding:12px;margin-top:10px;">'
+            + '<div style="font-weight:600;color:#0A3161;">Invite sent to ' + email + '</div>'
+            + (res.vv_email ? '<div style="font-size:12px;color:#555;margin-top:4px;">Sending address reserved: ' + res.vv_email + '</div>' : '')
+            + '<div style="font-weight:600;margin-top:10px;font-size:12px;">Still to do</div><ol style="margin:6px 0 0 18px;font-size:12px;line-height:1.6;">'
+            + res.manual_steps.map(function(s){ return '<li>' + s + '</li>'; }).join('')
+            + '</ol></div>';
+        }
+      }
       showStatus(`✅ Invite sent to ${email}`, false);
       document.getElementById('teamsInviteModal').style.display = 'none';
       document.getElementById('teamInviteEmail').value = '';
