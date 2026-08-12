@@ -1395,7 +1395,7 @@ const DEALS_LIST_COLUMNS = [
   'deal_id', 'cus_id', 'deal_name', 'campaign_target', 'status', 'goal_description',
   'co_advisor', 'days_active', 'target_close_date', 'created_at', 'last_updated',
   'gross_value_usd', 'pwv_usd', 'take_rate_pct', 'base_close_prob_pct', 'soft_circle_amount_usd',
-  'total_prospects', 'soft_touch_count', 'pitched_count', 'soft_circle_count',
+  'total_prospects', 'not_contacted_count', 'soft_touch_count', 'pitched_count', 'soft_circle_count',
   'committed_count', 'closed_count', 'declined_count', 'no_fit_count', 'broker_dealer',
   'deal_tag_prefix',
   'deal_stage:meta->>deal_stage',
@@ -2110,11 +2110,29 @@ function renderPipeline() {
 
   const grouped = {};
   STAGES.forEach(s => { grouped[s.key] = []; });
+
+  // A contact whose stage key is not among the rendered STAGES - because the key was
+  // never valid, or the stage was deactivated in saved settings - used to be grouped
+  // under a key that renderPipeline never draws a column for, so the card silently
+  // vanished from the board while still sitting on the deal. Fall those contacts back
+  // into Not Contacted, which always exists, rather than inventing an extra column.
+  const hasNotContacted = STAGES.some(s => s.key === 'not-contacted');
+  const fallbackStage = hasNotContacted ? 'not-contacted' : (STAGES[0] && STAGES[0].key);
+  if (fallbackStage && !grouped[fallbackStage]) grouped[fallbackStage] = [];
+
+  const strandedStages = [];
   visibleTargets.forEach(t => {
-    const stage = t._stage || 'not-contacted';
-    if (!grouped[stage]) grouped[stage] = [];
+    let stage = t._stage || 'not-contacted';
+    if (!grouped[stage]) {
+      if (strandedStages.indexOf(stage) === -1) strandedStages.push(stage);
+      if (fallbackStage) { t._stageStranded = stage; stage = fallbackStage; }
+      else { grouped[stage] = []; }
+    }
     grouped[stage].push(t);
   });
+  if (strandedStages.length) {
+    console.warn('Stages not present in STAGES, contacts shown under ' + fallbackStage + ': ' + strandedStages.join(', '));
+  }
 
   // Sort each column by score desc (null at bottom)
   Object.keys(grouped).forEach(stageKey => {
