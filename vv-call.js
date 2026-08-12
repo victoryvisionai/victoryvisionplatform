@@ -100,6 +100,27 @@
       .catch(function (e) { console.warn('VVCall: user load failed', e); });
   }
 
+  // ---------- remote audio ----------
+  // Telnyx resolves remoteElement by id at call time. No page defined
+  // vvcRemoteAudio, so the remote stream was never attached and calls were
+  // silent. Create the element here so every page that loads this gets it.
+  function ensureRemoteAudio() {
+    var el = document.getElementById('vvcRemoteAudio');
+    if (!el) {
+      el = document.createElement('audio');
+      el.id = 'vvcRemoteAudio';
+      el.autoplay = true;
+      el.setAttribute('playsinline', '');
+      el.style.display = 'none';
+      document.body.appendChild(el);
+    }
+    el.muted = false;
+    el.volume = 1;
+    var p = el.play();
+    if (p && p.catch) { p.catch(function () {}); }
+    return el;
+  }
+
   // ---------- telnyx ----------
   function connect() {
     if (client) return Promise.resolve(client);
@@ -290,6 +311,7 @@
             // Stamp the dial time here, not on the active event: if the SDK
             // never emits active, duration stays 0 and the call is never logged.
             startedAt = Date.now();
+            ensureRemoteAudio();
             call = client.newCall({
               destinationNumber: dest,
               callerNumber: from,
