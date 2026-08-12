@@ -1146,14 +1146,45 @@ function renderInsights() {
   }
 }
 
-async function requestNewFeedback() {
-  toast('AI analysis requested — refresh in ~3 minutes', 'info');
+async async function requestNewFeedback() {
+  // Was fire-and-forget at /ai/feedback, which no workflow served - the button
+  // showed a toast and nothing ever regenerated. aifeedback sat unchanged from
+  // 2026-03-31 while claiming zero activity against 165 sent emails.
+  const btns = Array.from(document.querySelectorAll('button'))
+    .filter(b => b.textContent.indexOf('Refresh Analysis') > -1);
+  btns.forEach(b => { b.disabled = true; b.dataset.prev = b.innerHTML; b.innerHTML = '⏳ Analyzing…'; });
+  toast('Rebuilding analysis from live data…', 'info');
   try {
-    fetch(N8N + '/ai/feedback', {
+    const r = await fetch(N8N + '/ai/refresh-analysis', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: CUSTOMER_ID })
-    }).catch(() => {});
-  } catch (e) {}
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, days: windowDays() })
+    });
+    const data = await r.json();
+    if (data && data.success && data.aifeedback) {
+      userAifeedback = data.aifeedback;
+      renderInsights();
+      renderFocusNow();
+      toast('Analysis updated', 'success');
+    } else {
+      toast((data && data.error) || 'Analysis failed. Try again.', 'error');
+    }
+  } catch (e) {
+    console.error('[requestNewFeedback]', e);
+    toast('Analysis failed: ' + e.message, 'error');
+  } finally {
+    btns.forEach(b => { b.disabled = false; if (b.dataset.prev) b.innerHTML = b.dataset.prev; });
+  }
+}
+
+// Days implied by the selected time-window pill, so the analysis matches what
+// the rest of the page is showing.
+function windowDays() {
+  const w = String(typeof timeWindow !== 'undefined' ? timeWindow : '30d');
+  if (w === '24h') return 1;
+  if (w === '7d') return 7;
+  if (w === '90d') return 90;
+  if (w === '1y') return 365;
+  return 30;
 }
 
 // ─── CHAT: ask anything about pipeline ────────────────────
@@ -1605,7 +1636,7 @@ async function sendWeeklyEmail() {
 }
 
 // ─── Auto SDR toggle ───────────────────────────────────
-async function toggleSdr(enabled) {
+async async function toggleSdr(enabled) {
   const { error } = await sb.from('users').update({ aisdr: enabled }).eq('email', CUSTOMER_ID);
   if (error) { toast('Failed: ' + error.message, 'error'); return; }
   toast('Auto SDR ' + (enabled ? 'enabled' : 'disabled'), 'success');
