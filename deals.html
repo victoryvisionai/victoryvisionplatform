@@ -1304,7 +1304,16 @@ function parseAnnEst(val) {
 }
 
 function dealSlug(dealName) {
-  const beforeDash = dealName.split(' - ')[0];
+  // The tag key is authoritative and lives on the deal record as deal_tag_prefix.
+  // Deriving it from the display name silently orphaned every tagged contact whenever
+  // the name contained punctuation - "Bally's" slugified to bally-s while the contact
+  // tags read ballys, and "M&A" became m-a against tags reading ma. Prefer the stored
+  // prefix; only fall back to slugifying the name when a deal has none.
+  const d = (typeof allDeals !== 'undefined' && Array.isArray(allDeals))
+    ? allDeals.find(x => x && x.deal_name === dealName)
+    : null;
+  if (d && d.deal_tag_prefix) return String(d.deal_tag_prefix).replace(/^deal:/, '');
+  const beforeDash = String(dealName || '').split(' - ')[0];
   return beforeDash.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
