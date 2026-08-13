@@ -3085,6 +3085,8 @@ function showContactDetails(contactId, event) {
       <button onclick="createMeetingForContact('${contactId}')" class="success" style="background: #0A3161;">📅 Create Meeting</button>
       <button onclick="createSMSForContact('${contactId}')" class="success" style="background: #ffc107; color: #000;">💬 Send SMS</button>
       <button onclick="makeCallToContact('${contactId}')" class="success" style="background: #dc3545;">📞 Make Call</button>
+      <button onclick="generateDraftForContact('${contactId}')" class="success" style="background: #6f42c1;">📝 AI Draft</button>
+      <button onclick="enrichContactNow('${contactId}')" class="success" style="background: #20c997;">🔍 Enrich</button>
       <button onclick="editContact('${contactId}')" class="success">✏️ Edit Contact</button>
       <button onclick="deleteContact('${contactId}')" class="danger">🗑️ Delete Contact</button>
     </div>
@@ -3113,6 +3115,96 @@ const CM_SECTIONS = [
 const CM_HEADER_FIELDS = ['name','first_name','title','company','close_probability','meetings_to_close','client_ann_est'];
 /* Rendered by dedicated blocks. */
 const CM_HANDLED = ['id','contact_id','tags','customer_journey','journey','journey_count','deals','plain_tags'];
+
+/* ══════════════════════════════════════════════
+   CONTACT ACTIONS — same n8n endpoints deals.html uses, so one workflow
+   serves both pages. /drafts/generate expects customer_id + contact_ids[]
+   plus an optional focus string; the draft lands in Messages > Drafts.
+══════════════════════════════════════════════ */
+const CONTACT_N8N = {
+  generateDrafts: 'https://victoryvision.app.n8n.cloud/webhook/drafts/generate',
+  enrichContact:  'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich'
+};
+
+function contactDealFocus(c) {
+  // Prefer the contact's own next step - it is the most specific instruction
+  // available and is what the operator actually wrote.
+  const ns = (c && c.next_steps || '').trim();
+  if (ns) return 'Follow the next step recorded for this contact: ' + ns.slice(0, 600);
+  const deals = (c && Array.isArray(c.deals)) ? c.deals : [];
+  if (deals.length) {
+    const d = deals[0];
+    return 'Move this contact forward in the "' + (d.campaign_name || d.slug) +
+           '" deal, currently at stage "' + d.stage + '". Orient the message toward the next stage.';
+  }
+  return 'Re-engage this contact with a specific, useful reason to talk. One ask only.';
+}
+
+async function generateDraftForContact(contactId) {
+  const c = (typeof allContacts !== 'undefined' ? allContacts : []).find(x => String(x.id) === String(contactId));
+  if (!c) { showStatus('Contact not found', true); return; }
+  if (!c.email) { showStatus('No email address on this contact', true); return; }
+
+  const btns = Array.from(document.querySelectorAll('.modal-actions button'))
+    .filter(b => b.textContent.indexOf('AI Draft') > -1);
+  btns.forEach(b => { b.disabled = true; b.dataset.prev = b.innerHTML; b.innerHTML = '⏳ Drafting…'; });
+  showStatus('Generating draft…', false);
+
+  try {
+    const deals = Array.isArray(c.deals) ? c.deals : [];
+    const res = await fetch(CONTACT_N8N.generateDrafts, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID,
+        contact_ids: [contactId],
+        deal_focus: contactDealFocus(c),
+        deal_slug: deals.length ? deals[0].slug : null,
+        source: 'contacts.html'
+      })
+    });
+    if (!res.ok) throw new Error('Draft webhook returned ' + res.status);
+    showStatus('Draft created. Check Messages → Drafts.', false);
+  } catch (e) {
+    console.error('[generateDraftForContact]', e);
+    showStatus('Draft generation failed: ' + e.message, true);
+  } finally {
+    btns.forEach(b => { b.disabled = false; if (b.dataset.prev) b.innerHTML = b.dataset.prev; });
+  }
+}
+
+async function enrichContactNow(contactId) {
+  const c = (typeof allContacts !== 'undefined' ? allContacts : []).find(x => String(x.id) === String(contactId));
+  if (!c) { showStatus('Contact not found', true); return; }
+  if (!c.linkedin && !c.email && !c.domain) {
+    showStatus('Needs a LinkedIn URL, email or domain to enrich', true); return;
+  }
+
+  const btns = Array.from(document.querySelectorAll('.modal-actions button'))
+    .filter(b => b.textContent.indexOf('Enrich') > -1);
+  btns.forEach(b => { b.disabled = true; b.dataset.prev = b.innerHTML; b.innerHTML = '⏳ Enriching…'; });
+  showStatus('Enrichment queued…', false);
+
+  try {
+    const res = await fetch(CONTACT_N8N.enrichContact, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID,
+        contact: [{ id: c.id, name: c.name, title: c.title, company: c.company,
+                    linkedin: c.linkedin, email: c.email, domain: c.domain }],
+        source: 'contacts.html'
+      })
+    });
+    if (!res.ok) throw new Error('Enrich webhook returned ' + res.status);
+    showStatus('Enrichment running. Results appear on the record in a minute or two.', false);
+  } catch (e) {
+    console.error('[enrichContactNow]', e);
+    showStatus('Enrichment failed: ' + e.message, true);
+  } finally {
+    btns.forEach(b => { b.disabled = false; if (b.dataset.prev) b.innerHTML = b.dataset.prev; });
+  }
+}
 
 function cmEsc(s) {
   return String(s == null ? '' : s)
