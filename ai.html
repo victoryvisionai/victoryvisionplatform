@@ -1164,6 +1164,7 @@ async function requestNewFeedback() {
       userAifeedback = data.aifeedback;
       renderInsights();
       renderFocusNow();
+  loadSdrReview();
       toast('Analysis updated', 'success');
     } else {
       toast((data && data.error) || 'Analysis failed. Try again.', 'error');
@@ -1178,6 +1179,95 @@ async function requestNewFeedback() {
 
 // Days implied by the selected time-window pill, so the analysis matches what
 // the rest of the page is showing.
+/* ══════════════════════════════════════════════
+   SDR REVIEW — actions the SDR wanted to run but could not, because the
+   contact has no aiemail/aicall permission or the action spends money.
+   Nothing in this queue has been executed.
+══════════════════════════════════════════════ */
+let sdrReviewOpen = false;
+let sdrReviewRows = [];
+
+async function loadSdrReview() {
+  try {
+    const { data: sum } = await sb.from('sdr_review_summary_v')
+      .select('*').eq('customer_id', CUSTOMER_ID).maybeSingle();
+    const pending = (sum && sum.pending) || 0;
+    const card = document.getElementById('sdrReviewCard');
+    if (!card) return;
+    if (!pending) { card.style.display = 'none'; return; }
+
+    card.style.display = '';
+    const badge = document.getElementById('sdrReviewBadge');
+    const sub = document.getElementById('sdrReviewSub');
+    const isNew = (sum && sum.new_24h) || 0;
+    if (isNew > 0) { badge.style.display = ''; badge.textContent = isNew + ' new'; }
+    else { badge.style.display = 'none'; }
+    const parts = [];
+    if (sum.pending_email) parts.push(sum.pending_email + ' email');
+    if (sum.pending_call)  parts.push(sum.pending_call + ' call');
+    if (sum.pending_spend) parts.push(sum.pending_spend + ' spend');
+    sub.textContent = pending + ' awaiting approval' + (parts.length ? ' (' + parts.join(', ') + ')' : '');
+
+    if (sdrReviewOpen) await renderSdrReview();
+  } catch (e) { console.error('[loadSdrReview]', e); }
+}
+
+async function toggleSdrReview() {
+  sdrReviewOpen = !sdrReviewOpen;
+  document.getElementById('sdrReviewCaret').textContent = sdrReviewOpen ? '▾' : '▸';
+  document.getElementById('sdrReviewBody').style.display = sdrReviewOpen ? '' : 'none';
+  if (sdrReviewOpen) await renderSdrReview();
+}
+
+async function renderSdrReview() {
+  const body = document.getElementById('sdrReviewBody');
+  body.innerHTML = '<div style="color:#6c757d;font-size:13px;">Loading…</div>';
+  const { data, error } = await sb.from('sdr_review')
+    .select('*').eq('customer_id', CUSTOMER_ID).eq('status', 'pending')
+    .order('created_at', { ascending: false }).limit(50);
+  if (error) { body.innerHTML = '<div style="color:#dc3545;">' + error.message + '</div>'; return; }
+  sdrReviewRows = data || [];
+  if (!sdrReviewRows.length) { body.innerHTML = '<div style="color:#6c757d;font-size:13px;">Nothing awaiting approval.</div>'; return; }
+
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const COLOR = { email:'#0A3161', call:'#bb133e', sms:'#b5820a', spend:'#6f42c1' };
+
+  body.innerHTML = sdrReviewRows.map(r => `
+    <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="background:${COLOR[r.channel]||'#555'};color:#fff;border-radius:9px;padding:1px 8px;font-size:10px;text-transform:uppercase;font-weight:700;">${esc(r.channel)}</span>
+        <strong style="color:#0A3161;">${esc(r.contact_name || r.contact_email || '(no contact)')}</strong>
+        <span style="color:#8a94a6;font-size:12px;">${esc(r.webhook)}</span>
+        <span style="color:#9aa4b5;font-size:11px;margin-left:auto;">${new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
+      </div>
+      <div style="color:#666;font-size:12px;margin-top:6px;">${esc(r.reason)}</div>
+      ${r.preview ? `<div style="background:#fafbfc;border-left:3px solid #dde3ec;padding:8px 10px;margin-top:8px;font-size:12.5px;white-space:pre-wrap;max-height:160px;overflow:auto;">${esc(r.preview)}</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button onclick="decideSdrReview(${r.id},'approve',false)" class="success" style="font-size:12px;padding:5px 10px;">Approve once</button>
+        <button onclick="decideSdrReview(${r.id},'approve',true)" class="success" style="font-size:12px;padding:5px 10px;background:#1e7a4a;">Approve + always allow</button>
+        <button onclick="decideSdrReview(${r.id},'reject',false)" class="danger" style="font-size:12px;padding:5px 10px;">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+async function decideSdrReview(id, decision, grantPermanent) {
+  try {
+    const fn = decision === 'approve' ? 'approve_sdr_review' : 'reject_sdr_review';
+    const args = decision === 'approve'
+      ? { p_id: id, p_by: CUSTOMER_ID, p_grant_permanent: !!grantPermanent }
+      : { p_id: id, p_by: CUSTOMER_ID };
+    const { error } = await sb.rpc(fn, args);
+    if (error) throw new Error(error.message);
+    toast(decision === 'approve'
+      ? (grantPermanent ? 'Approved. This contact is now AI-enabled for that channel.' : 'Approved for this action only.')
+      : 'Rejected', 'success');
+    await loadSdrReview();
+    await renderSdrReview();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+  }
+}
+
 function windowDays() {
   const w = String(typeof timeWindow !== 'undefined' ? timeWindow : '30d');
   if (w === '24h') return 1;
@@ -1975,6 +2065,7 @@ function renderFocusNow() {
 // ─── Master render ─────────────────────────────────────
 function renderAll() {
   renderFocusNow();
+  loadSdrReview();
   renderStats();
   renderFunnel();
   renderAnalytics();
