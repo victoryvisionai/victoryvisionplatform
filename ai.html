@@ -1636,7 +1636,7 @@ async function sendWeeklyEmail() {
 }
 
 // ─── Auto SDR toggle ───────────────────────────────────
-async async function toggleSdr(enabled) {
+async function toggleSdr(enabled) {
   const { error } = await sb.from('users').update({ aisdr: enabled }).eq('email', CUSTOMER_ID);
   if (error) { toast('Failed: ' + error.message, 'error'); return; }
   toast('Auto SDR ' + (enabled ? 'enabled' : 'disabled'), 'success');
