@@ -229,6 +229,15 @@
     if (logged) return;
     logged = true;
     var dur = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+    // Telnyx stamps every recording with call_session_id and call_leg_id. Sending
+    // them here turns recording-to-call matching into an exact lookup. Without
+    // them the server can only guess from the dialled number and a time window,
+    // which once attached a recording of one call to a different call entirely.
+    var ids = (call && call.telnyxIDs) ? call.telnyxIDs : {};
+    var sessionId = ids.telnyxSessionId || null;
+    var legId     = ids.telnyxLegId || null;
+    var ccId      = ids.telnyxCallControlId || null;
+    console.log('VVCall: telnyx session=' + sessionId + ' leg=' + legId);
     if (!contact || dur <= 0) { console.warn('VVCall: log skipped, duration=' + dur); return; }
     var notesEl = $('vvcNotes');
     console.log('VVCall: logging ' + dur + 's call with ' + (contact.name || 'unknown'));
@@ -242,7 +251,10 @@
         duration_seconds: dur,
         notes: notesEl ? notesEl.value : '',
         transcript: heard,
-        script: script
+        script: script,
+        session_id: sessionId,
+        leg_id: legId,
+        call_control_id: ccId
       })
     }).then(function (r) {
       console.log('VVCall: log status ' + r.status);
