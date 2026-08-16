@@ -835,21 +835,24 @@
    A/B CONSOLIDATION — an A/B test is one page with two variants, not two
    rows. Collapse the B variant into its parent and let the card toggle.
 ══════════════════════════════════════════════ */
-  var abShowVariant = {};   // parentId -> 'A' | 'B'
+  var abExpanded = {};   // parentId -> true when both variants are shown
 
   function groupAbVariants(list) {
     var byId = {};
     list.forEach(function(p) { byId[p.id] = p; });
     var out = [];
     list.forEach(function(p) {
+      // A B variant folds into its parent unless the pair is expanded.
       var parentId = p.ab_parent_id;
-      if (parentId && byId[parentId]) return;        // B folds into its A
+      if (parentId && byId[parentId]) {
+        if (abExpanded[parentId]) {
+          out.push(Object.assign({}, p, { _abIsChild: true, _abParent: byId[parentId] }));
+        }
+        return;
+      }
       var child = list.filter(function(x) { return String(x.ab_parent_id) === String(p.id); })[0];
       if (child) {
-        var shown = abShowVariant[p.id] === 'B' ? child : p;
-        out.push(Object.assign({}, shown, {
-          _abParent: p, _abChild: child, _abShowing: abShowVariant[p.id] || 'A'
-        }));
+        out.push(Object.assign({}, p, { _abParent: p, _abChild: child }));
       } else {
         out.push(p);
       }
@@ -857,25 +860,21 @@
     return out;
   }
 
-  function toggleAbVariant(parentId) {
-    abShowVariant[parentId] = abShowVariant[parentId] === 'B' ? 'A' : 'B';
-    renderPagesGrid();
+  // A/B pair collapses to one row. The + expands to show both variants.
+  function abExpandHtml(page) {
+    if (!page._abChild) return '';
+    var open = !!abExpanded[page._abParent.id];
+    return '<button onclick="event.stopPropagation();toggleAbExpand(' + page._abParent.id + ')" title="Show both A and B" ' +
+           'style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;' +
+           'border:1px solid #c7cfd8;border-radius:3px;background:' + (open ? '#0A3161' : '#fff') + ';' +
+           'color:' + (open ? '#fff' : '#0A3161') + ';font-size:13px;font-weight:700;line-height:1;cursor:pointer;padding:0;">' +
+           (open ? '\u2212' : '+') + '</button>' +
+           '<span style="background:#eef1f6;color:#45516b;border-radius:9px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:6px;">A/B</span>';
   }
 
-  function abToggleHtml(page) {
-    if (!page._abChild) return '';
-    var showing = page._abShowing;
-    var btn = function(v) {
-      var on = showing === v;
-      return '<button onclick="event.stopPropagation();toggleAbVariant(' + page._abParent.id + ')" ' +
-        'style="flex:1;padding:4px 0;border:none;cursor:pointer;font-size:11px;font-weight:700;' +
-        'background:' + (on ? '#0A3161' : '#e9edf2') + ';color:' + (on ? '#fff' : '#5a6472') + ';">' +
-        v + '</button>';
-    };
-    return '<div style="display:flex;border:1px solid #dde2e8;border-radius:5px;overflow:hidden;margin:8px 0;">' +
-             '<span style="padding:4px 8px;font-size:10px;color:#8a94a6;background:#f7f8fa;text-transform:uppercase;letter-spacing:.04em;align-self:center;">A/B</span>' +
-             btn('A') + btn('B') +
-           '</div>';
+  function toggleAbExpand(parentId) {
+    abExpanded[parentId] = !abExpanded[parentId];
+    renderPagesGrid();
   }
 
   function renderPagesGrid() {
@@ -909,7 +908,7 @@
       var n = parseFloat(v);
       return isNaN(n) ? '—' : '$' + n.toLocaleString();
     }
-    filteredPages.forEach(function(page) {
+    groupAbVariants(filteredPages).forEach(function(page) {
       var row = document.createElement('div');
       row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 90px 80px 80px 90px 240px;gap:12px;padding:12px 14px;border-bottom:1px solid #eef0f3;align-items:center;font-size:13px;';
       var typeClass = page.page_type || 'landing';
