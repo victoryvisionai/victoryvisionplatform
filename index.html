@@ -11,6 +11,7 @@
 <meta property="og:url" content="https://www.victoryvision.app"/>
 <meta property="og:type" content="website"/>
 <link rel="canonical" href="https://www.victoryvision.app"/>
+<!-- victoryvisionai.com serves this same file. Canonical always points at victoryvision.app so the two domains do not split ranking signals. -->
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Victory Vision","applicationCategory":"BusinessApplication","description":"AI sales desk for executive search, fund managers, insurance and professional services. Sources, enriches, sequences outreach, books meetings, coaches live calls and analyses outcomes.","url":"https://www.victoryvision.app","offers":{"@type":"Offer","priceCurrency":"USD","price":"1000"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.0","reviewCount":"24"}}
 </script>
@@ -118,7 +119,9 @@ footer a{color:#8FA3BC;text-decoration:none;margin-right:16px}
     <a href="#how">How it works</a>
     <a href="#proof">Proof</a>
     <a href="#pricing">Pricing</a>
+    <a href="https://www.skool.com/elite-ai-finance-8471/about" target="_blank" rel="noopener">Community</a>
   </nav>
+  <a class="btn ghost sm" href="/ai.html" onclick="vvGo('nav_login')" style="margin-right:8px">Log in</a>
   <a class="btn sm" href="https://calendly.com/victoryvision/45-mins" onclick="vvBook('nav')">Book a call</a>
 </div>
 </header>
@@ -130,8 +133,10 @@ footer a{color:#8FA3BC;text-decoration:none;margin-right:16px}
     <h1>Your pipeline should not depend on who felt like prospecting this week.</h1>
     <p class="lede">Victory Vision sources the right people, researches every one of them, runs the outreach, books the meeting, coaches you through the call, then analyses what happened and rewrites the next campaign. One system, closed loop.</p>
     <a class="btn" href="https://calendly.com/victoryvision/45-mins" onclick="vvBook('hero')">Book a 45-minute walkthrough</a>
+    <a class="btn ghost" href="/ai.html" onclick="vvGo('hero_login')" style="margin-left:10px">Log in to the platform</a>
     <a class="btn ghost" href="#how" style="margin-left:10px">See how it works</a>
     <p style="margin-top:18px;font-size:13.5px;color:var(--slate)">Built and run every day inside a live capital markets and insurance practice.</p>
+    <p style="margin-top:10px;font-size:13.5px;color:var(--slate)">Not ready for a demo? Learn the system first in the <a href="https://www.skool.com/elite-ai-finance-8471/about" target="_blank" rel="noopener" onclick="vvGo('hero_skool')" style="color:var(--navy);font-weight:600">Operator&#8217;s Edge AI Growth Lab</a>.</p>
   </div>
   <div class="panel">
     <h4>What the desk does today</h4>
@@ -255,12 +260,21 @@ footer a{color:#8FA3BC;text-decoration:none;margin-right:16px}
     <div>AI sales desk for search, capital markets, insurance and professional services.</div>
   </div>
   <div>
-    <a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="https://calendly.com/victoryvision/45-mins" onclick="vvBook('footer_link')">Book a call</a>
+    <a href="/ai.html" onclick="vvGo('footer_login')">Log in</a><a href="https://www.skool.com/elite-ai-finance-8471/about" target="_blank" rel="noopener" onclick="vvGo('footer_skool')">Operator&#8217;s Edge Community</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="https://calendly.com/victoryvision/45-mins" onclick="vvBook('footer_link')">Book a call</a>
   </div>
 </div>
 </footer>
 
 <script>
+// Non-booking destinations - login and community - are tracked separately so paid
+// media can optimise toward bookings without being polluted by returning users
+// clicking through to the app.
+function vvGo(loc){
+  try{
+    if(typeof gtag==='function'){ gtag('event','navigate',{event_category:'cta',event_label:loc}); }
+  }catch(e){}
+  return true;
+}
 // Fire conversion events on every booking CTA so Google Ads, LinkedIn and Bing
 // all optimise toward booked meetings rather than page views.
 function vvBook(loc){
