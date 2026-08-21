@@ -1467,7 +1467,8 @@
     uploadMedia: 'https://victoryvision.app.n8n.cloud/webhook/media/upload',
     createPresentation: 'https://victoryvision.app.n8n.cloud/webhook/presentations/create',
     getCampaigns: 'https://victoryvision.app.n8n.cloud/webhook/campaigns/get',
-    getContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get'
+    getContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/get',
+    refineVideo: 'https://victoryvision.app.n8n.cloud/webhook/media/video-refine'
   };
   
   let CUSTOMER_ID = null;
@@ -2744,6 +2745,7 @@ card.innerHTML = `
   <button id="saveBtn" onclick="saveFileChanges('${jse(file.id)}')" style="display:none;background:#28a745;">💾 Save</button>
   <button id="cancelBtn" onclick="cancelEdit()" style="display:none;background:#6c757d;">❌ Cancel</button>
   <button onclick="downloadFile('${jse(file.URL)}', '${jse(file.name)}')" style="background:#17a2b8;">📥 Download</button>
+  ${fileType === 'video' ? `<button onclick="refineVideoWithAI('${jse(file.id)}')" style="background:#6f42c1;color:white;">✨ AI Refine for Social</button>` : ''}
   <button onclick="archiveFile('${jse(file.id)}', ${file.archive ? 'true' : 'false'})" style="background:${file.archive ? '#28a745' : '#6c757d'};">
   ${file.archive ? '📤 Unarchive' : '🗄️ Archive'}
 </button>
@@ -2861,6 +2863,24 @@ async function toggleLeadMagnet(fileId, isChecked) {
     showStatus(isChecked ? 'Marked as lead magnet!' : 'Lead magnet removed.');
     applyFilters();
   } catch(e) { showStatus('Error updating lead magnet: ' + e.message, true); }
+}
+
+async function refineVideoWithAI(fileId) {
+  if (!confirm('Have AI watch this video and generate 1-5 social-ready clips (captions + logo, trimmed for conversion) based on your goals, active plans, and past wins? This may take a few minutes.')) return;
+  try {
+    showStatus('\u2728 AI is watching the video and building clips... this can take a few minutes. You can navigate away; new clips will appear in your library when ready.');
+    const result = await apiCall(ENDPOINTS.refineVideo, { file_id: fileId });
+    if (result && result.success !== false) {
+      showStatus('\u2728 AI Refine complete: ' + (result.clips_created || 0) + ' clip(s) created. Refresh to see them.');
+      closeModal();
+      await loadMediaFiles();
+      applyFilters();
+    } else {
+      throw new Error((result && result.message) || 'AI refine did not return success');
+    }
+  } catch (e) {
+    showStatus('Error refining video: ' + e.message, true);
+  }
 }
 
 async function moveToCampaign(fileId) {
@@ -3052,6 +3072,7 @@ document.getElementById('videoForm').addEventListener('submit', async (e) => {
   window.downloadFile = downloadFile;
   window.toggleLeadMagnet = toggleLeadMagnet;
 window.moveToCampaign = moveToCampaign;
+window.refineVideoWithAI = refineVideoWithAI;
 window.archiveFile = archiveFile;
 window.shareWithTeam = shareWithTeam;
   window.startTour = startTour;
