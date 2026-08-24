@@ -2024,25 +2024,22 @@ function renderCampaignMeta() {
   if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch (e) { meta = {}; } }
   if (!meta || typeof meta !== 'object') meta = {};
   const HIDE = new Set(['deal_tag_prefix','created_by','created_for','last_updated','merged_at','merged_into_id','merged_into_slug','workbook_updated','pricing_updated']);
-  const ARRAY_KEYS = new Set(['features','includes','segments']);
-  const keys = Object.keys(meta).filter(k => !HIDE.has(k)).sort();
+  const keys = Object.keys(meta).filter(function(k){ return !HIDE.has(k); }).sort();
   if (!keys.length) { box.innerHTML = ''; return; }
-  const rows = keys.map(k => {
+  const rowsHtml = keys.map(function(k){
     const raw = meta[k];
     const isObj = raw && typeof raw === 'object';
     const display = isObj ? JSON.stringify(raw) : String(raw == null ? '' : raw);
-    const label = k.replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());
-    const isUrl = typeof raw === 'string' && /^https?:\\/\\//.test(raw);
-    return `<div class="campaign-meta-row" style="display:grid;grid-template-columns:200px 1fr auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid #eef1f5;">
-      <div style="font-weight:600;color:#4a5568;font-size:0.85rem;padding-top:6px;">${esc(label)}</div>
-      <div class="campaign-meta-value" data-key="${esc(k)}" style="font-size:0.88rem;color:#1a2230;word-break:break-word;">${isUrl ? `<a href="${esc(raw)}" target="_blank">${esc(raw)}</a>` : esc(display)}</div>
-      <button class="icon-btn" style="font-size:0.75rem;padding:3px 8px;" onclick="editCampaignMetaField('${esc(k)}')">Edit</button>
-    </div>`;
+    const label = k.split('_').map(function(w){ return w ? w[0].toUpperCase() + w.slice(1) : w; }).join(' ');
+    const isUrl = typeof raw === 'string' && (raw.indexOf('http://') === 0 || raw.indexOf('https://') === 0);
+    const valueHtml = isUrl ? ('<a href="' + esc(raw) + '" target="_blank">' + esc(raw) + '</a>') : esc(display);
+    return '<div class="campaign-meta-row" style="display:grid;grid-template-columns:200px 1fr auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid #eef1f5;">' +
+      '<div style="font-weight:600;color:#4a5568;font-size:0.85rem;padding-top:6px;">' + esc(label) + '</div>' +
+      '<div class="campaign-meta-value" style="font-size:0.88rem;color:#1a2230;word-break:break-word;">' + valueHtml + '</div>' +
+      '<button class="icon-btn" style="font-size:0.75rem;padding:3px 8px;" onclick="editCampaignMetaField(' + JSON.stringify(k) + ')">Edit</button>' +
+    '</div>';
   }).join('');
-  box.innerHTML = `<div class="card" style="margin-top:16px;">
-    <div class="section-header"><h2>Campaign Details</h2></div>
-    <div>${rows}</div>
-  </div>`;
+  box.innerHTML = '<div class="card" style="margin-top:16px;"><div class="section-header"><h2>Campaign Details</h2></div><div>' + rowsHtml + '</div></div>';
 }
 
 function editCampaignMetaField(key) {
@@ -2052,16 +2049,17 @@ function editCampaignMetaField(key) {
   const current = meta[key];
   const isObj = current && typeof current === 'object';
   const currentStr = isObj ? JSON.stringify(current) : String(current == null ? '' : current);
-  const next = window.prompt('Edit ' + key.replace(/_/g, ' ') + (isObj ? ' (JSON)' : ''), currentStr);
+  const next = window.prompt('Edit ' + key.split('_').join(' ') + (isObj ? ' (JSON)' : ''), currentStr);
   if (next === null) return;
   let newVal = next;
   if (isObj) { try { newVal = JSON.parse(next); } catch (e) { showStatus('Invalid JSON, not saved', 'error'); return; } }
-  const newMeta = Object.assign({}, meta, {}); newMeta[key] = newVal;
+  const newMeta = Object.assign({}, meta);
+  newMeta[key] = newVal;
   supabaseClient.from('campaigns').update({ meta: newMeta, last_updated: new Date().toISOString() }).eq('id', selectedDeal.deal_id)
-    .then(({ error }) => {
-      if (error) { showStatus('Save failed: ' + error.message, 'error'); return; }
+    .then(function(res){
+      if (res.error) { showStatus('Save failed: ' + res.error.message, 'error'); return; }
       selectedDeal.meta = newMeta;
-      const idx = allDeals.findIndex(d => d.deal_id === selectedDeal.deal_id);
+      const idx = allDeals.findIndex(function(d){ return d.deal_id === selectedDeal.deal_id; });
       if (idx !== -1) allDeals[idx].meta = newMeta;
       showStatus('Saved', 'success');
       renderCampaignMeta();
