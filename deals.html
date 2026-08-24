@@ -1140,6 +1140,73 @@
 <!-- ============================================================ -->
 <!-- ADD CONTACT TO DEAL modal -->
 <!-- ============================================================ -->
+<div class="modal" id="dealEmailModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeDealEmailModal()">&times;</button>
+    <h2 id="dealEmailModalTitle">Email</h2>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:0.85rem;color:#666;">To</label>
+      <input type="text" id="demTo" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;" readonly>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:0.85rem;color:#666;">Subject</label>
+      <input type="text" id="demSubject" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:0.85rem;color:#666;">Body</label>
+      <textarea id="demBody" style="width:100%;min-height:180px;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;font-family:inherit;"></textarea>
+    </div>
+    <div id="demWarmOption" style="display:none;margin-bottom:10px;">
+      <label style="font-size:0.85rem;color:#666;"><input type="checkbox" id="demEnrollWarm"> Also enroll in the warm-outreach sequence instead of sending this one email directly</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-sm btn-secondary" onclick="saveDealEmailDraft()">Save Draft</button>
+      <button class="btn btn-sm btn-primary" onclick="sendDealEmail()">Send</button>
+    </div>
+    <div id="demStatus" style="margin-top:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<div class="modal" id="callTierModal">
+  <div class="modal-content" style="max-width:360px;">
+    <button class="modal-close" onclick="closeCallTierModal()">&times;</button>
+    <h2>Log Call / Set Priority</h2>
+    <p style="font-size:0.9rem;color:#666;">Set this contact's call-list tier (used by the Calls page dialer queue), or jump straight to the dialer.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;">
+      <button class="btn btn-sm" onclick="setCallTier(1)">Tier 1</button>
+      <button class="btn btn-sm" onclick="setCallTier(2)">Tier 2</button>
+      <button class="btn btn-sm" onclick="setCallTier(3)">Tier 3</button>
+    </div>
+    <textarea id="ctmNote" placeholder="Optional note (logs to activity)" style="width:100%;min-height:60px;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;font-family:inherit;"></textarea>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:10px;">
+      <button class="btn btn-sm btn-secondary" onclick="logCallAttemptOnly()">Log Attempt Only</button>
+      <button class="btn btn-sm btn-primary" onclick="goToDialer()">Open in Dialer &rarr;</button>
+    </div>
+    <div id="ctmStatus" style="margin-top:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<div class="modal" id="dealEditContactModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeDealEditContactModal()">&times;</button>
+    <h2>Edit Contact</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div><label style="font-size:0.85rem;color:#666;">Name</label><input type="text" id="decName" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+      <div><label style="font-size:0.85rem;color:#666;">Title</label><input type="text" id="decTitle" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+      <div><label style="font-size:0.85rem;color:#666;">Company</label><input type="text" id="decCompany" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+      <div><label style="font-size:0.85rem;color:#666;">Email</label><input type="text" id="decEmail" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+      <div><label style="font-size:0.85rem;color:#666;">Phone</label><input type="text" id="decPhone" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+      <div><label style="font-size:0.85rem;color:#666;">LinkedIn</label><input type="text" id="decLinkedin" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+    </div>
+    <div style="margin-top:10px;"><label style="font-size:0.85rem;color:#666;">Tags</label><input type="text" id="decTags" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;"></div>
+    <div style="margin-top:10px;"><label style="font-size:0.85rem;color:#666;">Next Steps</label><textarea id="decNextSteps" style="width:100%;min-height:70px;padding:8px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box;font-family:inherit;"></textarea></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+      <button class="btn btn-sm btn-primary" onclick="saveDealEditContact()">Save</button>
+    </div>
+    <div id="decStatus" style="margin-top:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
 <div class="modal" id="addContactModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeAddContactModal()">×</button>
