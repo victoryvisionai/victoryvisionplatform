@@ -2469,6 +2469,13 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
   }
 
   function selectLink(name, url) {
+    try {
+      const u = new URL(url);
+      if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', 'social');
+      if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'organic_social');
+      if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''));
+      url = u.toString();
+    } catch (e) {}
     selectedLink = { name, url };
     document.getElementById('selectedLinkDisplay').textContent = `✓ ${name}`;
     closeLinkModal();
