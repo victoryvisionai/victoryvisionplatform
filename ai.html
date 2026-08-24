@@ -492,6 +492,14 @@
     </div>
   </div>
 
+  <!-- Refresh Priorities -->
+  <div class="card">
+    <h2><span>🎯 Refresh Priorities</span></h2>
+    <p style="color:#666;font-size:0.9rem;margin:4px 0 12px;">Re-analyzes your pipeline, updates call-list tiers on contacts, and logs top actions into your active plan. Runs weekly automatically, or on demand here.</p>
+    <button class="btn btn-primary" id="refreshPriorityBtn" onclick="refreshTopPriorities()">Refresh Top Priorities</button>
+    <div id="refreshPriorityStatus" style="margin-top:8px;font-size:0.85rem;color:#666;"></div>
+  </div>
+
   <!-- Plans -->
   <div class="card">
     <h2>
@@ -1278,6 +1286,31 @@ function windowDays() {
 }
 
 // ─── CHAT: ask anything about pipeline ────────────────────
+async function refreshTopPriorities() {
+  const btn = document.getElementById('refreshPriorityBtn');
+  const status = document.getElementById('refreshPriorityStatus');
+  btn.disabled = true; btn.textContent = 'Refreshing...';
+  status.textContent = 'Analyzing pipeline, this can take 15-30 seconds...';
+  try {
+    const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/ai/refresh-analysis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, days: 30 })
+    });
+    const result = await r.json();
+    if (result.success) {
+      status.textContent = '✅ Priorities refreshed. Reloading insights...';
+      if (typeof loadInsights === 'function') loadInsights();
+      if (typeof loadPlans === 'function') loadPlans();
+    } else {
+      status.textContent = '❌ ' + (result.error || 'Refresh failed');
+    }
+  } catch (e) {
+    status.textContent = '❌ Error: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Refresh Top Priorities';
+  }
+}
+
 function suggestChat(el) {
   document.getElementById('chatInput').value = el.textContent;
   sendChat();
