@@ -2269,12 +2269,30 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
     try {
       showStatus('Loading pages...', false);
       const response = await apiCall(ENDPOINTS.getPages);
-      
-      if (response && response.pages && Array.isArray(response.pages)) {
-        allPages = response.pages;
+
+      // pages/get responds with a BARE ARRAY of page rows. The old code only
+      // accepted a { pages: [...] } envelope, so a perfectly good response was
+      // discarded and the modal always said "No pages found". Accept every
+      // shape the endpoint might return rather than assuming one.
+      let rows = [];
+      if (Array.isArray(response)) rows = response;
+      else if (response && Array.isArray(response.pages)) rows = response.pages;
+      else if (response && Array.isArray(response.data)) rows = response.data;
+      else if (response && Array.isArray(response.rows)) rows = response.rows;
+      else if (response && typeof response === 'object' && response.id) rows = [response];
+
+      // A page with no URL cannot be linked, so do not offer it.
+      allPages = rows.filter(p => p && (p.URL || p.url || p.campaign_URL));
+
+      if (allPages.length) {
         renderLinkList(allPages);
       } else {
-        document.getElementById('linkList').innerHTML = '<div style="padding: 20px; color: #999;">No pages found.</div>';
+        const why = rows.length
+          ? rows.length + ' page(s) returned but none have a URL set.'
+          : 'No pages returned for this account.';
+        document.getElementById('linkList').innerHTML =
+          '<div style="padding:20px;color:#999">' + why + '</div>';
+        console.warn('loadPagesForLinking:', why, response);
       }
     } catch (error) {
       console.error('Error loading pages:', error);
