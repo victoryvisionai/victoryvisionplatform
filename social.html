@@ -2265,9 +2265,7 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
     document.getElementById('linkModal').style.display = 'none';
   }
 
-  async async function loadPagesForLinking() {
-    // Was declared without `async` while using `await`, so this threw a SyntaxError
-    // at parse time and the Attach Page Link modal never populated.
+  async function loadPagesForLinking() {
     try {
       showStatus('Loading pages...', false);
       const response = await apiCall(ENDPOINTS.getPages);
