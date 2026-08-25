@@ -2504,11 +2504,14 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
     const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     try {
       const u = new URL(url);
+      // Keep the tagged link short enough to read in a post. A 36 character
+      // campaign uuid and a utm_term that just repeats utm_source added ~50
+      // characters of noise without adding any signal - the tracker resolves the
+      // campaign from the page row server-side, so the slug is enough here.
       if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', platform);
-      if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'organic_social');
-      if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', campaignId || slugify(pageSlug || name));
-      if (pageId && !u.searchParams.has('utm_content')) u.searchParams.set('utm_content', 'page_' + pageId);
-      if (!u.searchParams.has('utm_term')) u.searchParams.set('utm_term', platform);
+      if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'social');
+      if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', slugify(pageSlug || name));
+      if (pageId && !u.searchParams.has('utm_content')) u.searchParams.set('utm_content', 'p' + pageId);
       url = u.toString();
     } catch (e) {}
     selectedLink = { name, url, page_id: pageId || null, campaign_id: campaignId || null, page_slug: pageSlug || null, platform: platform };
