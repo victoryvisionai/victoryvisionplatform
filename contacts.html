@@ -995,6 +995,21 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
           </div>
         </div>
         <div class="campaign-item">
+          <input type="checkbox" id="campaign_draft" value="draft">
+          <label for="campaign_draft">&#9997;&#65039; Generate Drafts - AI writes one email per contact, saved to Drafts for review. Nothing sends.</label>
+        </div>
+        <div class="campaign-item">
+          <input type="checkbox" id="campaign_deal" value="deal">
+          <label for="campaign_deal">&#128188; Add to a Deal - put these contacts on a deal pipeline</label>
+          <div id="dealPickerWrap" style="display:none; margin:6px 0 0 28px;">
+            <label for="dealSelectInline" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Which deal?</label>
+            <select id="dealSelectInline" style="width:100%;max-width:420px;padding:8px;border:1px solid #dde2e8;border-radius:6px;font-size:13px;">
+              <option value="">&#8212; Loading deals&#8230; &#8212;</option>
+            </select>
+            <div style="font-size:11px;color:#888;margin-top:4px;">Contacts are added at stage Not Contacted and will appear on the deal pipeline immediately.</div>
+          </div>
+        </div>
+        <div class="campaign-item">
           <input type="checkbox" id="campaign_vv" value="vv">
           <label for="campaign_vv">🏆 Victory Vision Campaign - Pick a canned VV campaign to enroll</label>
           <div id="vvCampaignPickerWrap" style="display:none; margin:6px 0 0 28px;">
@@ -4161,6 +4176,50 @@ for (const campaign of selectedCampaigns) {
   // tag each selected contact with the leadmagnet campaign
   for (const c of selectedContactsList) await appendContactCampaignTag(c.contact_id || c.id, 'Lead Magnet');
   continue;
+        case 'draft': {
+          // Drafts are written to the email table for review. Nothing is sent, so
+          // this is the safe default for a first touch on a warm relationship.
+          const ids = selectedContactsList.map(c => c.contact_id || c.id).filter(Boolean);
+          try {
+            const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/drafts/generate', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ customer_id: CUSTOMER_ID, contact_ids: ids })
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            showStatus('Drafting ' + ids.length + ' email(s). Check Messages > Drafts in a moment.', false);
+          } catch (err) {
+            showStatus('Draft generation failed: ' + err.message, true);
+          }
+          continue;
+        }
+        case 'deal': {
+          const dSel = document.getElementById('dealSelectInline');
+          const dOpt = dSel && dSel.selectedOptions && dSel.selectedOptions[0];
+          if (!dOpt || !dOpt.value) {
+            showStatus('Pick a deal from the dropdown first', true);
+            continue;
+          }
+          const prefix = dOpt.getAttribute('data-prefix') || '';
+          if (!prefix) { showStatus('That deal has no tag prefix set', true); continue; }
+          let added = 0, already = 0;
+          for (const c of selectedContactsList) {
+            const cid = c.contact_id || c.id;
+            if (!cid) continue;
+            const existing = String(c.tags || '');
+            if (existing.indexOf(prefix + ':') !== -1) { already++; continue; }
+            const next = existing ? existing + ', ' + prefix + ':not-contacted' : prefix + ':not-contacted';
+            try {
+              const { error } = await supabaseClient.from('contacts')
+                .update({ tags: next }).eq('id', cid).eq('cus_id', CUSTOMER_ID);
+              if (error) throw error;
+              c.tags = next;
+              added++;
+            } catch (err) { console.warn('deal tag failed for ' + cid, err); }
+          }
+          showStatus('Added ' + added + ' contact(s) to ' + (dOpt.textContent || 'the deal') +
+                     (already ? '. ' + already + ' already on it.' : '.'), false);
+          continue;
+        }
         case 'nurture':
           endpoint = ENDPOINTS.enrollNurture;
           break;
@@ -4537,6 +4596,11 @@ function setupEventListeners() {
     var wrap = document.getElementById('newsletterPagePickerWrap');
     wrap.style.display = e.target.checked ? 'block' : 'none';
     if (e.target.checked) loadNewsletterPages();
+  });
+  document.getElementById('campaign_deal').addEventListener('change', function(e) {
+    var wrap = document.getElementById('dealPickerWrap');
+    wrap.style.display = e.target.checked ? 'block' : 'none';
+    if (e.target.checked) loadDealsInline();
   });
   document.getElementById('campaign_vv').addEventListener('change', function(e) {
     var wrap = document.getElementById('vvCampaignPickerWrap');
