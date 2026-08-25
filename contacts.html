@@ -4098,6 +4098,51 @@ function updateSelectedCount() {
 // deals.html reads, which prefers meta.deal_tag_prefix and only falls back to
 // slugifying the name - deriving it from the name alone silently orphaned
 // contacts whenever the name contained punctuation.
+// Priority tiers are stored as call-list-t1/t2/t3 tags on the contact - the same
+// tags calls.html builds its ranked dial list from. Filtering on them here means
+// the top call list and the top email list are the same list, which is the point.
+let activeTier = '';
+function filterByTier(tier) {
+  activeTier = tier || '';
+  document.querySelectorAll('.tier-btn').forEach(function (b) {
+    const on = (b.getAttribute('data-tier') || '') === activeTier;
+    b.style.outline = on ? '3px solid #bb133e' : 'none';
+    b.style.outlineOffset = on ? '1px' : '0';
+  });
+  // Drive it through the existing search box so every other filter still applies
+  // and the visible contact count stays honest.
+  const box = document.getElementById('searchFilter');
+  if (box) {
+    const cur = String(box.value || '');
+    const stripped = cur.replace(/call-list-t[123]/g, '').trim();
+    box.value = activeTier ? (stripped ? stripped + ' ' + activeTier : activeTier) : stripped;
+  }
+  applyFilters();
+  const n = (typeof filteredContacts !== 'undefined' && filteredContacts) ? filteredContacts.length : 0;
+  showStatus(activeTier ? (activeTier.toUpperCase().replace('CALL-LIST-','') + ': ' + n + ' contact(s)')
+                        : ('Showing all ' + n + ' contact(s)'), false);
+}
+
+// Templates live in the enrollment modal as their own workflow. Opening the modal
+// with only that option pre-ticked keeps templates separate from Custom Email
+// without duplicating the whole picker.
+function showTemplatePicker() {
+  if (selectedContacts.size === 0) {
+    showStatus('Select contacts first, then pick a template', true);
+    return;
+  }
+  const tplBox = document.getElementById('campaign_template');
+  if (tplBox) {
+    document.querySelectorAll('#campaignList input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
+    tplBox.checked = true;
+    tplBox.dispatchEvent(new Event('change'));
+    tplBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showStatus('Pick a template below, then Enroll in campaigns', false);
+  } else {
+    showStatus('Templates are not set up on this account yet', true);
+  }
+}
+
 let availableDeals = [];
 async function loadDealsInline() {
   const sel = document.getElementById('dealSelectInline');
