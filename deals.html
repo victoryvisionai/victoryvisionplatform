@@ -3472,6 +3472,18 @@ async function removeFromDeal() {
   selectedDeal = allDeals.find(d => d.deal_id === selectedDealId);
 }
 
+// Opens the current contact in contacts.html. Was exported on window but never
+// defined, so the export line threw a ReferenceError and every window.* assignment
+// after it never ran - which is why Add Contact, the card drag handlers and the
+// quick action buttons were all dead, not just this one.
+function openInContacts() {
+  if (!currentContact || !currentContact.id) {
+    showStatus('No contact selected', 'error');
+    return;
+  }
+  window.open('/contacts.html?contact_id=' + encodeURIComponent(currentContact.id), '_blank', 'noopener');
+}
+
 async function enrichContact() {
   if (!currentContact) return;
   showStatus('Enrichment started', 'info');
