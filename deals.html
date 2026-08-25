@@ -1126,11 +1126,11 @@
     </div>
 
     <div class="contact-actions">
-      <button class="btn btn-sm" onclick="quickEmailContact()" title="Open Gmail compose with this contact">✉️ Email</button>
-      <button class="btn btn-sm" onclick="quickLogCall()" title="Log a call attempt to journey">📞 Log Call</button>
+      <button class="btn btn-sm" onclick="quickEmailContact()" title="Email this contact">✉️ Email</button>
+      <button class="btn btn-sm" onclick="if (currentContact) openCallTierModal(currentContact)" title="Log a call attempt or set priority tier">📞 Log Call</button>
       <button class="btn btn-sm btn-secondary" onclick="enrichContact()">Enrich</button>
       <button class="btn btn-sm btn-secondary" onclick="enrollWarmOutreach()">Warm Outreach</button>
-      <button class="btn btn-sm btn-secondary" onclick="openInContacts()">Edit in Contacts →</button>
+      <button class="btn btn-sm btn-secondary" onclick="if (currentContact) openDealEditContactModal(currentContact)">Edit in Contacts →</button>
       <div style="flex: 1;"></div>
       <button class="btn btn-sm btn-danger" onclick="removeFromDeal()">Mark No-Fit</button>
     </div>
@@ -2818,7 +2818,7 @@ async function submitEnroll() {
 }
 
 async function quickEmailContact() {
-  if (currentContact) await quickEmailFromCard(currentContact.id);
+  if (currentContact) openDealEmailModal(currentContact, false);
 }
 async function quickLogCall() {
   if (currentContact) {
@@ -3508,23 +3508,169 @@ async function enrichContact() {
 }
 
 async function enrollWarmOutreach() {
-  if (!currentContact) return;
-  if (!confirm(`Enroll ${currentContact.name} in the warm-outreach email sequence?`)) return;
-  try {
-    const res = await fetch(N8N_ENDPOINTS.enrollWarmOutreach, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_id: currentContact.id, customer_id: CUSTOMER_ID, deal_slug: dealSlug(selectedDeal.deal_name) })
-    });
-    if (!res.ok) throw new Error('Outreach webhook returned ' + res.status);
-    showStatus('Enrolled in warm outreach', 'success');
-  } catch (e) {
-    showStatus('Enrollment failed: ' + e.message, 'error');
-  }
+  if (currentContact) openDealEmailModal(currentContact, true);
 }
 
-function openInContacts() {
-  window.open('contacts', '_blank');
+let demContact = null;
+function openDealEmailModal(contact, isWarm) {
+  demContact = contact;
+  document.getElementById('dealEmailModalTitle').textContent = isWarm ? 'Warm Outreach' : 'Email';
+  document.getElementById('demTo').value = contact.email || '';
+  document.getElementById('demSubject').value = (selectedDeal ? selectedDeal.deal_name + ' \u2014 ' : '') + 'quick note';
+  document.getElementById('demBody').value = 'Hi ' + (contact.first_name || (contact.name || '').split(' ')[0]) + ',\n\n';
+  document.getElementById('demWarmOption').style.display = isWarm ? 'block' : 'none';
+  document.getElementById('demEnrollWarm').checked = isWarm;
+  document.getElementById('demStatus').textContent = '';
+  document.getElementById('dealEmailModal').style.display = 'block';
+}
+function closeDealEmailModal() { document.getElementById('dealEmailModal').style.display = 'none'; demContact = null; }
+
+async function logDealEmailJourney(eventType, note) {
+  if (!demContact) return;
+  const slug = dealSlug(selectedDeal.deal_name);
+  const journeyEntry = { ts: new Date().toISOString(), event: eventType, deal: slug, note: note || '' };
+  const newJourney = [...safeJourney(demContact), journeyEntry];
+  await supabaseClient.from('contacts').update({ customer_journey: newJourney }).eq('id', demContact.id);
+}
+
+async function sendDealEmail() {
+  if (!demContact) return;
+  const status = document.getElementById('demStatus');
+  if (document.getElementById('demWarmOption').style.display !== 'none' && document.getElementById('demEnrollWarm').checked) {
+    try {
+      const res = await fetch(N8N_ENDPOINTS.enrollWarmOutreach, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: demContact.id, customer_id: CUSTOMER_ID, deal_slug: dealSlug(selectedDeal.deal_name) })
+      });
+      if (!res.ok) throw new Error('Outreach webhook returned ' + res.status);
+      await logDealEmailJourney('enrolled_warm_outreach', 'Enrolled from Deals page email modal');
+      status.textContent = '\u2705 Enrolled in warm outreach';
+      showStatus('Enrolled in warm outreach', 'success');
+      setTimeout(closeDealEmailModal, 900);
+    } catch (e) { status.textContent = '\u274c ' + e.message; }
+    return;
+  }
+  status.textContent = 'Sending...';
+  try {
+    const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/emails/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID, from: null, to: document.getElementById('demTo').value,
+        subject: document.getElementById('demSubject').value, cc: null, bcc: null,
+        body: document.getElementById('demBody').value, attachments: [], draft: false
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await logDealEmailJourney('email_sent', 'Sent from Deals page email modal');
+    status.textContent = '\u2705 Sent';
+    showStatus('Email sent', 'success');
+    setTimeout(closeDealEmailModal, 900);
+  } catch (e) { status.textContent = '\u274c Failed: ' + e.message; }
+}
+
+async function saveDealEmailDraft() {
+  if (!demContact) return;
+  const status = document.getElementById('demStatus');
+  status.textContent = 'Saving draft...';
+  try {
+    const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/emails/draft', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: CUSTOMER_ID, from: null, to: document.getElementById('demTo').value,
+        subject: document.getElementById('demSubject').value, cc: null, bcc: null,
+        body: document.getElementById('demBody').value, attachments: [], draft: true
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await logDealEmailJourney('email_draft_saved', 'Draft saved from Deals page email modal');
+    status.textContent = '\u2705 Draft saved \u2014 see Messages';
+    setTimeout(closeDealEmailModal, 900);
+  } catch (e) { status.textContent = '\u274c Failed: ' + e.message; }
+}
+
+let ctmContact = null;
+function openCallTierModal(contact) {
+  ctmContact = contact;
+  document.getElementById('ctmNote').value = '';
+  document.getElementById('ctmStatus').textContent = '';
+  document.getElementById('callTierModal').style.display = 'block';
+}
+function closeCallTierModal() { document.getElementById('callTierModal').style.display = 'none'; ctmContact = null; }
+
+async function setCallTier(tier) {
+  if (!ctmContact) return;
+  const status = document.getElementById('ctmStatus');
+  let tags = String(ctmContact.tags || '').replace(/,?\s*call-list-t[1-7]/gi, '').trim();
+  tags = (tags ? tags + ', ' : '') + 'call-list-t' + tier;
+  const { error } = await supabaseClient.from('contacts').update({ tags }).eq('id', ctmContact.id);
+  if (error) { status.textContent = '\u274c ' + error.message; return; }
+  ctmContact.tags = tags;
+  const idx = dealTargets.findIndex(t => t.id === ctmContact.id);
+  if (idx !== -1) dealTargets[idx].tags = tags;
+  status.textContent = '\u2705 Set to Tier ' + tier;
+  showStatus('Call tier set to T' + tier, 'success');
+}
+
+async function logCallAttemptOnly() {
+  if (!ctmContact) return;
+  const note = document.getElementById('ctmNote').value || 'Call logged via Deals page';
+  const slug = dealSlug(selectedDeal.deal_name);
+  const journeyEntry = { ts: new Date().toISOString(), event: 'call_attempted', deal: slug, note };
+  const newJourney = [...safeJourney(ctmContact), journeyEntry];
+  const newAttempts = (ctmContact.number_call_attempts || 0) + 1;
+  const today = new Date().toISOString().split('T')[0];
+  const { error } = await supabaseClient.from('contacts').update({
+    customer_journey: newJourney, number_call_attempts: newAttempts, last_called: today
+  }).eq('id', ctmContact.id);
+  if (error) { document.getElementById('ctmStatus').textContent = '\u274c ' + error.message; return; }
+  showStatus('Call logged', 'success');
+  closeCallTierModal();
+  if (currentContact) openContactModal(currentContact.id);
+}
+
+function goToDialer() {
+  if (!ctmContact) return;
+  window.open('/calls?contact_id=' + encodeURIComponent(ctmContact.id), '_blank');
+}
+
+let decContact = null;
+function openDealEditContactModal(contact) {
+  decContact = contact;
+  document.getElementById('decName').value = contact.name || '';
+  document.getElementById('decTitle').value = contact.title || '';
+  document.getElementById('decCompany').value = contact.company || '';
+  document.getElementById('decEmail').value = contact.email || '';
+  document.getElementById('decPhone').value = contact.phone_number || '';
+  document.getElementById('decLinkedin').value = contact.linkedin || '';
+  document.getElementById('decTags').value = contact.tags || '';
+  document.getElementById('decNextSteps').value = contact.next_steps || '';
+  document.getElementById('decStatus').textContent = '';
+  document.getElementById('dealEditContactModal').style.display = 'block';
+}
+function closeDealEditContactModal() { document.getElementById('dealEditContactModal').style.display = 'none'; decContact = null; }
+
+async function saveDealEditContact() {
+  if (!decContact) return;
+  const status = document.getElementById('decStatus');
+  const patch = {
+    name: document.getElementById('decName').value,
+    title: document.getElementById('decTitle').value,
+    company: document.getElementById('decCompany').value,
+    email: document.getElementById('decEmail').value,
+    phone_number: document.getElementById('decPhone').value,
+    linkedin: document.getElementById('decLinkedin').value,
+    tags: document.getElementById('decTags').value,
+    next_steps: document.getElementById('decNextSteps').value
+  };
+  const { error } = await supabaseClient.from('contacts').update(patch).eq('id', decContact.id);
+  if (error) { status.textContent = '\u274c ' + error.message; return; }
+  Object.assign(decContact, patch);
+  const idx = dealTargets.findIndex(t => t.id === decContact.id);
+  if (idx !== -1) Object.assign(dealTargets[idx], patch);
+  status.textContent = '\u2705 Saved';
+  showStatus('Contact updated', 'success');
+  setTimeout(closeDealEditContactModal, 700);
+  renderTargets();
 }
 
 // ============================================================
