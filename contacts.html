@@ -4108,6 +4108,8 @@ async function loadTemplatesInline() {
   }
 }
 
+// Tier filtering is available by typing call-list-t1 into the search box, which
+// already matches on contact.tags. The dedicated buttons were removed.
 let activeTier = '';
 function filterByTier(tier) {
   activeTier = tier || '';
@@ -4133,22 +4135,6 @@ function filterByTier(tier) {
 // Templates live in the enrollment modal as their own workflow. Opening the modal
 // with only that option pre-ticked keeps templates separate from Custom Email
 // without duplicating the whole picker.
-function showTemplatePicker() {
-  if (selectedContacts.size === 0) {
-    showStatus('Select contacts first, then pick a template', true);
-    return;
-  }
-  const tplBox = document.getElementById('campaign_template');
-  if (tplBox) {
-    document.querySelectorAll('#campaignList input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
-    tplBox.checked = true;
-    tplBox.dispatchEvent(new Event('change'));
-    tplBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    showStatus('Pick a template below, then Enroll in campaigns', false);
-  } else {
-    showStatus('Templates are not set up on this account yet', true);
-  }
-}
 
 let availableDeals = [];
 async function loadDealsInline() {
@@ -4725,11 +4711,6 @@ function setupEventListeners() {
     var wrap = document.getElementById('newsletterPagePickerWrap');
     wrap.style.display = e.target.checked ? 'block' : 'none';
     if (e.target.checked) loadNewsletterPages();
-  });
-  document.getElementById('campaign_template').addEventListener('change', function(e) {
-    var wrap = document.getElementById('templatePickerWrap');
-    wrap.style.display = e.target.checked ? 'block' : 'none';
-    if (e.target.checked) loadTemplatesInline();
   });
   document.getElementById('campaign_deal').addEventListener('change', function(e) {
     var wrap = document.getElementById('dealPickerWrap');
