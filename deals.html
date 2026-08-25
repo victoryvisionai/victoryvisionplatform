@@ -6,6 +6,14 @@
   <meta name="description" content="Manage your placement deals and pipelines."/>
   <meta name="author" content="Victory Vision"/>
   <title>Victory Vision AI - Deals</title>
+  <script>
+  // Build stamp. Without this there is no way to tell from the browser whether a
+  // published row actually reached the CDN, which cost real time chasing a fix
+  // that was already live. Check the console or run VV_BUILD in devtools.
+  window.VV_BUILD = { page: 'deals.html', version: '13', published: '2026-08-25' };
+  console.log('%cdeals.html build 13', 'background:#0A3161;color:#fff;padding:2px 6px;border-radius:3px',
+              '| openInContacts fix included | run VV_BUILD for details');
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
   <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/intro.min.js"></script>
