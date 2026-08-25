@@ -2265,7 +2265,9 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
     document.getElementById('linkModal').style.display = 'none';
   }
 
-  async function loadPagesForLinking() {
+  async async function loadPagesForLinking() {
+    // Was declared without `async` while using `await`, so this threw a SyntaxError
+    // at parse time and the Attach Page Link modal never populated.
     try {
       showStatus('Loading pages...', false);
       const response = await apiCall(ENDPOINTS.getPages);
@@ -2451,7 +2453,7 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
       <div style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;" 
            onmouseover="this.style.background='#f8f9fa'" 
            onmouseout="this.style.background='white'"
-           onclick="selectLink('${(page.name || page.page_name || 'Page ' + (idx + 1)).replace(/'/g, "\\'")}', '${(page.URL || page.campaign_URL || '').replace(/'/g, "\\'")}')"  >
+           onclick="selectLink('${(page.name || page.page_name || 'Page ' + (idx + 1)).replace(/'/g, "\\'")}', '${(page.URL || page.campaign_URL || '').replace(/'/g, "\\'")}', '${page.id || ''}', '${page.campaign_id || ''}', '${page.slug || ''}')"  >
         <strong>${page.name || page.page_name || 'Untitled Page'}</strong>
         <div style="font-size: 11px; color: #999; margin-top: 2px;">${page.URL || page.campaign_URL || 'No URL'}</div>
       </div>
@@ -2468,16 +2470,34 @@ aiPostEnabled = userData.aipost === true || userData.aipost === 'true' || userDa
     renderLinkList(filtered);
   }
 
-  function selectLink(name, url) {
+  function selectLink(name, url, pageId, campaignId, pageSlug) {
+    // UTM is the only way a page view ties back to the post that produced it.
+    // utm_source/medium identify the channel; utm_campaign identifies the campaign
+    // when the page has one, falling back to the page slug; utm_content carries the
+    // page id and utm_term the platform, so the tracker can resolve page, campaign
+    // and social post without guessing from the referrer.
+    const platform = (function () {
+      try {
+        var el = document.getElementById('platformSelect') || document.querySelector('[name="platform"]');
+        if (el && el.value) return String(el.value).toLowerCase();
+        var checked = document.querySelector('input[name="platform"]:checked');
+        if (checked && checked.value) return String(checked.value).toLowerCase();
+      } catch (e) {}
+      return 'social';
+    })();
+    const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     try {
       const u = new URL(url);
-      if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', 'social');
+      if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', platform);
       if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'organic_social');
-      if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''));
+      if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', campaignId || slugify(pageSlug || name));
+      if (pageId && !u.searchParams.has('utm_content')) u.searchParams.set('utm_content', 'page_' + pageId);
+      if (!u.searchParams.has('utm_term')) u.searchParams.set('utm_term', platform);
       url = u.toString();
     } catch (e) {}
-    selectedLink = { name, url };
-    document.getElementById('selectedLinkDisplay').textContent = `✓ ${name}`;
+    selectedLink = { name, url, page_id: pageId || null, campaign_id: campaignId || null, page_slug: pageSlug || null, platform: platform };
+    document.getElementById('selectedLinkDisplay').innerHTML =
+      '✓ ' + name + '<div style="font-size:10px;color:#999;word-break:break-all;margin-top:2px">' + url + '</div>';
     closeLinkModal();
   }
 
