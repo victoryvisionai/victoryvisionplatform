@@ -4111,6 +4111,30 @@ function updateSelectedCount() {
 // Priority tiers are stored as call-list-t1/t2/t3 tags on the contact - the same
 // tags calls.html builds its ranked dial list from. Filtering on them here means
 // the top call list and the top email list are the same list, which is the point.
+let availableTemplates = [];
+async function loadTemplatesInline() {
+  const sel = document.getElementById('templateSelectInline');
+  if (!sel || availableTemplates.length) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('campaigns')
+      .select('id, name, type, status')
+      .eq('customer_id', CUSTOMER_ID)
+      .eq('type', 'template')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    availableTemplates = (data || []).filter(t => t && t.id && String(t.status || '') !== 'archived');
+    sel.innerHTML = availableTemplates.length
+      ? '<option value="">-- Select a template --</option>' +
+        availableTemplates.map(t => '<option value="' + t.id + '">' +
+          String(t.name || 'Untitled').replace(/</g, '&lt;') + '</option>').join('')
+      : '<option value="">No templates found - build one on the Campaigns page</option>';
+  } catch (err) {
+    console.error('loadTemplatesInline failed', err);
+    sel.innerHTML = '<option value="">Could not load templates</option>';
+  }
+}
+
 let activeTier = '';
 function filterByTier(tier) {
   activeTier = tier || '';
@@ -4285,6 +4309,29 @@ for (const campaign of selectedCampaigns) {
   // tag each selected contact with the leadmagnet campaign
   for (const c of selectedContactsList) await appendContactCampaignTag(c.contact_id || c.id, 'Lead Magnet');
   continue;
+        case 'template': {
+          const tSel = document.getElementById('templateSelectInline');
+          const tOpt = tSel && tSel.selectedOptions && tSel.selectedOptions[0];
+          if (!tOpt || !tOpt.value) { showStatus('Pick a template from the dropdown first', true); continue; }
+          try {
+            const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/templates/schedule', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                customer_id: CUSTOMER_ID,
+                template_id: tOpt.value,
+                campaign_name: tOpt.textContent || '',
+                contact_ids: selectedContactsList.map(c => c.contact_id || c.id).filter(Boolean),
+                days_between: parseInt(document.getElementById('daysBetweenEmails')?.value || 3, 10),
+                start_date: new Date().toISOString().slice(0, 10)
+              })
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            showStatus('Scheduled ' + selectedContactsList.length + ' contact(s) on ' + (tOpt.textContent || 'template'), false);
+          } catch (err) {
+            showStatus('Template scheduling failed: ' + err.message, true);
+          }
+          continue;
+        }
         case 'draft': {
           // Drafts are written to the email table for review. Nothing is sent, so
           // this is the safe default for a first touch on a warm relationship.
