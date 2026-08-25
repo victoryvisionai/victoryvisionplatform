@@ -995,16 +995,6 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
           </div>
         </div>
         <div class="campaign-item">
-          <input type="checkbox" id="campaign_template" value="template">
-          <label for="campaign_template">&#128203; Saved Template - A/B drip from a template you built</label>
-          <div id="templatePickerWrap" style="display:none; margin:6px 0 0 28px;">
-            <label for="templateSelectInline" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Which template?</label>
-            <select id="templateSelectInline" style="width:100%;max-width:420px;padding:8px;border:1px solid #dde2e8;border-radius:6px;font-size:13px;">
-              <option value="">&#8212; Loading templates&#8230; &#8212;</option>
-            </select>
-          </div>
-        </div>
-        <div class="campaign-item">
           <input type="checkbox" id="campaign_draft" value="draft">
           <label for="campaign_draft">&#9997;&#65039; Generate Drafts - AI writes one email per contact, saved to Drafts for review. Nothing sends.</label>
         </div>
@@ -1031,15 +1021,10 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
         </div>
       </div>
       
-    <!-- Campaign Buttons -->
-      <div style="display:flex; gap:10px; justify-content:center; margin-top:15px; flex-wrap:wrap;">
-        <button onclick="showCustomCampaignModal()" class="success" style="background: #0A3161;">
-          ✨ Custom Email
-        </button>
-        <button onclick="showTemplatePicker()" class="success" style="background: #4b6a92;">
-          📋 Saved Templates
-        </button>
-      </div>
+    <!-- Campaign Buttons: Custom Email now lives in the bulk action row with the
+         other verbs so the actions are in one place. Saved Templates removed -
+         no campaigns rows of type=template exist, so the picker was always empty
+         and users reach templates through Custom Email instead. -->
     <!-- Column Selector -->
     <div class="column-selector" data-intro="Customize which contact fields are displayed in the table. Show only the information most relevant to your business needs." data-step="4">
       <h4 style="margin: 0 0 10px 0; color: #0A3161;">⚙️ Customize Table Columns</h4>
@@ -1088,19 +1073,6 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
           <option value="">All campaigns</option>
         </select>
       </div>      
-    <div class="form-group" style="min-width:100%;">
-        <label>Priority tier &#8212; same list calls.html works from</label>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
-          <button type="button" class="tier-btn" data-tier="call-list-t1" onclick="filterByTier('call-list-t1')"
-            style="background:#0A3161;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T1 &#8212; call first</button>
-          <button type="button" class="tier-btn" data-tier="call-list-t2" onclick="filterByTier('call-list-t2')"
-            style="background:#4b6a92;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T2</button>
-          <button type="button" class="tier-btn" data-tier="call-list-t3" onclick="filterByTier('call-list-t3')"
-            style="background:#8ea3bf;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T3</button>
-          <button type="button" class="tier-btn" data-tier="" onclick="filterByTier('')"
-            style="background:#e9ecef;color:#444;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">All</button>
-        </div>
-      </div>
     <div class="form-group">
         <label for="tagsFilter">Tags</label>
         <select id="tagsFilter">
@@ -1124,6 +1096,7 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
         <button id="selectAllBtn" class="secondary">Select All</button>
         <button id="deselectAllBtn" class="secondary">Deselect All</button>
         <button id="enrollCampaignsBtn" class="success">📧 Enroll in campaigns</button>
+        <button id="userEmailBtn" class="success" onclick="showCustomCampaignModal()">✉️ User Email</button>
         <button id="enrichContactsBtn" class="success">🔍 Enrich Selected</button>
         <button id="lookAlikeBtn" class="success" style="background: #17a2b8;">🔎 Look Alike</button>
         <button id="massSMSBtn" class="success" style="background: #8B4789;">📱 Mass SMS</button>
