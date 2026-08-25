@@ -4081,6 +4081,47 @@ function updateSelectedCount() {
   document.getElementById('selectAllCheckbox').checked = selectedContacts.size === filteredContacts.length && filteredContacts.length > 0;
 }
 
+// Deals are campaigns rows with type = 'deal'. The tag prefix must match what
+// deals.html reads, which prefers meta.deal_tag_prefix and only falls back to
+// slugifying the name - deriving it from the name alone silently orphaned
+// contacts whenever the name contained punctuation.
+let availableDeals = [];
+async function loadDealsInline() {
+  const sel = document.getElementById('dealSelectInline');
+  if (!sel) return;
+  if (availableDeals.length) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('campaigns')
+      .select('id, name, meta, status')
+      .eq('customer_id', CUSTOMER_ID)
+      .eq('type', 'deal')
+      .order('name', { ascending: true });
+    if (error) throw error;
+
+    availableDeals = (data || []).filter(d => d && d.id && String(d.status || '') !== 'archived');
+
+    if (!availableDeals.length) {
+      sel.innerHTML = '<option value="">No deals found - create one on the Deals page</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">-- Select a deal --</option>' +
+      availableDeals.map(function (d) {
+        let meta = d.meta;
+        if (meta && typeof meta === 'string') { try { meta = JSON.parse(meta); } catch (e) { meta = {}; } }
+        const prefix = (meta && meta.deal_tag_prefix)
+          ? String(meta.deal_tag_prefix)
+          : 'deal:' + String(d.name || '').split(' - ')[0].toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const label = String(d.name || 'Untitled').replace(/</g, '&lt;');
+        return '<option value="' + d.id + '" data-prefix="' + prefix + '">' + label + '</option>';
+      }).join('');
+  } catch (err) {
+    console.error('loadDealsInline failed', err);
+    sel.innerHTML = '<option value="">Could not load deals</option>';
+  }
+}
+
 let availableVVCampaigns = [];
 async function loadVVCampaignsInline() {
   var sel = document.getElementById('vvCampaignSelectInline');
