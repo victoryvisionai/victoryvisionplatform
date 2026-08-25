@@ -995,6 +995,16 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
           </div>
         </div>
         <div class="campaign-item">
+          <input type="checkbox" id="campaign_template" value="template">
+          <label for="campaign_template">&#128203; Saved Template - A/B drip from a template you built</label>
+          <div id="templatePickerWrap" style="display:none; margin:6px 0 0 28px;">
+            <label for="templateSelectInline" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Which template?</label>
+            <select id="templateSelectInline" style="width:100%;max-width:420px;padding:8px;border:1px solid #dde2e8;border-radius:6px;font-size:13px;">
+              <option value="">&#8212; Loading templates&#8230; &#8212;</option>
+            </select>
+          </div>
+        </div>
+        <div class="campaign-item">
           <input type="checkbox" id="campaign_draft" value="draft">
           <label for="campaign_draft">&#9997;&#65039; Generate Drafts - AI writes one email per contact, saved to Drafts for review. Nothing sends.</label>
         </div>
@@ -4695,6 +4705,11 @@ function setupEventListeners() {
     var wrap = document.getElementById('newsletterPagePickerWrap');
     wrap.style.display = e.target.checked ? 'block' : 'none';
     if (e.target.checked) loadNewsletterPages();
+  });
+  document.getElementById('campaign_template').addEventListener('change', function(e) {
+    var wrap = document.getElementById('templatePickerWrap');
+    wrap.style.display = e.target.checked ? 'block' : 'none';
+    if (e.target.checked) loadTemplatesInline();
   });
   document.getElementById('campaign_deal').addEventListener('change', function(e) {
     var wrap = document.getElementById('dealPickerWrap');
