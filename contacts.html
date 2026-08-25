@@ -1024,10 +1024,10 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
     <!-- Campaign Buttons -->
       <div style="display:flex; gap:10px; justify-content:center; margin-top:15px; flex-wrap:wrap;">
         <button onclick="showCustomCampaignModal()" class="success" style="background: #0A3161;">
-          ✨ Create Custom Email Campaign
+          ✨ Custom Email
         </button>
-        <button onclick="showVVCampaignModal()" class="success" style="background: #bb133e;">
-          🏆 Victory Vision Campaigns
+        <button onclick="showTemplatePicker()" class="success" style="background: #4b6a92;">
+          📋 Saved Templates
         </button>
       </div>
     <!-- Column Selector -->
@@ -1078,6 +1078,19 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
           <option value="">All campaigns</option>
         </select>
       </div>      
+    <div class="form-group" style="min-width:100%;">
+        <label>Priority tier &#8212; same list calls.html works from</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
+          <button type="button" class="tier-btn" data-tier="call-list-t1" onclick="filterByTier('call-list-t1')"
+            style="background:#0A3161;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T1 &#8212; call first</button>
+          <button type="button" class="tier-btn" data-tier="call-list-t2" onclick="filterByTier('call-list-t2')"
+            style="background:#4b6a92;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T2</button>
+          <button type="button" class="tier-btn" data-tier="call-list-t3" onclick="filterByTier('call-list-t3')"
+            style="background:#8ea3bf;color:#fff;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">T3</button>
+          <button type="button" class="tier-btn" data-tier="" onclick="filterByTier('')"
+            style="background:#e9ecef;color:#444;border:none;padding:7px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">All</button>
+        </div>
+      </div>
     <div class="form-group">
         <label for="tagsFilter">Tags</label>
         <select id="tagsFilter">
