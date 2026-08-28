@@ -146,7 +146,7 @@ function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).get
 
 function excluded(c){
   const tg=String(c.tags||'');
-  if(/do-not-call/.test(tg))return 'Do not call';
+  if(/do-not-call/.test(tg))return 'Do not call';if(/:declined\b/.test(tg))return 'Declined';if(/(^|,)\s*archived:/.test(tg))return 'Archived';
   const hold=tg.match(/hold-until:(\d{4}-\d{2}-\d{2})/);
   if(hold&&new Date(hold[1])>new Date())return 'On hold until '+hold[1];
   if(!c.phone_number)return 'No phone number';
@@ -166,8 +166,8 @@ function tier(c){
   if(t)return Math.min(parseInt(t[1],10),4);
   const p=num(c.close_probability);
   if(c.last_clicked_date&&p>=50)return 1;
-  if(p>=60||c.last_responded)return 1;
-  if(c.last_clicked_date||p>=35)return 2;
+  if(p>=60)return 1;
+  if(c.last_clicked_date||p>=35||c.last_responded)return 2;
   if(c.last_opened_date)return 3;
   return 4;
 }
