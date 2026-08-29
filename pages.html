@@ -768,7 +768,10 @@
           revenue: passthrough(page.revenue),
           views: passthrough(page.views),
           conversions: passthrough(page.conversions),
-          visitor_sources: page.visitor_sources || null
+          visitor_sources: page.visitor_sources || null,
+          campaign_name: page.campaign_name || null,
+          click_data: page.click_data || null,
+          ctr: passthrough(page.CTR)
         });
       });
       filteredPages = allPages.slice();
@@ -910,7 +913,7 @@
     }
     groupAbVariants(filteredPages).forEach(function(page) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 90px 80px 80px 90px 240px;gap:12px;padding:12px 14px;border-bottom:1px solid #eef0f3;align-items:center;font-size:13px;';
+      row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 90px 80px 80px 80px 90px 240px;gap:12px;padding:12px 14px;border-bottom:1px solid #eef0f3;align-items:center;font-size:13px;';
       var typeClass = page.page_type || 'landing';
       var isPub = !!(page.slug && page.url && page.url !== 'No URL set');
       var statusChip = isPub
@@ -924,8 +927,17 @@
           '<div style="color:#888;font-size:11px;margin-top:2px;">' + escHtml(page.slug||'') + '</div></div>' +
         '<div><span class="page-type-badge ' + typeClass + '" style="font-size:10px;padding:2px 8px;">' + (typeLabels[page.page_type] || page.page_type) + '</span></div>' +
         '<div>' + statusChip + '</div>' +
-        '<div>' + fmtNumL(page.views) + '</div>' +
+        '<div>' + (function(){ var cn = page.campaign_name; return cn ? ('<span style=\"font-size:12px;color:#0A3161;\">' + escHtml(cn) + '</span>') : '<span style=\"color:#aaa;\">—</span>'; })() + '</div>' +
+        '<div title=\"' + (function(){
+            var cd = page.click_data || {};
+            var uniq = (cd.unique_visitors !== undefined && cd.unique_visitors !== null) ? cd.unique_visitors : '?';
+            var src = page.visitor_sources || {};
+            var top = Object.keys(src).sort(function(a,b){ return (src[b]||0)-(src[a]||0); })[0];
+            var topLine = top ? (top + ': ' + src[top]) : 'no source data';
+            return ('Unique visitors: ' + uniq + ' | Top source: ' + topLine).replace(/\"/g, '&quot;');
+          })() + '\">' + fmtNumL(page.views) + '</div>' +
         '<div>' + fmtNumL(page.conversions) + '</div>' +
+        '<div>' + (function(){ var v = page.views, c = page.conversions; if (!v || v==='NULL' || !c || c==='NULL') return '—'; var rate = (parseFloat(c)/parseFloat(v))*100; return isNaN(rate) ? '—' : rate.toFixed(1) + '%'; })() + '</div>' +
         '<div>' + fmtMoneyL(page.revenue) + '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
           '<button class="btn-small secondary" data-act="view" data-id="' + page.id + '">👁</button>' +
