@@ -900,8 +900,8 @@
     wrap.style.cssText = 'background:#fff;border:1px solid #dde2e8;border-radius:8px;overflow:hidden;';
     var typeLabels = { landing: 'Landing', lead_magnet: 'Lead Magnet', newsletter: 'Newsletter' };
     var header = document.createElement('div');
-    header.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 90px 80px 80px 90px 240px;gap:12px;padding:10px 14px;background:#f5f6f8;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#555;font-weight:600;border-bottom:1px solid #dde2e8;';
-    header.innerHTML = '<div>Name</div><div>Type</div><div>Status</div><div>Views</div><div>Conv.</div><div>Revenue</div><div>Actions</div>';
+    header.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 90px 80px 80px 80px 90px 240px;gap:12px;padding:10px 14px;background:#f5f6f8;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#555;font-weight:600;border-bottom:1px solid #dde2e8;';
+    header.innerHTML = '<div>Name</div><div>Type</div><div>Campaign</div><div>Status</div><div>Views</div><div>Conv.</div><div>Conv %</div><div>Revenue</div><div>Actions</div>';
     wrap.appendChild(header);
     // Reuse the same null-aware formatters used in the card view, so the list and
     // grid show the same values for the same row.
