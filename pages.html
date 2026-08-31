@@ -1538,8 +1538,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-EventListener('DOMContentLoaded', init);
-
 const TRIGGERS_ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/pages/triggers';
 
 async function loadPageTriggers(pageId) {
@@ -1674,3 +1672,4 @@ async function deletePageTrigger(pageId, idx) {
 </script>
 </body>
 </html>
+document.addEventListener('DOMContentLoaded', init);
