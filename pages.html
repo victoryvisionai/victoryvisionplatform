@@ -1056,7 +1056,7 @@
           '<div class="meta-item"><span class="meta-label">Revenue:</span>' + fmtMoney(page.revenue) + '</div>' +
           '<div class="meta-item"><span class="meta-label">Campaign:</span>' + escHtml(page.campaign_name||'None') + '</div>' +
         '</div>' +
-        '<div class="analytics-section" id="analytics_' + page.id + '">' +
+        '<div class="triggers-section" id="triggers_' + page.id + '" style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">' + '<div class="analytics-header" style="display:flex;justify-content:space-between;align-items:center;">' + '<h4 style="margin:0;">Email Triggers</h4>' + '<button onclick="loadPageTriggers(' + page.id + ')" style="font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Manage</button>' + '</div>' + '<div id="triggers_list_' + page.id + '" style="margin-top:8px;"><div style="text-align:center;color:#999;padding:10px;font-size:13px;">Click Manage to view or add triggers</div></div>' + '</div>' + '<div class="analytics-section" id="analytics_' + page.id + '">' +
           '<div class="analytics-header">' +
             '<h4>📊 Analytics</h4>' +
             '<div class="time-windows">' + twButtons + '</div>' +
@@ -1519,6 +1519,124 @@
   window.createNewsletterPage = createNewsletterPage;
 
   document.addEventListener('DOMContentLoaded', init);
+
+const TRIGGERS_ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/pages/triggers';
+
+async function loadPageTriggers(pageId) {
+  const container = document.getElementById('triggers_list_' + pageId);
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;color:#999;padding:10px;font-size:13px;">Loading...</div>';
+  try {
+    const res = await fetch(TRIGGERS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list', page_id: pageId })
+    });
+    const data = await res.json();
+    if (!data.success) { container.innerHTML = '<div style="color:#c00;font-size:13px;">' + escHtml(data.error || 'Failed to load') + '</div>'; return; }
+    renderTriggersList(pageId, data.triggers || []);
+  } catch (e) {
+    container.innerHTML = '<div style="color:#c00;font-size:13px;">Error: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+function renderTriggersList(pageId, triggers) {
+  const container = document.getElementById('triggers_list_' + pageId);
+  if (!container) return;
+  let html = '';
+  if (triggers.length === 0) {
+    html += '<div style="color:#999;font-size:13px;padding:6px 0;">No triggers set up yet.</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">';
+    triggers.forEach(function(t, idx) {
+      const label = (t.event_type === 'form_submit' ? 'Form submitted' : t.event_type === 'link_click' ? 'Link clicked' : 'Page viewed') + (t.min_count > 1 ? ' (' + t.min_count + 'x)' : '');
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f7f8fa;border-radius:6px;font-size:13px;">' +
+        '<div><strong>' + escHtml(label) + '</strong> (' + (t.fire_count || 0) + ') <span style="color:#888;">→ ' + escHtml(t.subject || '(default)') + '</span>' + (t.active === false ? ' <span style="color:#c00;">[inactive]</span>' : '') + '</div>' +
+        '<div style="display:flex;gap:6px;"><button onclick=\'editPageTrigger(' + pageId + ', ' + idx + ')\' style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;">Edit</button>' +
+        '<button onclick=\'deletePageTrigger(' + pageId + ', ' + idx + ')\' style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #e0b0b0;background:#fff;color:#c00;cursor:pointer;">Delete</button></div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  html += '<button onclick="showAddTriggerForm(' + pageId + ')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #0B3162;background:#0B3162;color:#fff;cursor:pointer;">+ Add Trigger</button>';
+  html += '<div id="trigger_form_' + pageId + '"></div>';
+  container.innerHTML = html;
+  container._triggers = triggers;
+}
+
+function showAddTriggerForm(pageId, editIdx) {
+  const formHost = document.getElementById('trigger_form_' + pageId);
+  if (!formHost) return;
+  const container = document.getElementById('triggers_list_' + pageId);
+  const existing = (editIdx !== undefined && container && container._triggers) ? container._triggers[editIdx] : null;
+  formHost.innerHTML =
+    '<div style="margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff;">' +
+      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Event type</label>' +
+      '<select id="tf_event_' + pageId + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' +
+        '<option value="form_submit"' + (existing && existing.event_type === 'form_submit' ? ' selected' : '') + '>Form submitted (e.g. lead magnet downloaded)</option>' +
+        '<option value="page_view"' + (existing && existing.event_type === 'page_view' ? ' selected' : '') + '>Page viewed</option>' +
+        '<option value="link_click"' + (existing && existing.event_type === 'link_click' ? ' selected' : '') + '>Link clicked</option>' +
+      '</select></div>' +
+      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Minimum visits before firing (1 = fires the first time)</label>' +
+      '<input type="number" id="tf_mincount_' + pageId + '" min="1" value="' + (existing ? existing.min_count || 1 : 1) + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
+      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Subject</label>' +
+      '<input type="text" id="tf_subject_' + pageId + '" value="' + escHtml(existing ? existing.subject || '' : '') + '" placeholder="Here is your {{page_name}}" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
+      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Body (supports {{first_name}}, {{page_name}}, {{resource_url}}, {{campaign_name}})</label>' +
+      '<textarea id="tf_body_' + pageId + '" rows="4" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' + escHtml(existing ? existing.body || '' : '') + '</textarea></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button onclick="savePageTrigger(' + pageId + ', ' + (editIdx !== undefined ? editIdx : 'null') + ')" style="font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:#0B3162;color:#fff;cursor:pointer;">Save</button>' +
+      '<button onclick="document.getElementById(\'trigger_form_' + pageId + '\').innerHTML=\'\'" style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Cancel</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function editPageTrigger(pageId, idx) { showAddTriggerForm(pageId, idx); }
+
+async function savePageTrigger(pageId, editIdx) {
+  const container = document.getElementById('triggers_list_' + pageId);
+  const existingTriggers = (container && container._triggers) ? container._triggers.slice() : [];
+  const newTrigger = {
+    event_type: document.getElementById('tf_event_' + pageId).value,
+    min_count: parseInt(document.getElementById('tf_mincount_' + pageId).value, 10) || 1,
+    subject: document.getElementById('tf_subject_' + pageId).value,
+    body: document.getElementById('tf_body_' + pageId).value,
+    active: true
+  };
+  if (editIdx !== null && editIdx !== undefined && editIdx !== 'null' && existingTriggers[editIdx]) {
+    newTrigger.key = existingTriggers[editIdx].key;
+    existingTriggers[editIdx] = newTrigger;
+  } else {
+    existingTriggers.push(newTrigger);
+  }
+  const cleaned = existingTriggers.map(function(t) { const c = Object.assign({}, t); delete c.fire_count; return c; });
+  try {
+    const res = await fetch(TRIGGERS_ENDPOINT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', page_id: pageId, email_triggers: cleaned })
+    });
+    const data = await res.json();
+    if (!data.success) { alert('Failed to save: ' + (data.error || 'unknown error')); return; }
+    loadPageTriggers(pageId);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function deletePageTrigger(pageId, idx) {
+  if (!confirm('Delete this trigger?')) return;
+  const container = document.getElementById('triggers_list_' + pageId);
+  const existingTriggers = (container && container._triggers) ? container._triggers.slice() : [];
+  existingTriggers.splice(idx, 1);
+  const cleaned = existingTriggers.map(function(t) { const c = Object.assign({}, t); delete c.fire_count; return c; });
+  try {
+    const res = await fetch(TRIGGERS_ENDPOINT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', page_id: pageId, email_triggers: cleaned })
+    });
+    const data = await res.json();
+    if (!data.success) { alert('Failed to delete: ' + (data.error || 'unknown error')); return; }
+    loadPageTriggers(pageId);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
 </script>
 </body>
 </html>
