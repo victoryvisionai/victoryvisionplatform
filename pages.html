@@ -1599,6 +1599,17 @@ function showAddTriggerForm(pageId, editIdx) {
       '</select></div>' +
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Minimum visits before firing (1 = fires the first time)</label>' +
       '<input type="number" id="tf_mincount_' + pageId + '" min="1" value="' + (existing ? existing.min_count || 1 : 1) + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
+      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Response</label>' +
+      '<select id="tf_resptype_' + pageId + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' +
+        '<option value="template">Send this specific email</option>' +
+        '<option value="lead_magnet">Send Lead Magnet campaign</option>' +
+        '<option value="nurture">Send Nurture campaign</option>' +
+        '<option value="vv_campaign">Send VV Campaign</option>' +
+      '</select></div>' +
+      '<div style="margin-bottom:8px;display:flex;gap:8px;"><div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Total emails</label>' +
+      '<input type="number" id="tf_totalemails_' + pageId + '" min="1" value="6" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
+      '<div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Days between</label>' +
+      '<input type="number" id="tf_daysbetween_' + pageId + '" min="0" value="3" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div></div>' +
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Subject</label>' +
       '<input type="text" id="tf_subject_' + pageId + '" value="' + escHtml(existing ? existing.subject || '' : '') + '" placeholder="Here is your {{page_name}}" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Body (supports {{first_name}}, {{page_name}}, {{resource_url}}, {{campaign_name}})</label>' +
@@ -1620,6 +1631,9 @@ async function savePageTrigger(pageId, editIdx) {
     min_count: parseInt(document.getElementById('tf_mincount_' + pageId).value, 10) || 1,
     subject: document.getElementById('tf_subject_' + pageId).value,
     body: document.getElementById('tf_body_' + pageId).value,
+    response_type: document.getElementById('tf_resptype_' + pageId).value,
+    total_emails: parseInt(document.getElementById('tf_totalemails_' + pageId).value, 10) || 6,
+    days_between: parseInt(document.getElementById('tf_daysbetween_' + pageId).value, 10) || 0,
     active: true
   };
   if (editIdx !== null && editIdx !== undefined && editIdx !== 'null' && existingTriggers[editIdx]) {
