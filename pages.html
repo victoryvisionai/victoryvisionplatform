@@ -1056,7 +1056,7 @@
           '<div class="meta-item"><span class="meta-label">Revenue:</span>' + fmtMoney(page.revenue) + '</div>' +
           '<div class="meta-item"><span class="meta-label">Campaign:</span>' + escHtml(page.campaign_name||'None') + '</div>' +
         '</div>' +
-        '<div class="triggers-section" id="triggers_' + page.id + '" style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">' + '<div class="analytics-header" style="display:flex;justify-content:space-between;align-items:center;">' + '<h4 style="margin:0;">Email Triggers</h4>' + '<button onclick="loadPageTriggers(' + page.id + ')" style="font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Manage</button>' + '</div>' + '<div id="triggers_list_' + page.id + '" style="margin-top:8px;"><div style="text-align:center;color:#999;padding:10px;font-size:13px;">Click Manage to view or add triggers</div></div>' + '</div>' + '<div class="analytics-section" id="analytics_' + page.id + '">' +
+        '<div class="triggers-section" id="triggers_' + page.id + '" style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">' + '<div class="analytics-header" style="display:flex;justify-content:space-between;align-items:center;">' + '<h4 style="margin:0;">Email Triggers</h4>' + '<button class="vv-trig-manage" data-page-id="' + page.id + '" style="font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Manage</button>' + '</div>' + '<div id="triggers_list_' + page.id + '" style="margin-top:8px;"><div style="text-align:center;color:#999;padding:10px;font-size:13px;">Click Manage to view or add triggers</div></div>' + '</div>' + '<div class="analytics-section" id="analytics_' + page.id + '">' +
           '<div class="analytics-header">' +
             '<h4>📊 Analytics</h4>' +
             '<div class="time-windows">' + twButtons + '</div>' +
@@ -1518,7 +1518,27 @@
   window.createLeadMagnetPage = createLeadMagnetPage;
   window.createNewsletterPage = createNewsletterPage;
 
-  document.addEventListener('DOMContentLoaded', init);
+  document.add
+document.addEventListener('click', function(e) {
+  var t = e.target.closest('.vv-trig-manage, .vv-trig-edit, .vv-trig-delete, .vv-trig-addnew, .vv-trig-save, .vv-trig-cancel');
+  if (!t) return;
+  var pageId = t.getAttribute('data-page-id');
+  var idx = t.getAttribute('data-idx');
+  if (t.classList.contains('vv-trig-manage')) loadPageTriggers(pageId);
+  else if (t.classList.contains('vv-trig-edit')) editPageTrigger(pageId, parseInt(idx, 10));
+  else if (t.classList.contains('vv-trig-delete')) deletePageTrigger(pageId, parseInt(idx, 10));
+  else if (t.classList.contains('vv-trig-addnew')) showAddTriggerForm(pageId);
+  else if (t.classList.contains('vv-trig-save')) {
+    var ei = t.getAttribute('data-edit-idx');
+    savePageTrigger(pageId, ei === '' ? null : parseInt(ei, 10));
+  }
+  else if (t.classList.contains('vv-trig-cancel')) {
+    var fh = document.getElementById('trigger_form_' + pageId);
+    if (fh) fh.innerHTML = '';
+  }
+});
+
+EventListener('DOMContentLoaded', init);
 
 const TRIGGERS_ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/pages/triggers';
 
@@ -1552,13 +1572,13 @@ function renderTriggersList(pageId, triggers) {
       const label = (t.event_type === 'form_submit' ? 'Form submitted' : t.event_type === 'link_click' ? 'Link clicked' : 'Page viewed') + (t.min_count > 1 ? ' (' + t.min_count + 'x)' : '');
       html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f7f8fa;border-radius:6px;font-size:13px;">' +
         '<div><strong>' + escHtml(label) + '</strong> (' + (t.fire_count || 0) + ') <span style="color:#888;">→ ' + escHtml(t.subject || '(default)') + '</span>' + (t.active === false ? ' <span style="color:#c00;">[inactive]</span>' : '') + '</div>' +
-        '<div style="display:flex;gap:6px;"><button onclick=\'editPageTrigger(' + pageId + ', ' + idx + ')\' style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;">Edit</button>' +
-        '<button onclick=\'deletePageTrigger(' + pageId + ', ' + idx + ')\' style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #e0b0b0;background:#fff;color:#c00;cursor:pointer;">Delete</button></div>' +
+        '<div style="display:flex;gap:6px;"><button class="vv-trig-edit" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;">Edit</button>' +
+        '<button class="vv-trig-delete" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #e0b0b0;background:#fff;color:#c00;cursor:pointer;">Delete</button></div>' +
       '</div>';
     });
     html += '</div>';
   }
-  html += '<button onclick="showAddTriggerForm(' + pageId + ')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #0B3162;background:#0B3162;color:#fff;cursor:pointer;">+ Add Trigger</button>';
+  html += '<button class="vv-trig-addnew" data-page-id="' + pageId + '" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #0B3162;background:#0B3162;color:#fff;cursor:pointer;">+ Add Trigger</button>';
   html += '<div id="trigger_form_' + pageId + '"></div>';
   container.innerHTML = html;
   container._triggers = triggers;
@@ -1584,8 +1604,8 @@ function showAddTriggerForm(pageId, editIdx) {
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Body (supports {{first_name}}, {{page_name}}, {{resource_url}}, {{campaign_name}})</label>' +
       '<textarea id="tf_body_' + pageId + '" rows="4" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' + escHtml(existing ? existing.body || '' : '') + '</textarea></div>' +
       '<div style="display:flex;gap:8px;">' +
-      '<button onclick="savePageTrigger(' + pageId + ', ' + (editIdx !== undefined ? editIdx : 'null') + ')" style="font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:#0B3162;color:#fff;cursor:pointer;">Save</button>' +
-      '<button onclick="document.getElementById(\'trigger_form_' + pageId + '\').innerHTML=\'\'" style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Cancel</button>' +
+      '<button class="vv-trig-save" data-page-id="' + pageId + '" data-edit-idx="' + (editIdx !== undefined && editIdx !== null ? editIdx : '') + '" style="font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:#0B3162;color:#fff;cursor:pointer;">Save</button>' +
+      '<button class="vv-trig-cancel" data-page-id="' + pageId + '" style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Cancel</button>' +
       '</div>' +
     '</div>';
 }
