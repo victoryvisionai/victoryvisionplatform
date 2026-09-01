@@ -1576,7 +1576,7 @@ function renderTriggersList(pageId, triggers) {
       const respLabel = t.response_type === 'newsletter' ? 'Add to newsletter' : t.response_type === 'saved_template' ? 'Saved template' : escHtml(t.subject || '(no subject set)');
       html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f7f8fa;border-radius:6px;font-size:13px;">' +
         '<div><strong>' + escHtml(label) + '</strong> (' + (t.fire_count || 0) + ') <span style="color:#888;">→ ' + respLabel + '</span>' + (t.active === false ? ' <span style="color:#c00;">[inactive]</span>' : '') + '</div>' +
-        '<div style="display:flex;gap:6px;"><button class="vv-trig-edit" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;">Edit</button>' +
+        '<div style="display:flex;gap:6px;"><button class="vv-trig-edit" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;color:#333;cursor:pointer;">Edit</button>' +
         '<button class="vv-trig-delete" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #e0b0b0;background:#fff;color:#c00;cursor:pointer;">Delete</button></div>' +
       '</div>';
     });
