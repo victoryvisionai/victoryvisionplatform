@@ -1056,7 +1056,7 @@
           '<div class="meta-item"><span class="meta-label">Revenue:</span>' + fmtMoney(page.revenue) + '</div>' +
           '<div class="meta-item"><span class="meta-label">Campaign:</span>' + escHtml(page.campaign_name||'None') + '</div>' +
         '</div>' +
-        '<div class="triggers-section" id="triggers_' + page.id + '" style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">' + '<div class="analytics-header" style="display:flex;justify-content:space-between;align-items:center;">' + '<h4 style="margin:0;">Email Triggers</h4>' + '<button class="vv-trig-manage" data-page-id="' + page.id + '" style="font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Manage</button>' + '</div>' + '<div id="triggers_list_' + page.id + '" style="margin-top:8px;"><div style="text-align:center;color:#999;padding:10px;font-size:13px;">Click Manage to view or add triggers</div></div>' + '</div>' + '<div class="analytics-section" id="analytics_' + page.id + '">' +
+        '<div class="triggers-section" id="triggers_' + page.id + '" style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">' + '<div class="analytics-header" style="display:flex;justify-content:space-between;align-items:center;">' + '<h4 style="margin:0;">Email Triggers</h4>' + '<button type="button" class="vv-trig-manage" data-page-id="' + page.id + '" style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #0B3162;background:#fff;color:#0B3162;cursor:pointer;min-width:70px;">Manage</button>' + '</div>' + '<div id="triggers_list_' + page.id + '" style="margin-top:8px;"><div style="text-align:center;color:#999;padding:10px;font-size:13px;">Click Manage to view or add triggers</div></div>' + '</div>' + '<div class="analytics-section" id="analytics_' + page.id + '">' +
           '<div class="analytics-header">' +
             '<h4>📊 Analytics</h4>' +
             '<div class="time-windows">' + twButtons + '</div>' +
@@ -1078,7 +1078,7 @@
       '</div>';
 
     card.addEventListener('click', function(e) {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION' || e.target.tagName === 'LABEL' || e.target.closest('.triggers-section')) return;
       toggleCardExpansion(card, page.id);
     });
 
@@ -1567,8 +1567,9 @@ function renderTriggersList(pageId, triggers) {
     html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">';
     triggers.forEach(function(t, idx) {
       const label = (t.event_type === 'form_submit' ? 'Form submitted' : t.event_type === 'link_click' ? 'Link clicked' : 'Page viewed') + (t.min_count > 1 ? ' (' + t.min_count + 'x)' : '');
+      const respLabel = t.response_type === 'newsletter' ? 'Add to newsletter' : t.response_type === 'saved_template' ? 'Saved template' : escHtml(t.subject || '(no subject set)');
       html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f7f8fa;border-radius:6px;font-size:13px;">' +
-        '<div><strong>' + escHtml(label) + '</strong> (' + (t.fire_count || 0) + ') <span style="color:#888;">→ ' + escHtml(t.subject || '(default)') + '</span>' + (t.active === false ? ' <span style="color:#c00;">[inactive]</span>' : '') + '</div>' +
+        '<div><strong>' + escHtml(label) + '</strong> (' + (t.fire_count || 0) + ') <span style="color:#888;">→ ' + respLabel + '</span>' + (t.active === false ? ' <span style="color:#c00;">[inactive]</span>' : '') + '</div>' +
         '<div style="display:flex;gap:6px;"><button class="vv-trig-edit" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;">Edit</button>' +
         '<button class="vv-trig-delete" data-page-id="' + pageId + '" data-idx="' + idx + '" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid #e0b0b0;background:#fff;color:#c00;cursor:pointer;">Delete</button></div>' +
       '</div>';
@@ -1585,7 +1586,10 @@ function showAddTriggerForm(pageId, editIdx) {
   const formHost = document.getElementById('trigger_form_' + pageId);
   if (!formHost) return;
   const container = document.getElementById('triggers_list_' + pageId);
-  const existing = (editIdx !== undefined && container && container._triggers) ? container._triggers[editIdx] : null;
+  const existing = (editIdx !== undefined && editIdx !== null && container && container._triggers) ? container._triggers[editIdx] : null;
+  const respType = existing ? (existing.response_type || 'template') : 'template';
+
+  let templateOptionsHtml = '<option value="">Loading templates...</option>';
   formHost.innerHTML =
     '<div style="margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff;">' +
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Event type</label>' +
@@ -1597,25 +1601,69 @@ function showAddTriggerForm(pageId, editIdx) {
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Minimum visits before firing (1 = fires the first time)</label>' +
       '<input type="number" id="tf_mincount_' + pageId + '" min="1" value="' + (existing ? existing.min_count || 1 : 1) + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
       '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Response</label>' +
-      '<select id="tf_resptype_' + pageId + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' +
-        '<option value="template">Send this specific email</option>' +
-        '<option value="lead_magnet">Send Lead Magnet campaign</option>' +
-        '<option value="nurture">Send Nurture campaign</option>' +
-        '<option value="vv_campaign">Send VV Campaign</option>' +
+      '<select id="tf_resptype_' + pageId + '" onchange="onTriggerResponseTypeChange(' + pageId + ')" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' +
+        '<option value="template"' + (respType === 'template' ? ' selected' : '') + '>Write a custom email</option>' +
+        '<option value="saved_template"' + (respType === 'saved_template' ? ' selected' : '') + '>Send a saved template</option>' +
+        '<option value="newsletter"' + (respType === 'newsletter' ? ' selected' : '') + '>Add contact to newsletter</option>' +
       '</select></div>' +
-      '<div style="margin-bottom:8px;display:flex;gap:8px;"><div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Total emails</label>' +
-      '<input type="number" id="tf_totalemails_' + pageId + '" min="1" value="6" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
-      '<div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Days between</label>' +
-      '<input type="number" id="tf_daysbetween_' + pageId + '" min="0" value="3" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div></div>' +
-      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Subject</label>' +
-      '<input type="text" id="tf_subject_' + pageId + '" value="' + escHtml(existing ? existing.subject || '' : '') + '" placeholder="Here is your {{page_name}}" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
-      '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Body (supports {{first_name}}, {{page_name}}, {{resource_url}}, {{campaign_name}})</label>' +
-      '<textarea id="tf_body_' + pageId + '" rows="4" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' + escHtml(existing ? existing.body || '' : '') + '</textarea></div>' +
+      '<div id="tf_template_picker_' + pageId + '" style="margin-bottom:8px;' + (respType === 'saved_template' ? '' : 'display:none;') + '">' +
+        '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Saved template</label>' +
+        '<select id="tf_templateid_' + pageId + '" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' + templateOptionsHtml + '</select>' +
+      '</div>' +
+      '<div id="tf_custom_fields_' + pageId + '" style="' + (respType === 'template' ? '' : 'display:none;') + '">' +
+        '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Subject</label>' +
+        '<input type="text" id="tf_subject_' + pageId + '" value="' + escHtml(existing ? existing.subject || '' : '') + '" placeholder="Here is your {{page_name}}" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;"></div>' +
+        '<div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Body (supports {{first_name}}, {{page_name}}, {{resource_url}}, {{campaign_name}})</label>' +
+        '<textarea id="tf_body_' + pageId + '" rows="4" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' + escHtml(existing ? existing.body || '' : '') + '</textarea></div>' +
+        '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
+          '<input type="checkbox" id="tf_savetemplate_' + pageId + '" style="width:auto;">' +
+          '<label for="tf_savetemplate_' + pageId + '" style="font-size:12px;font-weight:normal;margin:0;">Also save this as a reusable template</label>' +
+        '</div>' +
+        '<div id="tf_templatename_wrap_' + pageId + '" style="margin-bottom:8px;display:none;">' +
+          '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px;">Template name</label>' +
+          '<input type="text" id="tf_templatename_' + pageId + '" placeholder="e.g. Lead magnet delivery" style="width:100%;padding:5px;border-radius:5px;border:1px solid #ccc;">' +
+        '</div>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="vv-trig-save" data-page-id="' + pageId + '" data-edit-idx="' + (editIdx !== undefined && editIdx !== null ? editIdx : '') + '" style="font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:#0B3162;color:#fff;cursor:pointer;">Save</button>' +
       '<button class="vv-trig-cancel" data-page-id="' + pageId + '" style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Cancel</button>' +
       '</div>' +
     '</div>';
+
+  const cb = document.getElementById('tf_savetemplate_' + pageId);
+  if (cb) cb.addEventListener('change', function() {
+    document.getElementById('tf_templatename_wrap_' + pageId).style.display = this.checked ? 'block' : 'none';
+  });
+
+  await loadTemplateOptions(pageId, existing ? existing.template_id : null);
+}
+
+function onTriggerResponseTypeChange(pageId) {
+  const val = document.getElementById('tf_resptype_' + pageId).value;
+  document.getElementById('tf_template_picker_' + pageId).style.display = (val === 'saved_template') ? 'block' : 'none';
+  document.getElementById('tf_custom_fields_' + pageId).style.display = (val === 'template') ? 'block' : 'none';
+}
+
+async function loadTemplateOptions(pageId, selectedId) {
+  const sel = document.getElementById('tf_templateid_' + pageId);
+  if (!sel) return;
+  try {
+    const res = await fetch(TRIGGERS_ENDPOINT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_templates' })
+    });
+    const data = await res.json();
+    const templates = (data && data.success && Array.isArray(data.templates)) ? data.templates : [];
+    if (templates.length === 0) {
+      sel.innerHTML = '<option value="">No saved templates yet - create one below</option>';
+      return;
+    }
+    sel.innerHTML = templates.map(function(t) {
+      return '<option value="' + t.id + '"' + (String(selectedId) === String(t.id) ? ' selected' : '') + '>' + escHtml(t.name) + '</option>';
+    }).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Failed to load templates</option>';
+  }
 }
 
 function editPageTrigger(pageId, idx) { showAddTriggerForm(pageId, idx); }
@@ -1623,17 +1671,38 @@ function editPageTrigger(pageId, idx) { showAddTriggerForm(pageId, idx); }
 async function savePageTrigger(pageId, editIdx) {
   const container = document.getElementById('triggers_list_' + pageId);
   const existingTriggers = (container && container._triggers) ? container._triggers.slice() : [];
+  const responseType = document.getElementById('tf_resptype_' + pageId).value;
+
   const newTrigger = {
     event_type: document.getElementById('tf_event_' + pageId).value,
     min_count: parseInt(document.getElementById('tf_mincount_' + pageId).value, 10) || 1,
-    subject: document.getElementById('tf_subject_' + pageId).value,
-    body: document.getElementById('tf_body_' + pageId).value,
-    response_type: document.getElementById('tf_resptype_' + pageId).value,
-    total_emails: parseInt(document.getElementById('tf_totalemails_' + pageId).value, 10) || 6,
-    days_between: parseInt(document.getElementById('tf_daysbetween_' + pageId).value, 10) || 0,
+    response_type: responseType,
     active: true
   };
-  if (editIdx !== null && editIdx !== undefined && editIdx !== 'null' && existingTriggers[editIdx]) {
+
+  if (responseType === 'saved_template') {
+    const templateId = document.getElementById('tf_templateid_' + pageId).value;
+    if (!templateId) { alert('Choose a saved template, or create one first.'); return; }
+    newTrigger.template_id = templateId;
+  } else if (responseType === 'template') {
+    newTrigger.subject = document.getElementById('tf_subject_' + pageId).value;
+    newTrigger.body = document.getElementById('tf_body_' + pageId).value;
+
+    const saveAsTemplateEl = document.getElementById('tf_savetemplate_' + pageId);
+    if (saveAsTemplateEl && saveAsTemplateEl.checked) {
+      const templateName = (document.getElementById('tf_templatename_' + pageId).value || '').trim();
+      if (!templateName) { alert('Give the template a name to save it.'); return; }
+      try {
+        await fetch(TRIGGERS_ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_template', name: templateName, subject: newTrigger.subject, body: newTrigger.body })
+        });
+      } catch (e) { alert('Trigger will still save, but the template failed to save: ' + e.message); }
+    }
+  }
+  // responseType === 'newsletter' needs no subject/body/template - handled entirely server-side.
+
+  if (editIdx !== null && editIdx !== undefined && editIdx !== '' && existingTriggers[editIdx]) {
     newTrigger.key = existingTriggers[editIdx].key;
     existingTriggers[editIdx] = newTrigger;
   } else {
