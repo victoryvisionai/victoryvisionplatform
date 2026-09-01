@@ -1582,7 +1582,7 @@ function renderTriggersList(pageId, triggers) {
   container._triggers = triggers;
 }
 
-function showAddTriggerForm(pageId, editIdx) {
+async function showAddTriggerForm(pageId, editIdx) {
   const formHost = document.getElementById('trigger_form_' + pageId);
   if (!formHost) return;
   const container = document.getElementById('triggers_list_' + pageId);
