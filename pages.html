@@ -966,6 +966,11 @@
     var card = document.createElement('div');
     card.className = 'page-card';
 
+    // Stash customer_id per page so the trigger form's template picker can
+    // scope requests to the right tenant without an extra round trip.
+    window._pageCustomerIds = window._pageCustomerIds || {};
+    window._pageCustomerIds[page.id] = page.customer_id || '';
+
     var createdDate = 'Unknown';
     if (page.created_at) { try { createdDate = new Date(page.created_at).toLocaleDateString(); } catch(e) { createdDate = page.created_at; } }
 
@@ -1540,6 +1545,7 @@
 const TRIGGERS_ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/pages/triggers';
 
 async function loadPageTriggers(pageId) {
+  // customer_id is stashed by createPageCard via registerPageCustomerId(pageId, page.customer_id)
   const container = document.getElementById('triggers_list_' + pageId);
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;color:#999;padding:10px;font-size:13px;">Loading...</div>';
@@ -1580,6 +1586,7 @@ function renderTriggersList(pageId, triggers) {
   html += '<div id="trigger_form_' + pageId + '"></div>';
   container.innerHTML = html;
   container._triggers = triggers;
+  container._customerId = window._pageCustomerIds && window._pageCustomerIds[pageId];
 }
 
 async function showAddTriggerForm(pageId, editIdx) {
@@ -1635,7 +1642,7 @@ async function showAddTriggerForm(pageId, editIdx) {
     document.getElementById('tf_templatename_wrap_' + pageId).style.display = this.checked ? 'block' : 'none';
   });
 
-  await loadTemplateOptions(pageId, existing ? existing.template_id : null);
+  await loadTemplateOptions(pageId, existing ? existing.template_name : null);
 }
 
 function onTriggerResponseTypeChange(pageId) {
@@ -1644,13 +1651,15 @@ function onTriggerResponseTypeChange(pageId) {
   document.getElementById('tf_custom_fields_' + pageId).style.display = (val === 'template') ? 'block' : 'none';
 }
 
-async function loadTemplateOptions(pageId, selectedId) {
+async function loadTemplateOptions(pageId, selectedName) {
   const sel = document.getElementById('tf_templateid_' + pageId);
   if (!sel) return;
   try {
-    const res = await fetch(TRIGGERS_ENDPOINT, {
+    const container = document.getElementById('triggers_list_' + pageId);
+  const customerId = (container && container._customerId) || '';
+  const res = await fetch(TRIGGERS_ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list_templates' })
+      body: JSON.stringify({ action: 'list_templates', customer_id: customerId })
     });
     const data = await res.json();
     const templates = (data && data.success && Array.isArray(data.templates)) ? data.templates : [];
@@ -1659,7 +1668,7 @@ async function loadTemplateOptions(pageId, selectedId) {
       return;
     }
     sel.innerHTML = templates.map(function(t) {
-      return '<option value="' + t.id + '"' + (String(selectedId) === String(t.id) ? ' selected' : '') + '>' + escHtml(t.name) + '</option>';
+      return '<option value="' + escHtml(t.name) + '"' + (selectedName === t.name ? ' selected' : '') + '>' + escHtml(t.name) + '</option>';
     }).join('');
   } catch (e) {
     sel.innerHTML = '<option value="">Failed to load templates</option>';
@@ -1681,9 +1690,9 @@ async function savePageTrigger(pageId, editIdx) {
   };
 
   if (responseType === 'saved_template') {
-    const templateId = document.getElementById('tf_templateid_' + pageId).value;
-    if (!templateId) { alert('Choose a saved template, or create one first.'); return; }
-    newTrigger.template_id = templateId;
+    const templateName = document.getElementById('tf_templateid_' + pageId).value;
+    if (!templateName) { alert('Choose a saved template, or create one first.'); return; }
+    newTrigger.template_name = templateName;
   } else if (responseType === 'template') {
     newTrigger.subject = document.getElementById('tf_subject_' + pageId).value;
     newTrigger.body = document.getElementById('tf_body_' + pageId).value;
@@ -1693,9 +1702,10 @@ async function savePageTrigger(pageId, editIdx) {
       const templateName = (document.getElementById('tf_templatename_' + pageId).value || '').trim();
       if (!templateName) { alert('Give the template a name to save it.'); return; }
       try {
+        const cid = (document.getElementById('triggers_list_' + pageId) || {})._customerId || '';
         await fetch(TRIGGERS_ENDPOINT, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'save_template', name: templateName, subject: newTrigger.subject, body: newTrigger.body })
+          body: JSON.stringify({ action: 'save_template', customer_id: cid, name: templateName, subject: newTrigger.subject, body: newTrigger.body })
         });
       } catch (e) { alert('Trigger will still save, but the template failed to save: ' + e.message); }
     }
