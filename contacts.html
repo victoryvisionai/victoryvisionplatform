@@ -968,6 +968,14 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
       <h4 style="margin: 0 0 15px 0; color: #0A3161;">📧 Available Email campaigns</h4>
       <div class="campaign-list" id="campaignList">
         <div class="campaign-item">
+          <input type="checkbox" id="campaign_custom_ai" value="custom_ai">
+          <label for="campaign_custom_ai">🤖 AI Topic Email - Give AI a topic and how many emails, it writes and schedules them</label>
+        </div>
+        <div class="campaign-item">
+          <input type="checkbox" id="campaign_template_modal" value="template_modal">
+          <label for="campaign_template_modal">📂 Email Templates - Send from your saved templates</label>
+        </div>
+        <div class="campaign-item">
           <input type="checkbox" id="campaign_ads" value="leadmagnet">
 <label for="campaign_ads">🧲 Lead Magnet - Send a lead magnet landing page</label>
         </div>
@@ -1096,8 +1104,6 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
         <button id="selectAllBtn" class="secondary">Select All</button>
         <button id="deselectAllBtn" class="secondary">Deselect All</button>
         <button id="enrollCampaignsBtn" class="success">📧 Enroll in campaigns</button>
-        <button id="aiTopicEmailBtn" class="success" onclick="showCustomCampaignModal('custom')" title="Give AI a topic and how many emails - it writes and schedules them">🤖 AI Topic Email</button>
-        <button id="templateEmailBtn" class="success" style="background:#6f42c1;" onclick="showCustomCampaignModal('template')" title="Send from your saved email templates">📂 Email Templates</button>
         <button id="enrichContactsBtn" class="success">🔍 Enrich Selected</button>
         <button id="lookAlikeBtn" class="success" style="background: #17a2b8;">🔎 Look Alike</button>
         <button id="massSMSBtn" class="success" style="background: #8B4789;">📱 Mass SMS</button>
@@ -4286,6 +4292,12 @@ for (const campaign of selectedCampaigns) {
       let campaignPrompt = '';
       let vvPayloadExtra = null;
       switch(campaign) {
+        case 'custom_ai':
+          showCustomCampaignModal('custom');
+          continue;
+        case 'template_modal':
+          showCustomCampaignModal('template');
+          continue;
         case 'leadmagnet':
   await enrollLeadMagnet();
   // tag each selected contact with the leadmagnet campaign
