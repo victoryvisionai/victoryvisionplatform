@@ -1104,7 +1104,8 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
         <button id="selectAllBtn" class="secondary">Select All</button>
         <button id="deselectAllBtn" class="secondary">Deselect All</button>
         <button id="enrollCampaignsBtn" class="success">📧 Enroll in campaigns</button>
-        <button id="enrichContactsBtn" class="success">🔍 Enrich Selected</button>
+        <button id="enrichContactsEmailBtn" class="success">📧 Enrich Email</button>
+        <button id="enrichContactsPhoneBtn" class="success" style="background:#c2410c;">📱 Enrich Phone</button>
         <button id="lookAlikeBtn" class="success" style="background: #17a2b8;">🔎 Look Alike</button>
         <button id="massSMSBtn" class="success" style="background: #8B4789;">📱 Mass SMS</button>
         <button id="deleteSelectedBtn" class="danger">🗑️ Delete Selected</button>
@@ -1814,7 +1815,8 @@ const ENDPOINTS = {
   generateContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/look',
   addContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/add',
   updateContact: 'https://victoryvision.app.n8n.cloud/webhook/contacts/update',
-  enrichContacts: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich',
+  enrichContactsEmail: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich-email',
+  enrichContactsPhone: 'https://victoryvision.app.n8n.cloud/webhook/contacts/enrich-phone',
   uploadCSV: 'https://victoryvision.app.n8n.cloud/webhook/contacts/upload-csv',
   enrollAds: 'https://victoryvision.app.n8n.cloud/webhook/emails/ad-campaign',
 enrollLeadMagnet: 'https://victoryvision.app.n8n.cloud/webhook/emails/leadmagnet',
@@ -3002,7 +3004,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 // Enrich contacts
-async function enrichSelectedContacts() {
+async async function enrichSelectedContactsCore(endpoint, label) {
   if (selectedContacts.size === 0) {
     showStatus('Please select contacts to enrich', true);
     return;
@@ -3022,10 +3024,8 @@ async function enrichSelectedContacts() {
       return;
     }
     
-// Show immediate feedback
-    showStatus(`Enriching ${selectedContactsList.length} contacts...`, false);
+    showStatus(`${label}: enriching ${selectedContactsList.length} contacts...`, false);
     
-    // Process 5 at a time instead of 1 (5x faster)
     const BATCH_SIZE = 5;
     let completed = 0;
     
@@ -3039,40 +3039,38 @@ async function enrichSelectedContacts() {
             email: contact.email || '',
             linkedin: contact.linkedin || '',
             name: contact.name || '',
-            domain: contact.domain || '',
-            address: contact.address || '',
-            tags: contact.tags || '',
-            notes: contact.notes || '',
-            industry: contact.industry || '',
-            title: contact.title || '',
-            company: contact.company || '',
-            annual_revenue: contact.annual_revenue || '',
-            employee_count: contact.employee_count || '',
-            client_ann_est: contact.client_ann_est || '',
-            conversion_revenue: contact.conversion_revenue || 0
+            company: contact.company || ''
           }
         };
-        console.log('Enriching contact:', enrichmentData);
-        return apiCall(ENDPOINTS.enrichContacts, enrichmentData).catch(err => {
-          console.error('Enrich failed:', err);
+        console.log(label + ' enriching contact:', enrichmentData);
+        return apiCall(endpoint, enrichmentData).catch(err => {
+          console.error(label + ' enrich failed:', err);
         });
       }));
       
       completed += batch.length;
-      showStatus(`Enriched ${completed} of ${selectedContactsList.length} contacts...`, false);
+      showStatus(`${label}: enriched ${completed} of ${selectedContactsList.length} contacts...`, false);
     }
     
-    showStatus(`Enrichment complete! ${selectedContactsList.length} contacts processed.`, false);
+    showStatus(`${label} complete! ${selectedContactsList.length} contacts processed.`, false);
     selectedContacts.clear();
     updateSelectedCount();
     renderContactsTable();
     document.getElementById('selectAllCheckbox').checked = false;
     setTimeout(() => loadContacts(), 5000);
 
-} catch (error) {
-    console.error('Error enriching contacts:', error);
+  } catch (error) {
+    console.error('Error enriching contacts (' + label + '):', error);
     showStatus('Error enriching contacts: ' + error.message, true);
   }
+}
+
+function enrichSelectedContactsEmail() {
+  return enrichSelectedContactsCore(ENDPOINTS.enrichContactsEmail, 'Enrich Email');
+}
+
+function enrichSelectedContactsPhone() {
+  return enrichSelectedContactsCore(ENDPOINTS.enrichContactsPhone, 'Enrich Phone');
 }
     
 // Show contact details modal
@@ -4761,7 +4759,8 @@ function setupEventListeners() {
     wrap.style.display = e.target.checked ? 'block' : 'none';
     if (e.target.checked) loadVVCampaignsInline();
   });
-  document.getElementById('enrichContactsBtn').addEventListener('click', enrichSelectedContacts);
+  document.getElementById('enrichContactsEmailBtn').addEventListener('click', enrichSelectedContactsEmail);
+  document.getElementById('enrichContactsPhoneBtn').addEventListener('click', enrichSelectedContactsPhone);
   document.getElementById('lookAlikeBtn').addEventListener('click', showLookAlikeModal);
   document.getElementById('massSMSBtn').addEventListener('click', showMassSMSModal);
   document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelectedContacts);
