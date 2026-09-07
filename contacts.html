@@ -3004,7 +3004,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 // Enrich contacts
-async async function enrichSelectedContactsCore(endpoint, label) {
+async function enrichSelectedContactsCore(endpoint, label) {
   if (selectedContacts.size === 0) {
     showStatus('Please select contacts to enrich', true);
     return;
