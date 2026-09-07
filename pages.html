@@ -657,82 +657,98 @@
   // ─── Create pages ─────────────────────────────────────────────────────────────
   async function createPage() {
     var btn = document.getElementById('createPageBtn');
-    try {
-      var selectedVideoId = document.getElementById('headerVideoSelect').value;
-      var pageTitle = document.getElementById('pageTitle').value.trim();
-      var pageDescription = document.getElementById('pageDescription').value.trim();
-      var slug = document.getElementById('slugLanding').value.trim();
-      var abTest = document.getElementById('abTestLanding').checked;
-      if (!selectedVideoId) { showStatus('Please select a header video.', true); return; }
-      btn.disabled = true; btn.textContent = '🔄 Creating Page...';
-      var result = await apiCall(ENDPOINTS.pagesCreate, { campaigns_file_id: selectedVideoId, title: pageTitle, description: pageDescription, slug: slug, ab_test: String(abTest), page_type: 'landing', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' });
-      if (result && result.success !== false) {
-        showStatus('Landing page created successfully!');
-        document.getElementById('headerVideoSelect').value = '';
-        document.getElementById('pageTitle').value = '';
-        document.getElementById('pageDescription').value = '';
-        document.getElementById('slugLanding').value = '';
-        document.getElementById('abTestLanding').checked = false;
-        await loadPages(); applyFilters();
-      } else { throw new Error(result && result.message ? result.message : 'Page creation failed'); }
-    } catch(e) {
-      console.error(e);
-      showStatus('Error creating page: ' + e.message, true);
-      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLanding'); if (s) { s.focus(); s.select(); } }
-    }
-    finally { btn.disabled = false; btn.textContent = '📄 Create Landing Page'; }
+    var selectedVideoId = document.getElementById('headerVideoSelect').value;
+    var pageTitle = document.getElementById('pageTitle').value.trim();
+    var pageDescription = document.getElementById('pageDescription').value.trim();
+    var slug = document.getElementById('slugLanding').value.trim();
+    var abTest = document.getElementById('abTestLanding').checked;
+    if (!selectedVideoId) { showStatus('Please select a header video.', true); return; }
+    // FIXED: previously awaited the full page-generation workflow (an AI call
+    // that can take 15-60+ seconds) before clearing the form or re-enabling the
+    // button, making the page feel stuck. Now clears optimistically right away
+    // and dispatches in the background; real errors (e.g. slug collision) still
+    // surface via a toast and refocus the field once the response comes back.
+    var dispatchedSlug = slug;
+    showStatus('Creating landing page in the background - it will appear in the list shortly...');
+    document.getElementById('headerVideoSelect').value = '';
+    document.getElementById('pageTitle').value = '';
+    document.getElementById('pageDescription').value = '';
+    document.getElementById('slugLanding').value = '';
+    document.getElementById('abTestLanding').checked = false;
+    apiCall(ENDPOINTS.pagesCreate, { campaigns_file_id: selectedVideoId, title: pageTitle, description: pageDescription, slug: dispatchedSlug, ab_test: String(abTest), page_type: 'landing', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' })
+      .then(function(result) {
+        if (result && result.success !== false) {
+          showStatus('Landing page created successfully!');
+          loadPages().then(applyFilters);
+        } else {
+          throw new Error(result && result.message ? result.message : 'Page creation failed');
+        }
+      })
+      .catch(function(e) {
+        console.error(e);
+        showStatus('Error creating page "' + dispatchedSlug + '": ' + e.message, true);
+        if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLanding'); if (s) { s.value = dispatchedSlug; s.focus(); s.select(); } }
+      });
   }
 
   async function createLeadMagnetPage() {
-    try {
-      var lmId = document.getElementById('lmSelectedId').value;
-      var title = document.getElementById('lmTitle').value.trim();
-      var description = document.getElementById('lmDescription').value.trim();
-      var slug = document.getElementById('slugLeadMagnet').value.trim();
-      var abTest = document.getElementById('abTestLm').checked;
-      if (!lmId) { showStatus('Please select a lead magnet file.', true); return; }
-      showStatus('Creating lead magnet page...');
-      var result = await apiCall(ENDPOINTS.pagesLeadMagnet, { campaigns_file_id: lmId, title: title, description: description, slug: slug, ab_test: String(abTest), page_type: 'lead_magnet', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' });
-      if (result && result.success !== false) {
-        showStatus('Lead magnet page created!');
-        document.getElementById('lmSelectedName').value = '';
-        document.getElementById('lmSelectedId').value = '';
-        document.getElementById('lmTitle').value = '';
-        document.getElementById('lmDescription').value = '';
-        document.getElementById('slugLeadMagnet').value = '';
-        document.getElementById('abTestLm').checked = false;
-        selectedLmFile = null;
-        await loadPages(); applyFilters();
-      } else { throw new Error(result && result.message ? result.message : 'Creation failed'); }
-    } catch(e) {
-      console.error(e);
-      showStatus('Error: ' + e.message, true);
-      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLeadMagnet'); if (s) { s.focus(); s.select(); } }
-    }
+    var lmId = document.getElementById('lmSelectedId').value;
+    var title = document.getElementById('lmTitle').value.trim();
+    var description = document.getElementById('lmDescription').value.trim();
+    var slug = document.getElementById('slugLeadMagnet').value.trim();
+    var abTest = document.getElementById('abTestLm').checked;
+    if (!lmId) { showStatus('Please select a lead magnet file.', true); return; }
+    var dispatchedSlug = slug;
+    showStatus('Creating lead magnet page in the background - it will appear in the list shortly...');
+    document.getElementById('lmSelectedName').value = '';
+    document.getElementById('lmSelectedId').value = '';
+    document.getElementById('lmTitle').value = '';
+    document.getElementById('lmDescription').value = '';
+    document.getElementById('slugLeadMagnet').value = '';
+    document.getElementById('abTestLm').checked = false;
+    selectedLmFile = null;
+    apiCall(ENDPOINTS.pagesLeadMagnet, { campaigns_file_id: lmId, title: title, description: description, slug: dispatchedSlug, ab_test: String(abTest), page_type: 'lead_magnet', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' })
+      .then(function(result) {
+        if (result && result.success !== false) {
+          showStatus('Lead magnet page created!');
+          loadPages().then(applyFilters);
+        } else {
+          throw new Error(result && result.message ? result.message : 'Creation failed');
+        }
+      })
+      .catch(function(e) {
+        console.error(e);
+        showStatus('Error creating "' + dispatchedSlug + '": ' + e.message, true);
+        if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugLeadMagnet'); if (s) { s.value = dispatchedSlug; s.focus(); s.select(); } }
+      });
   }
 
   async function createNewsletterPage() {
-    try {
-      var title = document.getElementById('nlTitle').value.trim();
-      var description = document.getElementById('nlDescription').value.trim();
-      var slug = document.getElementById('slugNewsletter').value.trim();
-      var abTest = document.getElementById('abTestNl').checked;
-      if (!title) { showStatus('Please enter a newsletter name.', true); return; }
-      showStatus('Creating newsletter page...');
-      var result = await apiCall(ENDPOINTS.pagesNewsletter, { title: title, description: description, slug: slug, ab_test: String(abTest), page_type: 'newsletter', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' });
-      if (result && result.success !== false) {
-        showStatus('Newsletter page created!');
-        document.getElementById('nlTitle').value = '';
-        document.getElementById('nlDescription').value = '';
-        document.getElementById('slugNewsletter').value = '';
-        document.getElementById('abTestNl').checked = false;
-        await loadPages(); applyFilters();
-      } else { throw new Error(result && result.message ? result.message : 'Creation failed'); }
-    } catch(e) {
-      console.error(e);
-      showStatus('Error: ' + e.message, true);
-      if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugNewsletter'); if (s) { s.focus(); s.select(); } }
-    }
+    var title = document.getElementById('nlTitle').value.trim();
+    var description = document.getElementById('nlDescription').value.trim();
+    var slug = document.getElementById('slugNewsletter').value.trim();
+    var abTest = document.getElementById('abTestNl').checked;
+    if (!title) { showStatus('Please enter a newsletter name.', true); return; }
+    var dispatchedSlug = slug;
+    showStatus('Creating newsletter page in the background - it will appear in the list shortly...');
+    document.getElementById('nlTitle').value = '';
+    document.getElementById('nlDescription').value = '';
+    document.getElementById('slugNewsletter').value = '';
+    document.getElementById('abTestNl').checked = false;
+    apiCall(ENDPOINTS.pagesNewsletter, { title: title, description: description, slug: dispatchedSlug, ab_test: String(abTest), page_type: 'newsletter', google_pixel: currentUserData.google_pixel || '', msft_pixel: currentUserData.msft_pixel || '', linkedin_pixel: currentUserData.linkedin_pixel || '' })
+      .then(function(result) {
+        if (result && result.success !== false) {
+          showStatus('Newsletter page created!');
+          loadPages().then(applyFilters);
+        } else {
+          throw new Error(result && result.message ? result.message : 'Creation failed');
+        }
+      })
+      .catch(function(e) {
+        console.error(e);
+        showStatus('Error creating "' + dispatchedSlug + '": ' + e.message, true);
+        if (e.code === 'SLUG_EXISTS') { var s = document.getElementById('slugNewsletter'); if (s) { s.value = dispatchedSlug; s.focus(); s.select(); } }
+      });
   }
 
   // ─── Load pages ───────────────────────────────────────────────────────────────
