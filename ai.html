@@ -502,7 +502,13 @@
       <i>"Draft a follow-up to Aria Vossoughi."</i>
     </p>
     <div id="chatLog" class="chat-log"></div>
+    <div id="chatAttachmentPreview" style="display:none;align-items:center;gap:8px;padding:6px 10px;margin-bottom:6px;background:#f1f5f9;border-radius:8px;font-size:13px;">
+      <span id="chatAttachmentName" style="flex:1;color:#475569;"></span>
+      <span onclick="removeChatAttachment()" style="cursor:pointer;color:#94a3b8;font-weight:700;">&times;</span>
+    </div>
     <div class="chat-input-row">
+      <input type="file" id="chatFileInput" accept="image/*,.txt,.csv,.md" style="display:none;" onchange="handleChatFileSelect(event)">
+      <button type="button" onclick="document.getElementById('chatFileInput').click()" title="Attach a file (screenshot, text)" style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 8px;color:#64748b;">📎</button>
       <textarea id="chatInput" rows="2" placeholder="Ask anything about your pipeline, contacts, deals…"
                 onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChat();}"></textarea>
       <button class="btn btn-primary" onclick="sendChat()" id="chatSendBtn">Send</button>
@@ -1340,18 +1346,45 @@ function suggestChat(el) {
   sendChat();
 }
 
+async let chatAttachment = null; // { name, mime_type, data_base64, is_image }
+
+function handleChatFileSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('File too large - 5MB max', 'error'); event.target.value = ''; return; }
+  const isImage = file.type.startsWith('image/');
+  const reader = new FileReader();
+  reader.onload = function() {
+    const result = reader.result;
+    const base64 = String(result).split(',')[1] || '';
+    chatAttachment = { name: file.name, mime_type: file.type || 'text/plain', data_base64: base64, is_image: isImage };
+    document.getElementById('chatAttachmentName').textContent = '📎 ' + file.name;
+    document.getElementById('chatAttachmentPreview').style.display = 'flex';
+  };
+  reader.onerror = function() { toast('Could not read file', 'error'); };
+  reader.readAsDataURL(file);
+}
+function removeChatAttachment() {
+  chatAttachment = null;
+  document.getElementById('chatFileInput').value = '';
+  document.getElementById('chatAttachmentPreview').style.display = 'none';
+}
+
 async function sendChat() {
   const input = document.getElementById('chatInput');
   const msg = input.value.trim();
-  if (!msg) return;
+  if (!msg && !chatAttachment) return;
   input.value = '';
   const log = document.getElementById('chatLog');
   const btn = document.getElementById('chatSendBtn');
+  const attachmentForSend = chatAttachment;
+  const attachmentLabel = attachmentForSend ? ' 📎 ' + attachmentForSend.name : '';
+  removeChatAttachment();
   
   // Render user msg
   const userMsg = document.createElement('div');
   userMsg.className = 'chat-msg user';
-  userMsg.textContent = msg;
+  userMsg.textContent = (msg || '(attachment only)') + attachmentLabel;
   log.appendChild(userMsg);
   log.scrollTop = log.scrollHeight;
   
@@ -1364,7 +1397,7 @@ async function sendChat() {
   
   btn.disabled = true;
   
-  chatHistory.push({ role: 'user', content: msg });
+  chatHistory.push({ role: 'user', content: msg + attachmentLabel });
   
   try {
     const res = await fetch(N8N + '/ai/chat', {
@@ -1374,7 +1407,8 @@ async function sendChat() {
         message: msg,
         master_tag: masterTag === 'all' ? null : masterTag,
         window_days: timeWindow === 'custom' ? 30 : timeWindow,
-        history: chatHistory.slice(-8)  // last 8 turns for context
+        history: chatHistory.slice(-8),  // last 8 turns for context
+        attachment: attachmentForSend
       })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
