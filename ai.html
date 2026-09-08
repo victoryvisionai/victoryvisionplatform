@@ -437,6 +437,25 @@
     <div id="topProspects"></div>
   </div>
 
+  <div class="card" id="experimentsCard" style="margin-top:24px;">
+    <div id="experimentsHeader" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleExperimentsPanel()">
+      <h2 style="margin:0;">🧪 AI SDR Experiments</h2>
+      <span id="experimentsToggleIcon" style="font-size:20px;">▸</span>
+    </div>
+    <div id="experimentsBody" style="display:none;margin-top:16px;">
+      <div id="experimentsWindows" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
+      <div id="experimentsCombos"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;">
+        <div style="font-weight:600;margin-bottom:8px;">Add a new experiment idea</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="newExperimentIdea" type="text" placeholder="e.g. West Point - Advisory/Search" style="flex:1;min-width:220px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+          <input id="newExperimentNotes" type="text" placeholder="Optional notes" style="flex:1;min-width:220px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+          <button onclick="addExperimentIdea()" class="success" style="white-space:nowrap;">+ Add Experiment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats grid -->
   <div class="stats-grid" id="statsGrid">
     <div class="stat-box"><span class="v" id="stContacts">0</span><div class="l">Contacts</div></div>
@@ -2137,6 +2156,84 @@ function renderTopProspects() {
       <span class="focus-now-badge" style="background:${x.score >= 70 ? '#22c55e' : x.score >= 40 ? '#f59e0b' : '#64748b'};">${Math.round(x.score)}%</span>
     </div>
   `; }).join('');
+}
+
+// ─── Experiments panel ─────────────────────────────────
+let experimentsLoaded = false;
+function toggleExperimentsPanel() {
+  const body = document.getElementById('experimentsBody');
+  const icon = document.getElementById('experimentsToggleIcon');
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? 'block' : 'none';
+  icon.textContent = opening ? '▾' : '▸';
+  if (opening && !experimentsLoaded) { loadExperiments(); experimentsLoaded = true; }
+}
+async function loadExperiments() {
+  try {
+    const res = await fetch(N8N + '/experiments/summary', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID })
+    });
+    const data = await res.json();
+    if (!data || !data.success) return;
+
+    const w = data.windows || {};
+    const windowsEl = document.getElementById('experimentsWindows');
+    function windowCard(label, stats) {
+      stats = stats || { total: 0, by_outcome: {} };
+      const won = stats.by_outcome.won || 0;
+      const pending = stats.by_outcome.pending || 0;
+      return `<div style="flex:1;min-width:140px;padding:14px;border:1px solid #e2e8f0;border-radius:10px;">
+        <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
+        <div style="font-size:24px;font-weight:700;color:#0A3161;">${stats.total}</div>
+        <div style="font-size:12px;color:#64748b;">${won} won · ${pending} pending</div>
+      </div>`;
+    }
+    windowsEl.innerHTML = windowCard('Last 90 days', w.d90) + windowCard('Last 180 days', w.d180) + windowCard('Last 360 days', w.d360);
+
+    const combosEl = document.getElementById('experimentsCombos');
+    const combos = data.combos || [];
+    if (!combos.length) { combosEl.innerHTML = '<p style="color:#64748b;">No experiments yet.</p>'; return; }
+    combosEl.innerHTML = combos.map(c => {
+      const winRate = c.total > 0 ? Math.round((c.won / c.total) * 100) : 0;
+      const typeLabel = (c.experiment_type || '').replace(/_/g, ' ');
+      return `<div style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;">${esc(c.workflow_combo)}</div>
+            <div style="font-size:12px;color:#94a3b8;">${esc(typeLabel)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;">${c.total} run${c.total===1?'':'s'} · ${c.won} won · ${c.nurture_exit} exited · ${c.pending} pending</div>
+            ${c.won > 0 ? `<div style="font-size:12px;color:#16a34a;">${winRate}% win rate</div>` : ''}
+          </div>
+        </div>
+        ${c.latest_note ? `<div style="font-size:13px;color:#64748b;margin-top:6px;">${esc(c.latest_note)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) { console.error('[loadExperiments]', e); }
+}
+async function addExperimentIdea() {
+  const idea = document.getElementById('newExperimentIdea').value.trim();
+  const notes = document.getElementById('newExperimentNotes').value.trim();
+  if (!idea) { toast('Enter an experiment idea first', 'error'); return; }
+  try {
+    const res = await fetch(N8N + '/experiments/add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, idea, notes })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      document.getElementById('newExperimentIdea').value = '';
+      document.getElementById('newExperimentNotes').value = '';
+      toast('Experiment added', 'success');
+      experimentsLoaded = false;
+      loadExperiments();
+      experimentsLoaded = true;
+    } else {
+      toast('Could not add experiment', 'error');
+    }
+  } catch (e) { console.error('[addExperimentIdea]', e); toast('Error adding experiment', 'error'); }
 }
 
 // ─── Master render ─────────────────────────────────────
