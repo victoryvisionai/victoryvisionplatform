@@ -437,6 +437,18 @@
     <div id="topProspects"></div>
   </div>
 
+  <div class="card" id="aisdrChannelsCard" style="margin-top:24px;">
+    <div id="aisdrChannelsHeader" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAisdrChannelsPanel()">
+      <h2 style="margin:0;">🤖 AI SDR Channels</h2>
+      <span id="aisdrChannelsToggleIcon" style="font-size:20px;">▸</span>
+    </div>
+    <div id="aisdrChannelsBody" style="display:none;margin-top:16px;">
+      <p style="color:#64748b;font-size:13px;margin-bottom:16px;">Control which channels the AI SDR is allowed to use on your behalf.</p>
+      <div id="aisdrChannelsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <button onclick="saveAisdrChannels()" class="btn btn-primary" style="margin-top:16px;">Save Channel Settings</button>
+    </div>
+  </div>
+
   <div class="card" id="experimentsCard" style="margin-top:24px;">
     <div id="experimentsHeader" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleExperimentsPanel()">
       <h2 style="margin:0;">🧪 AI SDR Experiments</h2>
@@ -2190,6 +2202,105 @@ function renderTopProspects() {
       <span class="focus-now-badge" style="background:${x.score >= 70 ? '#22c55e' : x.score >= 40 ? '#f59e0b' : '#64748b'};">${Math.round(x.score)}%</span>
     </div>
   `; }).join('');
+}
+
+// ─── AI SDR Channels panel ──────────────────────────────
+const AISDR_SIMPLE_CHANNELS = [
+  { key: 'email', label: 'Email' },
+  { key: 'calls', label: 'AI Calls' },
+  { key: 'sms', label: 'SMS' },
+  { key: 'campaigns', label: 'Campaigns' },
+  { key: 'websites', label: 'Websites / Pages' },
+  { key: 'social', label: 'Social Posts' },
+  { key: 'images', label: 'Images' },
+  { key: 'videos', label: 'Videos' },
+  { key: 'presentations', label: 'Presentations' }
+];
+let aisdrChannelsLoaded = false;
+let currentAisdrChannels = null;
+
+function toggleAisdrChannelsPanel() {
+  const body = document.getElementById('aisdrChannelsBody');
+  const icon = document.getElementById('aisdrChannelsToggleIcon');
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? 'block' : 'none';
+  icon.textContent = opening ? '▾' : '▸';
+  if (opening && !aisdrChannelsLoaded) { loadAisdrChannels(); aisdrChannelsLoaded = true; }
+}
+
+function renderAisdrChannelsList() {
+  const c = currentAisdrChannels || {};
+  const listEl = document.getElementById('aisdrChannelsList');
+  const rowStyle = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;';
+  let html = '';
+  AISDR_SIMPLE_CHANNELS.forEach(ch => {
+    const on = c[ch.key] !== false;
+    html += `<div style="${rowStyle}">
+      <span>${esc(ch.label)}</span>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;">
+        <input type="checkbox" data-channel="${ch.key}" class="aisdr-toggle" ${on ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+        <span class="aisdr-slider" style="position:absolute;cursor:pointer;inset:0;background:${on ? '#16a34a' : '#cbd5e1'};border-radius:24px;transition:0.2s;"></span>
+      </label>
+    </div>`;
+  });
+  const ads = c.ads || { enabled: true, min_daily_spend: 10, max_daily_spend: 50 };
+  html += `<div style="${rowStyle}flex-direction:column;align-items:stretch;gap:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Ads</span>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;">
+        <input type="checkbox" id="aisdrAdsEnabled" ${ads.enabled !== false ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+        <span class="aisdr-slider" style="position:absolute;cursor:pointer;inset:0;background:${ads.enabled !== false ? '#16a34a' : '#cbd5e1'};border-radius:24px;transition:0.2s;"></span>
+      </label>
+    </div>
+    <div style="display:flex;gap:12px;font-size:13px;color:#64748b;">
+      <label>Min daily spend $<input type="number" id="aisdrAdsMin" value="${ads.min_daily_spend||0}" min="0" style="width:70px;margin-left:4px;padding:4px;border:1px solid #cbd5e1;border-radius:6px;"></label>
+      <label>Max daily spend $<input type="number" id="aisdrAdsMax" value="${ads.max_daily_spend||0}" min="0" style="width:70px;margin-left:4px;padding:4px;border:1px solid #cbd5e1;border-radius:6px;"></label>
+    </div>
+  </div>`;
+  listEl.innerHTML = html;
+  document.querySelectorAll('.aisdr-toggle').forEach(input => {
+    input.addEventListener('change', function() {
+      this.nextElementSibling.style.background = this.checked ? '#16a34a' : '#cbd5e1';
+    });
+  });
+  const adsToggle = document.getElementById('aisdrAdsEnabled');
+  if (adsToggle) adsToggle.addEventListener('change', function() {
+    this.nextElementSibling.style.background = this.checked ? '#16a34a' : '#cbd5e1';
+  });
+}
+
+async function loadAisdrChannels() {
+  try {
+    const { data, error } = await sb.from('users').select('aisdr_channels').eq('email', CUSTOMER_ID).single();
+    if (error) throw error;
+    currentAisdrChannels = (data && data.aisdr_channels) || {};
+    renderAisdrChannelsList();
+  } catch (e) {
+    console.error('[loadAisdrChannels]', e);
+    toast('Could not load channel settings', 'error');
+  }
+}
+
+async function saveAisdrChannels() {
+  const updated = {};
+  AISDR_SIMPLE_CHANNELS.forEach(ch => {
+    const input = document.querySelector('.aisdr-toggle[data-channel="' + ch.key + '"]');
+    updated[ch.key] = input ? input.checked : true;
+  });
+  updated.ads = {
+    enabled: document.getElementById('aisdrAdsEnabled').checked,
+    min_daily_spend: Number(document.getElementById('aisdrAdsMin').value) || 0,
+    max_daily_spend: Number(document.getElementById('aisdrAdsMax').value) || 0
+  };
+  try {
+    const { error } = await sb.from('users').update({ aisdr_channels: updated }).eq('email', CUSTOMER_ID);
+    if (error) throw error;
+    currentAisdrChannels = updated;
+    toast('Channel settings saved', 'success');
+  } catch (e) {
+    console.error('[saveAisdrChannels]', e);
+    toast('Could not save channel settings', 'error');
+  }
 }
 
 // ─── Experiments panel ─────────────────────────────────
