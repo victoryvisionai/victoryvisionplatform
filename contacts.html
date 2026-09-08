@@ -1109,11 +1109,8 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
         <button id="lookAlikeBtn" class="success" style="background: #17a2b8;">🔎 Look Alike</button>
         <button id="massSMSBtn" class="success" style="background: #8B4789;">📱 Mass SMS</button>
         <button id="deleteSelectedBtn" class="danger">🗑️ Delete Selected</button>
+        <button id="massCallButton" onclick="startMassCall()" class="success" style="background: linear-gradient(135deg, #059669, #047857); color: white; font-weight: bold;">📞 Mass Call Selected</button>
         <span id="selectedCount" style="margin-left: 10px; color: #6699cc;">0 selected</span>
-      </div>
-<div class="bulk-actions-right">
-        <button id="expandContactBtn" class="success" style="background: #17a2b8;">🔍 Expand Contact</button>
-        <button id="massCallButton" onclick="startMassCall()" class="success" style="background: linear-gradient(135deg, #059669, #047857); color: white; font-weight: bold; margin-left: 10px;">📞 Mass Call Selected</button>
       </div>
     </div>
     <!-- Contacts Table -->
@@ -4655,7 +4652,6 @@ function showStatus(message, isError = false, persist = false) {
 }
 
 function setupEventListeners() {
-  document.getElementById('expandContactBtn').addEventListener('click', expandFirstSelectedContact);
   
   document.getElementById('addContactForm').addEventListener('submit', async (e) => {
     e.preventDefault();
