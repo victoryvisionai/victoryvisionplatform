@@ -778,7 +778,27 @@ async function joinMeeting(invite) {
       userName: invite.name || userEmail.split('@')[0],
     };
     if (isHost && hostToken) joinOpts.token = hostToken;
-    await callFrame.join(joinOpts);
+    // FIXED: callFrame.join() had no timeout - if it hung (most commonly a stuck
+    // camera/mic permission prompt, or a slow/failed WebRTC negotiation), the page
+    // spun on "Joining meeting..." forever with zero feedback. Now fails loudly
+    // after 15s with a direct fallback link instead of hanging silently.
+    const joinTimeoutMs = 15000;
+    let joinTimedOut = false;
+    const joinResult = await Promise.race([
+      callFrame.join(joinOpts).then(r => ({ ok: true, r })),
+      new Promise(resolve => setTimeout(() => { joinTimedOut = true; resolve({ ok: false }); }, joinTimeoutMs))
+    ]);
+    if (joinTimedOut || !joinResult.ok) {
+      loadingState.style.display = 'none';
+      const directUrl = invite.room_url + (isHost && hostToken ? ('?t=' + hostToken) : '');
+      const openDirect = confirm(
+        'Joining is taking too long - this is usually a stuck camera/microphone permission prompt.\n\n' +
+        'Click OK to open the meeting directly in a new tab (bypasses this page), or Cancel to keep waiting here.'
+      );
+      if (openDirect) window.open(directUrl, '_blank');
+      try { callFrame.destroy(); } catch (e) {}
+      return;
+    }
 
     loadingState.style.display = 'none';
     videoContainer.style.display = 'block';
