@@ -1358,7 +1358,7 @@ function suggestChat(el) {
   sendChat();
 }
 
-async let chatAttachment = null; // { name, mime_type, data_base64, is_image }
+let chatAttachment = null; // { name, mime_type, data_base64, is_image }
 
 function handleChatFileSelect(event) {
   const file = event.target.files && event.target.files[0];
