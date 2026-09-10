@@ -2142,17 +2142,8 @@ async function loadContacts() {
       contact_id: contact.id || contact.contact_id || contact.email || `contact_${index}`
     }));
 
-    // Default sort: leads with "Hot" in tags float to the top; then by close_probability desc,
-    // then by last_opened_date desc. Keeps stable order for everything else.
-    const hasHotTag = (c) => /\bhot\b/i.test(String(c.tags || ''));
-    allContacts.sort((a, b) => {
-      const ah = hasHotTag(a) ? 1 : 0, bh = hasHotTag(b) ? 1 : 0;
-      if (ah !== bh) return bh - ah;
-      const ap = parseFloat(a.close_probability) || 0;
-      const bp = parseFloat(b.close_probability) || 0;
-      if (ap !== bp) return bp - ap;
-      return new Date(b.last_opened_date || 0) - new Date(a.last_opened_date || 0);
-    });
+    // Default sort: most recently created contacts first.
+    allContacts.sort((a, b) => new Date(b.created || 0) - new Date(a.created || 0));
 
     filteredContacts = [...allContacts];
     
