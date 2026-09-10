@@ -458,6 +458,7 @@
       <button id="runExperimentBtn" onclick="runExperimentCycle()" class="btn btn-primary" style="margin-bottom:16px;">▶ Run Experiment Cycle Now</button>
       <div id="experimentsWindows" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
       <div id="experimentsCombos"></div>
+      <div id="experimentsExplained"></div>
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;">
         <div style="font-weight:600;margin-bottom:8px;">Add a new experiment idea</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2381,6 +2382,28 @@ async function loadExperiments() {
         ${c.latest_note ? `<div style="font-size:13px;color:#64748b;margin-top:6px;">${esc(c.latest_note)}</div>` : ''}
       </div>`;
     }).join('');
+
+    const explainedEl = document.getElementById('experimentsExplained');
+    const explained = data.recent_experiments_explained || [];
+    if (explainedEl) {
+      if (!explained.length) {
+        explainedEl.innerHTML = '';
+      } else {
+        explainedEl.innerHTML = '<h3 style="margin:20px 0 10px;font-size:15px;">Recent experiments, explained</h3>' + explained.map(e => {
+          const statusColor = e.outcome === 'won' ? '#16a34a' : e.outcome === 'nurture_exit' ? '#94a3b8' : e.outcome === 'converting' ? '#0A3161' : '#d97706';
+          const dispatchList = (e.dispatch || []).join(' → ');
+          return `<div style="padding:14px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;">
+              <div style="font-weight:600;font-size:13px;">${esc(e.workflow_combo || '')}</div>
+              <div style="font-size:11px;color:${statusColor};text-transform:uppercase;font-weight:600;white-space:nowrap;">${esc(e.outcome || '')}</div>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${esc(dispatchList)}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;font-style:italic;">Hypothesis: ${esc(e.hypothesis || '')}</div>
+            <div style="font-size:13px;margin-top:8px;">${esc(e.explanation || '')}</div>
+          </div>`;
+        }).join('');
+      }
+    }
   } catch (e) { console.error('[loadExperiments]', e); }
 }
 async function addExperimentIdea() {
