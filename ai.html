@@ -455,6 +455,7 @@
       <span id="experimentsToggleIcon" style="font-size:20px;">▸</span>
     </div>
     <div id="experimentsBody" style="display:none;margin-top:16px;">
+      <button id="runExperimentBtn" onclick="runExperimentCycle()" class="btn btn-primary" style="margin-bottom:16px;">▶ Run Experiment Cycle Now</button>
       <div id="experimentsWindows" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
       <div id="experimentsCombos"></div>
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;">
@@ -2305,6 +2306,30 @@ async function saveAisdrChannels() {
 
 // ─── Experiments panel ─────────────────────────────────
 let experimentsLoaded = false;
+
+async function runExperimentCycle() {
+  const btn = document.getElementById('runExperimentBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running... (takes a few minutes)';
+  try {
+    const resp = await fetch('https://victoryvision.app.n8n.cloud/webhook/experiments/design-now', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    if (!resp.ok) throw new Error('Request failed: ' + resp.status);
+    toast('Experiment cycle finished — refreshing results', 'success');
+    experimentsLoaded = false;
+    loadExperiments();
+  } catch (e) {
+    console.error('[runExperimentCycle]', e);
+    toast('Could not complete experiment cycle', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Run Experiment Cycle Now';
+  }
+}
+
 function toggleExperimentsPanel() {
   const body = document.getElementById('experimentsBody');
   const icon = document.getElementById('experimentsToggleIcon');
