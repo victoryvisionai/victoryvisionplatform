@@ -2376,14 +2376,33 @@ async function loadExperiments() {
       const runsHtml = (c.runs || []).map(run => {
         const statusColor = run.outcome === 'won' ? '#16a34a' : run.outcome === 'nurture_exit' ? '#94a3b8' : run.outcome === 'converting' ? '#0A3161' : '#d97706';
         const dispatchList = (run.dispatch || []).join(' → ');
+        // Real per-step status, from Check Step Results against the actual backend
+        // tables - answers concretely which campaign/page was made, how many real
+        // leads a lookalike found, whether anything actually sent.
+        const stepsHtml = (run.steps || []).map(s => {
+          const sColor = s.status === 'completed' ? '#16a34a' : s.status === 'in_progress' ? '#d97706' : s.status === 'failed' ? '#dc2626' : '#94a3b8';
+          const rd = s.result_data ? Object.entries(s.result_data).map(([k,v]) => k.replace(/_/g,' ') + ': ' + v).join(', ') : '';
+          return `<div style="font-size:11px;margin-top:3px;padding-left:8px;border-left:2px solid ${sColor};">
+            <span style="color:${sColor};font-weight:600;text-transform:uppercase;">${esc(s.status || 'pending')}</span>
+            <span style="color:#475569;"> ${esc(s.step_name || s.workflow_name || '')}</span>
+            ${rd ? `<div style="color:#94a3b8;">${esc(rd)}</div>` : ''}
+          </div>`;
+        }).join('');
+        const suggestionsHtml = (run.next_experiment_suggestions || []).length
+          ? `<div style="font-size:12px;margin-top:6px;"><b>Next-experiment candidates:</b><ul style="margin:4px 0 0 18px;padding:0;">${run.next_experiment_suggestions.map(s => `<li>${esc(s.workflow_combo || '')} - ${esc(s.hypothesis || '')}</li>`).join('')}</ul></div>`
+          : '';
         return `<div style="padding:12px;margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fafbfc;">
           <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;">
             <div style="font-size:12px;color:#64748b;font-weight:600;">${esc(run.date || '')}</div>
             <div style="font-size:11px;color:${statusColor};text-transform:uppercase;font-weight:600;white-space:nowrap;">${esc(run.outcome || '')}</div>
           </div>
           ${dispatchList ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Steps: ${esc(dispatchList)}</div>` : ''}
+          ${stepsHtml ? `<div style="margin-top:6px;">${stepsHtml}</div>` : ''}
           ${run.hypothesis ? `<div style="font-size:12px;color:#64748b;margin-top:6px;font-style:italic;">Hypothesis: ${esc(run.hypothesis)}</div>` : ''}
           ${run.explanation ? `<div style="font-size:13px;margin-top:6px;">${esc(run.explanation)}</div>` : ''}
+          ${run.lessons_learned ? `<div style="font-size:12px;margin-top:6px;background:#fffbeb;padding:6px 8px;border-radius:6px;"><b>Lesson learned:</b> ${esc(run.lessons_learned)}</div>` : ''}
+          ${(run.victories_linked || []).length ? `<div style="font-size:12px;margin-top:6px;color:#16a34a;"><b>Victories:</b> ${run.victories_linked.length} linked</div>` : ''}
+          ${suggestionsHtml}
         </div>`;
       }).join('');
       return `<div style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
