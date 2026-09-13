@@ -73,7 +73,9 @@ tr.sel td{background:#e8f2ff}
 
 <div class="wrap">
 <h1>&#128222; Calls</h1>
-<div class="sub">Ranked by tier and engagement. Click a name to load prep, then call. Or select several and enroll them in AI calling.</div>
+<div class="sub">Ranked by tier and engagement. Click a name to load prep, then call. Or select several and enroll them in AI calling.
+  <button id="refreshCallListBtn" onclick="refreshCallList()" style="margin-left:12px;padding:4px 12px;font-size:12px;border-radius:6px;border:1px solid #0A3161;background:#fff;color:#0A3161;cursor:pointer;">↻ Refresh Call List</button>
+  </div>
 
 <div class="bar">
   <span class="lbl">Segment</span>
@@ -141,7 +143,7 @@ const PICKED=new Set();
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'');t.style.display='block';setTimeout(function(){t.style.display='none';},4500);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function num(v){const n=parseFloat(String(v==null?'':v).replace('%',''));return isFinite(n)?n:0;}
+function num(v){const n=parseFloat(String(v==null?'':v).replace(/[%$,]/g,''));return isFinite(n)?n:0;}
 function days(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
 
 function excluded(c){
@@ -208,6 +210,26 @@ function dealsOf(c){
 function plainTags(c){
   return String(c.tags||'').split(',').map(function(t){return t.trim();})
     .filter(function(t){return t&&t.indexOf('deal:')!==0&&t.indexOf('call-list-t')!==0;});
+}
+
+async function refreshCallList(){
+  const btn = document.getElementById('refreshCallListBtn');
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Refreshing...';
+  try {
+    const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/contacts/refresh-call-list', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    location.reload();
+  } catch (e) {
+    console.error('[refreshCallList]', e);
+    btn.disabled = false;
+    btn.textContent = orig;
+    alert('Refresh failed - try again in a moment.');
+  }
 }
 
 async function boot(){
