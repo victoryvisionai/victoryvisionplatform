@@ -2365,13 +2365,31 @@ async function loadExperiments() {
     const combosEl = document.getElementById('experimentsCombos');
     const combos = data.combos || [];
     if (!combos.length) { combosEl.innerHTML = '<p style="color:#64748b;">No experiments yet.</p>'; return; }
-    combosEl.innerHTML = combos.map(c => {
+    // Real, nested rendering: each experiment thread (workflow_combo) is one
+    // collapsible group showing aggregate results, and expanding it reveals
+    // every dated run underneath - hypothesis, steps taken, and outcome - so
+    // hypothesis -> actions -> results over time is visible in one place.
+    combosEl.innerHTML = combos.map((c, ci) => {
       const winRate = c.total > 0 ? Math.round((c.won / c.total) * 100) : 0;
       const typeLabel = (c.experiment_type || '').replace(/_/g, ' ');
+      const groupId = 'expGroup' + ci;
+      const runsHtml = (c.runs || []).map(run => {
+        const statusColor = run.outcome === 'won' ? '#16a34a' : run.outcome === 'nurture_exit' ? '#94a3b8' : run.outcome === 'converting' ? '#0A3161' : '#d97706';
+        const dispatchList = (run.dispatch || []).join(' → ');
+        return `<div style="padding:12px;margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fafbfc;">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;">
+            <div style="font-size:12px;color:#64748b;font-weight:600;">${esc(run.date || '')}</div>
+            <div style="font-size:11px;color:${statusColor};text-transform:uppercase;font-weight:600;white-space:nowrap;">${esc(run.outcome || '')}</div>
+          </div>
+          ${dispatchList ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Steps: ${esc(dispatchList)}</div>` : ''}
+          ${run.hypothesis ? `<div style="font-size:12px;color:#64748b;margin-top:6px;font-style:italic;">Hypothesis: ${esc(run.hypothesis)}</div>` : ''}
+          ${run.explanation ? `<div style="font-size:13px;margin-top:6px;">${esc(run.explanation)}</div>` : ''}
+        </div>`;
+      }).join('');
       return `<div style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="const el=document.getElementById('${groupId}');el.style.display=el.style.display==='none'?'block':'none';">
           <div>
-            <div style="font-weight:600;">${esc(c.workflow_combo)}</div>
+            <div style="font-weight:600;">▸ ${esc(c.workflow_combo)}</div>
             <div style="font-size:12px;color:#94a3b8;">${esc(typeLabel)}</div>
           </div>
           <div style="text-align:right;">
@@ -2379,31 +2397,9 @@ async function loadExperiments() {
             ${c.won > 0 ? `<div style="font-size:12px;color:#16a34a;">${winRate}% win rate</div>` : ''}
           </div>
         </div>
-        ${c.latest_note ? `<div style="font-size:13px;color:#64748b;margin-top:6px;">${esc(c.latest_note)}</div>` : ''}
+        <div id="${groupId}" style="display:none;">${runsHtml}</div>
       </div>`;
     }).join('');
-
-    const explainedEl = document.getElementById('experimentsExplained');
-    const explained = data.recent_experiments_explained || [];
-    if (explainedEl) {
-      if (!explained.length) {
-        explainedEl.innerHTML = '';
-      } else {
-        explainedEl.innerHTML = '<h3 style="margin:20px 0 10px;font-size:15px;">Recent experiments, explained</h3>' + explained.map(e => {
-          const statusColor = e.outcome === 'won' ? '#16a34a' : e.outcome === 'nurture_exit' ? '#94a3b8' : e.outcome === 'converting' ? '#0A3161' : '#d97706';
-          const dispatchList = (e.dispatch || []).join(' → ');
-          return `<div style="padding:14px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;">
-              <div style="font-weight:600;font-size:13px;">${esc(e.workflow_combo || '')}</div>
-              <div style="font-size:11px;color:${statusColor};text-transform:uppercase;font-weight:600;white-space:nowrap;">${esc(e.outcome || '')}</div>
-            </div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${esc(dispatchList)}</div>
-            <div style="font-size:12px;color:#64748b;margin-top:6px;font-style:italic;">Hypothesis: ${esc(e.hypothesis || '')}</div>
-            <div style="font-size:13px;margin-top:8px;">${esc(e.explanation || '')}</div>
-          </div>`;
-        }).join('');
-      }
-    }
   } catch (e) { console.error('[loadExperiments]', e); }
 }
 async function addExperimentIdea() {
