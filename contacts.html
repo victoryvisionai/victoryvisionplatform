@@ -4259,6 +4259,24 @@ async function enrollInCampaigns() {
   }
   
   try {
+    // FIXED: a modal-based campaign type (custom_ai, template_modal) must be exclusive -
+    // if any OTHER campaign checkbox was left checked from a prior action, the old loop
+    // would open the modal AND simultaneously fire that other campaign's real, immediate
+    // enrollment in the same click. That enrollment then cleared/deselected the contacts
+    // out from under the just-opened modal, and the user never got to finish it. Now: if
+    // a modal type is present, open it, uncheck every other campaign box, and stop here -
+    // nothing else runs until the modal's own submit flow handles it.
+    if (selectedCampaigns.includes('custom_ai')) {
+      document.querySelectorAll('#campaignList input[type="checkbox"]').forEach(cb => { if (cb.value !== 'custom_ai') cb.checked = false; });
+      showCustomCampaignModal('custom');
+      return;
+    }
+    if (selectedCampaigns.includes('template_modal')) {
+      document.querySelectorAll('#campaignList input[type="checkbox"]').forEach(cb => { if (cb.value !== 'template_modal') cb.checked = false; });
+      showCustomCampaignModal('template');
+      return;
+    }
+
     const selectedContactsList = Array.from(selectedContacts).map(id => 
       allContacts.find(c => 
         c.contact_id === id || 
@@ -4266,7 +4284,6 @@ async function enrollInCampaigns() {
         c.email === id
       )
     ).filter(c => c && c.email);
-// After line 3205:
 const contactsWithoutEmail = Array.from(selectedContacts).length - selectedContactsList.length;
 if (contactsWithoutEmail > 0) {
   showStatus(`⚠️ ${contactsWithoutEmail} contact(s) skipped - no email address`, true);
