@@ -220,7 +220,7 @@ async function refreshCallList(){
   try {
     const r = await fetch('https://victoryvision.app.n8n.cloud/webhook/contacts/refresh-call-list', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: CUSTOMER_ID })
+      body: JSON.stringify({ customer_id: CID })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     location.reload();
