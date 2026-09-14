@@ -4377,7 +4377,7 @@ for (const campaign of selectedCampaigns) {
           endpoint = ENDPOINTS.enrollNurture;
           break;
         case 'meeting':
-          endpoint = ENDPOINTS.enrollMeeting;
+          endpoint = ENDPOINTS.customEmailCampaign;
           break;
      case 'newsletter':
           await enrollNewsletterModal();
@@ -4461,6 +4461,7 @@ for (const campaign of selectedCampaigns) {
               email: contact.email,
               name: contact.name,
               campaign: campaign,
+              campaign_type: campaign,
               contact_id: contact.contact_id || contact.id || contact.email,
               customer_id: CUSTOMER_ID
             }, extra));
@@ -5996,18 +5997,15 @@ async function confirmLeadMagnet() {
     showStatus(`⏳ Enrolling ${leadMagnetContactsPending.length} contacts in lead magnet...`, false);
     document.getElementById('leadMagnetModal').style.display = 'none';
 
-    const response = await fetch(ENDPOINTS.enrollLeadMagnet, {
+    const response = await fetch(ENDPOINTS.customEmailCampaign, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer_id: CUSTOMER_ID,
+        campaign_type: 'leadmagnet',
         lead_magnet_url: selectedLeadMagnetUrl,
         lead_magnet_page_id: selectedLeadMagnetPageId,
-        contacts: leadMagnetContactsPending.map(c => ({
-          id: c.id || c.contact_id,
-          email: c.email,
-          name: c.name
-        }))
+        selected_contacts: leadMagnetContactsPending.map(c => c.id || c.contact_id)
       })
     });
 
@@ -6105,18 +6103,14 @@ async function confirmNewsletter() {
     showStatus(`⏳ Enrolling ${newsletterContactsPending.length} contacts in newsletter...`, false);
     document.getElementById('newsletterModal').style.display = 'none';
 
-    // Fire per-contact (matches existing enroll pattern for other sequences).
+    await apiCall(ENDPOINTS.customEmailCampaign, {
+      customer_id: CUSTOMER_ID,
+      campaign_type: 'newsletter',
+      selected_contacts: newsletterContactsPending.map(c => c.id || c.contact_id),
+      newsletter_page_id: selectedNewsletterPageId,
+      newsletter_url: selectedNewsletterUrl
+    });
     for (const c of newsletterContactsPending) {
-      await apiCall(ENDPOINTS.enrollNewsletter, {
-        customer_id: CUSTOMER_ID,
-        email: c.email,
-        name: c.name,
-        campaign: 'newsletter',
-        contact_id: c.id || c.contact_id,
-        newsletter_page_id: selectedNewsletterPageId,
-        newsletter_page_url: selectedNewsletterUrl,
-        newsletter_url: selectedNewsletterUrl
-      });
       await appendContactCampaignTag(c.id || c.contact_id, 'Newsletter');
     }
     showStatus(`✅ ${newsletterContactsPending.length} contacts enrolled in newsletter!`, false);
