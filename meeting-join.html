@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Join Meeting - Victory Vision</title>
+<style>
+  body { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; background:#0A3161; min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { background:#fff; border-radius:14px; padding:40px 32px; max-width:420px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center; }
+  h1 { font-size:22px; color:#0A3161; margin:0 0 8px; }
+  p.sub { color:#6B7280; font-size:14px; margin:0 0 24px; }
+  input { width:100%; padding:14px; font-size:16px; border:1px solid #E2E5EA; border-radius:8px; box-sizing:border-box; margin-bottom:14px; }
+  button { width:100%; padding:14px; font-size:16px; font-weight:600; color:#fff; background:#C41E3A; border:none; border-radius:8px; cursor:pointer; }
+  button:disabled { opacity:0.6; cursor:default; }
+  .error { color:#991B1B; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:8px; padding:12px; font-size:14px; margin-top:14px; display:none; }
+  .success { color:#166534; font-size:15px; margin-top:14px; display:none; }
+  .meeting-id-note { font-size:12px; color:#9CA3AF; margin-top:20px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Join Your Meeting</h1>
+    <p class="sub">Enter the email you were invited with to get straight into the room.</p>
+    <input type="email" id="join-email" placeholder="you@company.com" autocomplete="email"/>
+    <button id="join-btn">Join Meeting</button>
+    <div class="error" id="join-error"></div>
+    <div class="success" id="join-success">Found it — taking you in now...</div>
+    <div class="meeting-id-note" id="meeting-id-note"></div>
+  </div>
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const meetingId = params.get('m') || params.get('meeting_id') || '';
+  const noteEl = document.getElementById('meeting-id-note');
+  if (!meetingId) {
+    noteEl.textContent = 'No meeting specified in this link. Ask your host to resend the invite.';
+  }
+
+  const btn = document.getElementById('join-btn');
+  const emailInput = document.getElementById('join-email');
+  const errorEl = document.getElementById('join-error');
+  const successEl = document.getElementById('join-success');
+
+  function attemptJoin() {
+    const email = emailInput.value.trim();
+    if (!email) { showError('Enter the email address you were invited with.'); return; }
+    if (!meetingId) { showError('This link is missing meeting information. Ask your host to resend it.'); return; }
+
+    errorEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+
+    fetch('https://victoryvision.app.n8n.cloud/webhook/meetings/join-by-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, meeting_id: meetingId })
+    }).then(function(res){ return res.json(); })
+      .then(function(data){
+        if (data && data.ok && data.room_url) {
+          successEl.style.display = 'block';
+          setTimeout(function(){ window.location.href = data.room_url; }, 600);
+        } else {
+          showError((data && data.error) || 'No meeting found for that email.');
+        }
+      })
+      .catch(function(err){
+        console.error('[join-by-email]', err);
+        showError('Something went wrong. Please try again.');
+      })
+      .finally(function(){
+        btn.disabled = false;
+        btn.textContent = 'Join Meeting';
+      });
+  }
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+  }
+
+  btn.addEventListener('click', attemptJoin);
+  emailInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') attemptJoin(); });
+})();
+</script>
+</body>
+</html>
