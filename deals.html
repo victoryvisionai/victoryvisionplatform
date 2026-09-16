@@ -3008,8 +3008,8 @@ function renderActivity() {
     return `
       <div style="border-left: 3px solid #0A3161; padding: 8px 12px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px; word-break: break-word;">
         <div style="font-size: 0.78rem; color: #666;">${tsDate}</div>
-        <div><strong>${esc(ev.contact_name)}</strong> — <span style="color: #0A3161;">${esc(ev.event || 'event')}</span></div>
-        ${ev.note ? `<div style="font-size: 0.82rem; color: #555; margin-top: 4px;">${esc(ev.note)}</div>` : ''}
+        <div><strong>${esc(ev.contact_name)}</strong> — <span style="color: #0A3161;">${esc((ev.type || ev.event || 'event').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</span></div>
+        ${(ev.summary || ev.note) ? `<div style="font-size: 0.82rem; color: #555; margin-top: 4px;">${esc(ev.summary || ev.note)}</div>` : ''}
         ${ev.from && ev.to ? `<div style="font-size: 0.82rem; color: #555;">${esc(getStageLabel(ev.from))} → ${esc(getStageLabel(ev.to))}</div>` : ''}
       </div>
     `;
@@ -3353,7 +3353,7 @@ async function openContactModal(contactId) {
       return `
         <div class="journey-entry">
           <div class="journey-ts">${ts}</div>
-          <div><span class="journey-event">${esc(ev.event || 'event')}</span></div>
+          <div><span class="journey-event">${esc((ev.type || ev.event || 'event').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</span></div>
           ${details.length ? `<div style="color: #555; margin-top: 2px;">${details.join(' · ')}</div>` : ''}
         </div>`;
     }).join('');
