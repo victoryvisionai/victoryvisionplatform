@@ -719,9 +719,9 @@ function populateMasterTagDropdown() {
 async function loadAllData() {
   const tasks = await Promise.allSettled([
     sb.from('contacts').select('id, name, email, company, tags, created, client_won_date, client_ann_est, last_emailed_date, last_opened_date, last_responded, last_called, last_clicked_date, num_emails_opened, num_links_clicked, number_emails_sent, number_call_attempts, meeting_date, next_steps, customer_journey, campaigns')
-      .eq('cus_id', CUSTOMER_ID).order('created', { ascending: false }).limit(2000),
+      .eq('cus_id', CUSTOMER_ID).order('created', { ascending: false }).limit(5000),
     sb.from('email').select('id, "from", "to", subject, sent_at, opened_at, replied_at, clicked_at, opens, clicks, inbound, campaign, customer_id, created_at')
-      .eq('customer_id', CUSTOMER_ID).gte('sent_at', new Date(Date.now() - 365*86400000).toISOString()).limit(2000),
+      .eq('customer_id', CUSTOMER_ID).gte('sent_at', new Date(Date.now() - 365*86400000).toISOString()).limit(5000),
     sb.from('SMS').select('id, message, "to", "from", created_at, customer_id, responded, respondedat, campaign')
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
     sb.from('calls').select('id, person_called, number_called, customer_id, created_at, outcome, contact_id, call_score')
