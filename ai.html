@@ -845,7 +845,7 @@ function renderFunnel() {
   const softCircle = scoped.filter(c => (c.tags || '').toLowerCase().includes(':soft-circle')).length;
   const contactWins = scoped.filter(c => c.client_won_date && inWindow(c.client_won_date)).length;
   const victoryWins = allVictories.filter(v => inWindow(v.created_at)).length;
-  const wins = contactWins + victoryWins;
+  const wins = victoryWins; // victories is now the single source of truth for the Victory count. Adding contactWins double-counted any win that had both a client_won_date and a victories row.
 
   document.getElementById('funnelLabel').textContent = `${tagLabel()} · ${windowLabel()}`;
   document.getElementById('funnel').innerHTML = `
