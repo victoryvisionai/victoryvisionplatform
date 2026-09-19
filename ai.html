@@ -1961,6 +1961,20 @@ function analyticsSections() {
           allDealsDashboard.forEach(d=>{st[d.status||'open']=(st[d.status||'open']||0)+1;});
           return barCfg(Object.keys(st),Object.values(st),'Deals');
         }
+        if (type==='Stage distribution'){
+          // Snapshot of where prospects currently sit per deal - not velocity
+          // (that would need per-transition timestamps, which nothing today
+          // records; a tag change overwrites the prior stage with no history).
+          const active=allDealsDashboard.filter(d=>d.total_prospects>0).slice(0,8);
+          return multiBarCfg(active.map(d=>d.deal_name),[
+            {label:'Not contacted',data:active.map(d=>d.not_contacted_count||0)},
+            {label:'Soft touch',data:active.map(d=>d.soft_touch_count||0)},
+            {label:'Pitched',data:active.map(d=>d.pitched_count||0)},
+            {label:'Soft circle',data:active.map(d=>d.soft_circle_count||0)},
+            {label:'Committed',data:active.map(d=>d.committed_count||0)},
+            {label:'Closed',data:active.map(d=>d.closed_count||0)}
+          ]);
+        }
         const named=allDealsDashboard
           .map(d=>({name:d.deal_name||'Deal',v:parseFloat(d.effective_stage_weighted_pwv_usd)||0}))
           .filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8);
