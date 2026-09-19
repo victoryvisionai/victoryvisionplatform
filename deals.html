@@ -3124,6 +3124,12 @@ function recalcLivePwv() {
     document.getElementById('livePwv').textContent = '$' + formatMoney(pwv);
   }
 }
+function onPricingModelChange() {
+  const isSub = document.getElementById('editDealEconomicsModel').value === 'subscription';
+  document.querySelectorAll('.pricing-field-transaction').forEach(el => el.style.display = isSub ? 'none' : '');
+  document.querySelectorAll('.pricing-field-subscription').forEach(el => el.style.display = isSub ? '' : 'none');
+  recalcLivePwv();
+}
 function closeEditDealModal() { document.getElementById('editDealModal').classList.remove('active'); }
 
 async function saveDealMeta() {
