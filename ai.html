@@ -1985,6 +1985,21 @@ function analyticsSections() {
     // 5. CAMPAIGNS — reply rate / volume by campaign
     { key:'campaigns', title:'Campaigns', types:['Reply rate','Volume','By workflow'],
       build(type){
+        if (type==='By workflow'){
+          const wf={User:{s:0,o:0,c:0,r:0},Nurture:{s:0,o:0,c:0,r:0},Template:{s:0,o:0,c:0,r:0},'Campaign/Other':{s:0,o:0,c:0,r:0}};
+          emails.forEach(e=>{
+            const camp=e.campaign||'';
+            const k = camp==='user-generated' ? 'User' : camp==='nurture' ? 'Nurture' : /^wf:template:/.test(camp) ? 'Template' : 'Campaign/Other';
+            wf[k].s++; if(e.opened_at||e.opens>0) wf[k].o++; if(e.clicked_at||e.clicks>0) wf[k].c++; if(e.replied_at) wf[k].r++;
+          });
+          const labels=Object.keys(wf);
+          return multiBarCfg(labels,[
+            {label:'Sent',data:labels.map(k=>wf[k].s)},
+            {label:'Opened',data:labels.map(k=>wf[k].o)},
+            {label:'Clicked',data:labels.map(k=>wf[k].c)},
+            {label:'Replied',data:labels.map(k=>wf[k].r)}
+          ]);
+        }
         const stats={};
         emails.forEach(e=>{const c=e.campaign||'Direct';if(!stats[c])stats[c]={sent:0,rep:0};
           stats[c].sent++;if(e.replied_at)stats[c].rep++;});
