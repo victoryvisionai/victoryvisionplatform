@@ -2023,7 +2023,7 @@ function analyticsSections() {
         if (type==='Engagement by tag'){
           const tagCounts={};
           scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();
-            if(t&&t.length>2&&!t.startsWith('deal:'))tagCounts[t]=(tagCounts[t]||0)+1;}));
+            if(t&&t.length>2&&!t.startsWith('deal:')&&!t.startsWith('archived'))tagCounts[t]=(tagCounts[t]||0)+1;}));
           const topTags=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
           const byEmail={};
           emails.forEach(e=>{const k=(e.to||'').toLowerCase(); if(!k)return; (byEmail[k]=byEmail[k]||[]).push(e);});
