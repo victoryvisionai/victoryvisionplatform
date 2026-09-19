@@ -3091,8 +3091,10 @@ async function editDealMeta() {
   document.getElementById('editDealSize').value = m.deal_size_usd != null ? m.deal_size_usd : '';
   document.getElementById('editDealTakeRate').value = m.take_rate_pct != null ? m.take_rate_pct : '';
   document.getElementById('editDealCloseProb').value = m.base_close_prob_pct != null ? m.base_close_prob_pct : '';
-  document.getElementById('editDealEconomicsModel').value = m.economics_model || (m.deal_size_usd > 0 ? 'transaction' : 'subscription');
+  document.getElementById('editDealEconomicsModel').value = m.vv_pricing_model
+    || (m.unit_price_usd > 0 ? 'subscription' : (m.deal_size_usd > 0 ? 'transaction' : 'subscription'));
   document.getElementById('editDealUnitPrice').value = m.unit_price_usd != null ? m.unit_price_usd : '';
+  onPricingModelChange();
   document.getElementById('editDealCounterpartyName').value = m.counterparty_name || '';
   document.getElementById('editDealCounterpartyCompany').value = m.counterparty_company || '';
   document.getElementById('editDealMandate').value = selectedDeal._goal_description || selectedDeal.goal_description || '';
