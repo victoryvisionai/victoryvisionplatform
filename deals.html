@@ -3145,6 +3145,9 @@ async function saveDealMeta() {
   if (sizeRaw !== '') updatedMeta.deal_size_usd = parseFloat(sizeRaw) || 0;
   if (takeRaw !== '') updatedMeta.take_rate_pct = parseFloat(takeRaw) || 0;
   if (closeRaw !== '') updatedMeta.base_close_prob_pct = parseFloat(closeRaw) || 0;
+  updatedMeta.economics_model = document.getElementById('editDealEconomicsModel').value;
+  const unitPriceRaw = document.getElementById('editDealUnitPrice').value;
+  if (unitPriceRaw !== '') updatedMeta.unit_price_usd = parseFloat(unitPriceRaw) || 0;
   // Pre-compute gross + pwv so the view shows them even without recomputing
   const size = updatedMeta.deal_size_usd || 0;
   const take = updatedMeta.take_rate_pct || 0;
