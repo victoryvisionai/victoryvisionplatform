@@ -3113,8 +3113,16 @@ function recalcLivePwv() {
   const close = parseFloat(document.getElementById('editDealCloseProb').value) || 0;
   const gross = size * take / 100;
   const pwv = gross * close / 100;
-  document.getElementById('liveGross').textContent = '$' + formatMoney(gross);
-  document.getElementById('livePwv').textContent = '$' + formatMoney(pwv);
+  const model = document.getElementById('editDealEconomicsModel').value;
+  const unitPrice = parseFloat(document.getElementById('editDealUnitPrice').value) || 0;
+  const prospects = (selectedDeal && selectedDeal.total_prospects) || 0;
+  if (model === 'subscription') {
+    document.getElementById('liveGross').textContent = '$' + formatMoney(unitPrice) + ' / customer';
+    document.getElementById('livePwv').textContent = '$' + formatMoney(unitPrice * prospects) + ' (' + prospects + ' prospects)';
+  } else {
+    document.getElementById('liveGross').textContent = '$' + formatMoney(gross);
+    document.getElementById('livePwv').textContent = '$' + formatMoney(pwv);
+  }
 }
 function closeEditDealModal() { document.getElementById('editDealModal').classList.remove('active'); }
 
