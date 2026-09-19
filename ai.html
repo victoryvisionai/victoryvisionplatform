@@ -2116,7 +2116,7 @@ function analyticsSections() {
     // 9. PAGES — views vs conversions / subscribers
     { key:'pages', title:'Landing Pages', types:['Views vs conversions','Subscribers'],
       build(type){
-        const pages=allPages.slice(0,8);
+        const pages=allPages.filter(p=>inWindow(p.created_at)).slice(0,8);
         if (type==='Subscribers'){
           return barCfg(pages.map(p=>p.name||'page'),pages.map(p=>p.subscribers||0),'Subscribers');
         }
