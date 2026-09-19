@@ -2104,11 +2104,21 @@ function analyticsSections() {
     // 8. TOP LEADS — most engaged contacts (opens+clicks+replies)
     { key:'topleads', title:'Top Leads', types:['By engagement','By emails opened'],
       build(type){
-        const ranked=scoped.map(c=>({
-          name:c.name||c.email||'—',
-          eng:(c.num_emails_opened||0)+(c.num_links_clicked||0)*2+(c.last_responded?5:0),
-          opened:c.num_emails_opened||0
-        }));
+        // Previously ranked on the contact's lifetime num_emails_opened /
+        // num_links_clicked / last_responded fields, which ignored the top
+        // time-window selector entirely (a contact active a year ago would
+        // outrank someone active this week even inside a 24h/7d view). Now
+        // recomputed from the window-scoped emails array itself, keyed by
+        // recipient, same byEmail pattern used in the Tags section.
+        const byEmail3={};
+        emails.forEach(e=>{const k=(e.to||'').toLowerCase(); if(!k)return; (byEmail3[k]=byEmail3[k]||[]).push(e);});
+        const ranked=scoped.map(c=>{
+          const es=byEmail3[(c.email||'').toLowerCase()]||[];
+          const opened=es.filter(e=>e.opened_at||e.opens>0).length;
+          const clicked=es.filter(e=>e.clicked_at||e.clicks>0).length;
+          const replied=es.some(e=>e.replied_at);
+          return { name:c.name||c.email||'—', eng: opened + clicked*2 + (replied?5:0), opened };
+        });
         const key=type==='By emails opened'?'opened':'eng';
         const top=ranked.sort((a,b)=>b[key]-a[key]).slice(0,8).filter(x=>x[key]>0);
         return barCfg(top.map(x=>x.name),top.map(x=>x[key]),type==='By emails opened'?'Opens':'Engagement score','h');
