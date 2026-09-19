@@ -784,7 +784,7 @@
     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
       <div class="form-group">
         <label>Pricing Model</label>
-        <select id="editDealEconomicsModel" onchange="recalcLivePwv()">
+        <select id="editDealEconomicsModel" onchange="onPricingModelChange()">
           <option value="transaction">Total Deal Value (one-time or mandate fee)</option>
           <option value="subscription">Per-Customer Annual Recurring Revenue</option>
         </select>
