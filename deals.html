@@ -3091,7 +3091,7 @@ async function editDealMeta() {
   document.getElementById('editDealSize').value = m.deal_size_usd != null ? m.deal_size_usd : '';
   document.getElementById('editDealTakeRate').value = m.take_rate_pct != null ? m.take_rate_pct : '';
   document.getElementById('editDealCloseProb').value = m.base_close_prob_pct != null ? m.base_close_prob_pct : '';
-  document.getElementById('editDealEconomicsModel').value = m.vv_pricing_model
+  document.getElementById('editDealEconomicsModel').value = m.economics_model
     || (m.unit_price_usd > 0 ? 'subscription' : (m.deal_size_usd > 0 ? 'transaction' : 'subscription'));
   document.getElementById('editDealUnitPrice').value = m.unit_price_usd != null ? m.unit_price_usd : '';
   onPricingModelChange();
@@ -3153,7 +3153,7 @@ async function saveDealMeta() {
   if (sizeRaw !== '') updatedMeta.deal_size_usd = parseFloat(sizeRaw) || 0;
   if (takeRaw !== '') updatedMeta.take_rate_pct = parseFloat(takeRaw) || 0;
   if (closeRaw !== '') updatedMeta.base_close_prob_pct = parseFloat(closeRaw) || 0;
-  updatedMeta.vv_pricing_model = document.getElementById('editDealEconomicsModel').value;
+  updatedMeta.economics_model = document.getElementById('editDealEconomicsModel').value;
   const unitPriceRaw = document.getElementById('editDealUnitPrice').value;
   if (unitPriceRaw !== '') updatedMeta.unit_price_usd = parseFloat(unitPriceRaw) || 0;
   // Pre-compute gross + pwv so the view shows them even without recomputing
