@@ -2014,6 +2014,30 @@ function analyticsSections() {
     // 6. TAGS — contacts per tag / deals per tag
     { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags','Engagement by tag'],
       build(type){
+        if (type==='Engagement by tag'){
+          const tagCounts={};
+          scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();
+            if(t&&t.length>2&&!t.startsWith('deal:'))tagCounts[t]=(tagCounts[t]||0)+1;}));
+          const topTags=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+          const byEmail={};
+          emails.forEach(e=>{const k=(e.to||'').toLowerCase(); if(!k)return; (byEmail[k]=byEmail[k]||[]).push(e);});
+          const stats=topTags.map(tag=>{
+            let s=0,o=0,c=0,r=0;
+            scoped.forEach(ct=>{
+              const ctags=(ct.tags||'').toLowerCase().split(',').map(x=>x.trim());
+              if(!ctags.includes(tag))return;
+              const es=byEmail[(ct.email||'').toLowerCase()]||[];
+              es.forEach(e=>{s++;if(e.opened_at||e.opens>0)o++;if(e.clicked_at||e.clicks>0)c++;if(e.replied_at)r++;});
+            });
+            return {tag,s,o,c,r};
+          });
+          return multiBarCfg(stats.map(x=>x.tag),[
+            {label:'Sent',data:stats.map(x=>x.s)},
+            {label:'Opened',data:stats.map(x=>x.o)},
+            {label:'Clicked',data:stats.map(x=>x.c)},
+            {label:'Replied',data:stats.map(x=>x.r)}
+          ]);
+        }
         const counts={};
         scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();if(!t||t.length<2)return;
           const isDeal=t.startsWith('deal:');
