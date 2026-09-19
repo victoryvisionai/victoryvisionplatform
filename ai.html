@@ -1939,7 +1939,7 @@ function analyticsSections() {
         if (type==='By tag'){
           const counts={};
           scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();
-            if(t&&!t.startsWith('deal:')&&t.length>2)counts[t]=(counts[t]||0)+1;}));
+            if(t&&!t.startsWith('deal:')&&!t.startsWith('archived')&&t.length>2)counts[t]=(counts[t]||0)+1;}));
           const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
           return doughnutCfg(top.map(x=>x[0]),top.map(x=>x[1]));
         }
