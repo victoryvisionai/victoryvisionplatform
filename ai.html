@@ -1950,7 +1950,7 @@ function analyticsSections() {
         return lineCfg(b.labels,b.counts,'New contacts');
       }},
     // 2. PIPELINE — deal value by stage / count by stage
-    { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage'],
+    { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage','Stage distribution'],
       build(type){
         // Was reading meta.deal_size_usd/take_rate_pct directly, which none of
         // the subscription-model deals ever had set - always $0. Now reads the
