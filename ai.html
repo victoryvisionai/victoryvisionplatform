@@ -2047,6 +2047,7 @@ function analyticsSections() {
         const counts={};
         scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();if(!t||t.length<2)return;
           const isDeal=t.startsWith('deal:');
+          if(t.startsWith('archived'))return;
           if(type==='Deal tags'?isDeal:!isDeal)counts[t]=(counts[t]||0)+1;}));
         const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
         return barCfg(top.map(x=>x[0]),top.map(x=>x[1]),'Contacts');
