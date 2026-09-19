@@ -740,6 +740,8 @@ async function loadAllData() {
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
     sb.from('victories').select('id, customer_id, created_at, estimated_annual_revenue, company_won, contact_converted, contact_id')
       .eq('customer_id', CUSTOMER_ID).order('created_at', { ascending: false }).limit(500),
+    sb.from('deals_dashboard').select('deal_id, deal_name, status, economics_model, unit_price_usd, total_prospects, effective_pipeline_value_usd, effective_stage_weighted_pwv_usd, effective_closed_value_usd')
+      .eq('cus_id', CUSTOMER_ID).neq('status', 'archived'),
   ]);
 
   allContacts = tasks[0].status==='fulfilled' ? (tasks[0].value.data || []) : [];
