@@ -1986,7 +1986,7 @@ function analyticsSections() {
     { key:'campaigns', title:'Campaigns', types:['Reply rate','Volume','By workflow'],
       build(type){
         if (type==='By workflow'){
-          const wf={User:{s:0,o:0,c:0,r:0},Nurture:{s:0,o:0,c:0,r:0},Template:{s:0,o:0,c:0,r:0},'Campaign/Other':{s:0,o:0,c:0,r:0}};
+          const wf={User:{s:0,o:0,c:0,r:0},Nurture:{s:0,o:0,c:0,r:0},Template:{s:0,o:0,c:0,r:0},'VV Campaign':{s:0,o:0,c:0,r:0},'Lead Magnet':{s:0,o:0,c:0,r:0},Newsletter:{s:0,o:0,c:0,r:0},Other:{s:0,o:0,c:0,r:0}};
           emails.forEach(e=>{
             const camp=e.campaign||'';
             const k = camp==='user-generated' ? 'User'
