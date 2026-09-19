@@ -583,7 +583,7 @@ let CUSTOMER_ID = null, authToken = null;
 let masterTag = 'all';           // current master tag filter
 let timeWindow = 30;             // days
 let customFromDate = null, customToDate = null;
-let allContacts = [], allEmails = [], allSMS = [], allCalls = [];
+let allContacts = [], allEmails = [], allSMS = [], allCalls = [], allDealsDashboard = [];
 let allMeetings = [], allInvites = [], allDeals = [], allPages = [], allPlans = [], allAds = [], allVictories = [];
 let userAifeedback = null;       // from users.aifeedback jsonb
 let chatHistory = [];            // local conversation for context
@@ -1949,7 +1949,7 @@ function analyticsSections() {
     // 2. PIPELINE — deal value by stage / count by stage
     { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage'],
       build(type){
-        const deals=allDeals.filter(d=>d.type==='deal'&&inWindow(d.created_at));
+        const deals=allDeals.filter(d=>d.type==='deal');
         if (type==='Count by stage'){
           const st={};
           deals.forEach(d=>{const s=((d.meta&&d.meta.stage)||d.status||'open');st[s]=(st[s]||0)+1;});
@@ -2104,21 +2104,11 @@ function analyticsSections() {
     // 8. TOP LEADS — most engaged contacts (opens+clicks+replies)
     { key:'topleads', title:'Top Leads', types:['By engagement','By emails opened'],
       build(type){
-        // Previously ranked on the contact's lifetime num_emails_opened /
-        // num_links_clicked / last_responded fields, which ignored the top
-        // time-window selector entirely (a contact active a year ago would
-        // outrank someone active this week even inside a 24h/7d view). Now
-        // recomputed from the window-scoped emails array itself, keyed by
-        // recipient, same byEmail pattern used in the Tags section.
-        const byEmail3={};
-        emails.forEach(e=>{const k=(e.to||'').toLowerCase(); if(!k)return; (byEmail3[k]=byEmail3[k]||[]).push(e);});
-        const ranked=scoped.map(c=>{
-          const es=byEmail3[(c.email||'').toLowerCase()]||[];
-          const opened=es.filter(e=>e.opened_at||e.opens>0).length;
-          const clicked=es.filter(e=>e.clicked_at||e.clicks>0).length;
-          const replied=es.some(e=>e.replied_at);
-          return { name:c.name||c.email||'—', eng: opened + clicked*2 + (replied?5:0), opened };
-        });
+        const ranked=scoped.map(c=>({
+          name:c.name||c.email||'—',
+          eng:(c.num_emails_opened||0)+(c.num_links_clicked||0)*2+(c.last_responded?5:0),
+          opened:c.num_emails_opened||0
+        }));
         const key=type==='By emails opened'?'opened':'eng';
         const top=ranked.sort((a,b)=>b[key]-a[key]).slice(0,8).filter(x=>x[key]>0);
         return barCfg(top.map(x=>x.name),top.map(x=>x[key]),type==='By emails opened'?'Opens':'Engagement score','h');
@@ -2126,7 +2116,7 @@ function analyticsSections() {
     // 9. PAGES — views vs conversions / subscribers
     { key:'pages', title:'Landing Pages', types:['Views vs conversions','Subscribers'],
       build(type){
-        const pages=allPages.filter(p=>inWindow(p.created_at)).slice(0,8);
+        const pages=allPages.slice(0,8);
         if (type==='Subscribers'){
           return barCfg(pages.map(p=>p.name||'page'),pages.map(p=>p.subscribers||0),'Subscribers');
         }
