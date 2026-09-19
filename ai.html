@@ -1952,15 +1952,18 @@ function analyticsSections() {
     // 2. PIPELINE — deal value by stage / count by stage
     { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage'],
       build(type){
-        const deals=allDeals.filter(d=>d.type==='deal');
+        // Was reading meta.deal_size_usd/take_rate_pct directly, which none of
+        // the subscription-model deals ever had set - always $0. Now reads the
+        // deals_dashboard view, which picks the right economics model
+        // (transaction vs subscription) per deal and was fixed for real on 2026-09-19.
         if (type==='Count by stage'){
           const st={};
-          deals.forEach(d=>{const s=((d.meta&&d.meta.stage)||d.status||'open');st[s]=(st[s]||0)+1;});
+          allDealsDashboard.forEach(d=>{st[d.status||'open']=(st[d.status||'open']||0)+1;});
           return barCfg(Object.keys(st),Object.values(st),'Deals');
         }
-        const named=deals.map(d=>{const m=d.meta||{};
-          const pwv=parseFloat(m.pwv_usd)||(parseFloat(m.deal_size_usd)||0)*(parseFloat(m.take_rate_pct)||0)/100*(parseFloat(m.base_close_prob_pct)||0)/100;
-          return{name:d.name||'Deal',v:pwv};}).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8);
+        const named=allDealsDashboard
+          .map(d=>({name:d.deal_name||'Deal',v:parseFloat(d.effective_stage_weighted_pwv_usd)||0}))
+          .filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8);
         return barCfg(named.map(x=>x.name),named.map(x=>Math.round(x.v)),'Weighted value ($)');
       }},
     // 3. CALLS — volume over time / by outcome
