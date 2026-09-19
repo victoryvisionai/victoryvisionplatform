@@ -2018,7 +2018,7 @@ function analyticsSections() {
         return barCfg(r.map(x=>x.k),r.map(x=>x.s),'Sent');
       }},
     // 6. TAGS — contacts per tag / deals per tag
-    { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags','Engagement by tag'],
+    { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags','Engagement by tag','Top tag x workflow'],
       build(type){
         if (type==='Engagement by tag'){
           const tagCounts={};
@@ -2043,6 +2043,45 @@ function analyticsSections() {
             {label:'Clicked',data:stats.map(x=>x.c)},
             {label:'Replied',data:stats.map(x=>x.r)}
           ]);
+        }
+        if (type==='Top tag x workflow'){
+          // Quick ranked read: which (tag, workflow) pairing is actually
+          // engaged, by reply rate. Same barCfg('h') pattern as Top Leads -
+          // one metric, one ranked list, no matrix/heatmap UI.
+          const tagCounts2={};
+          scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();
+            if(t&&t.length>2&&!t.startsWith('deal:')&&!t.startsWith('archived'))tagCounts2[t]=(tagCounts2[t]||0)+1;}));
+          const topTags2=Object.entries(tagCounts2).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+          const byEmail2={};
+          emails.forEach(e=>{const k=(e.to||'').toLowerCase(); if(!k)return; (byEmail2[k]=byEmail2[k]||[]).push(e);});
+          function classify(camp){
+            camp=camp||'';
+            if(camp==='user-generated')return 'User';
+            if(camp==='nurture')return 'Nurture';
+            if(/^wf:template:/.test(camp))return 'Template';
+            if(camp==='vvcampaign')return 'VV Campaign';
+            if(camp==='Lead Magnet Drip'||/^leadmagnet/i.test(camp))return 'Lead Magnet';
+            if(camp==='Newsletter Campaign')return 'Newsletter';
+            return 'Other';
+          }
+          const combos={};
+          topTags2.forEach(tag=>{
+            scoped.forEach(ct=>{
+              const ctags=(ct.tags||'').toLowerCase().split(',').map(x=>x.trim());
+              if(!ctags.includes(tag))return;
+              const es=byEmail2[(ct.email||'').toLowerCase()]||[];
+              es.forEach(e=>{
+                const wfk=classify(e.campaign);
+                const key=tag+' — '+wfk;
+                if(!combos[key])combos[key]={s:0,r:0};
+                combos[key].s++; if(e.replied_at)combos[key].r++;
+              });
+            });
+          });
+          const ranked=Object.entries(combos).filter(([k,v])=>v.s>=3)
+            .map(([k,v])=>({k,pct:v.r*100/v.s}))
+            .sort((a,b)=>b.pct-a.pct).slice(0,8);
+          return barCfg(ranked.map(x=>x.k),ranked.map(x=>+x.pct.toFixed(1)),'Reply rate %','h');
         }
         const counts={};
         scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();if(!t||t.length<2)return;
