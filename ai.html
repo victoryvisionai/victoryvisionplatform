@@ -755,6 +755,7 @@ async function loadAllData() {
   allPlans    = tasks[8].status==='fulfilled' ? (tasks[8].value.data || []) : [];
   allAds      = tasks[9].status==='fulfilled' ? (tasks[9].value.data || []) : [];
   allVictories = tasks[10].status==='fulfilled' ? (tasks[10].value.data || []) : [];
+  allDealsDashboard = tasks[11].status==='fulfilled' ? (tasks[11].value.data || []) : [];
 
   console.log('Loaded:', { contacts: allContacts.length, emails: allEmails.length, sms: allSMS.length,
     calls: allCalls.length, meetings: allMeetings.length, deals: allDeals.length, plans: allPlans.length });
