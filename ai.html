@@ -1949,7 +1949,7 @@ function analyticsSections() {
     // 2. PIPELINE — deal value by stage / count by stage
     { key:'pipeline', title:'Pipeline', types:['Value by deal','Count by stage'],
       build(type){
-        const deals=allDeals.filter(d=>d.type==='deal');
+        const deals=allDeals.filter(d=>d.type==='deal'&&inWindow(d.created_at));
         if (type==='Count by stage'){
           const st={};
           deals.forEach(d=>{const s=((d.meta&&d.meta.stage)||d.status||'open');st[s]=(st[s]||0)+1;});
