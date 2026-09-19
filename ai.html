@@ -845,7 +845,7 @@ function renderFunnel() {
   const softCircle = scoped.filter(c => (c.tags || '').toLowerCase().includes(':soft-circle')).length;
   const contactWins = scoped.filter(c => c.client_won_date && inWindow(c.client_won_date)).length;
   const victoryWins = allVictories.filter(v => inWindow(v.created_at)).length;
-  const wins = victoryWins; // victories is now the single source of truth for the Victory count. Adding contactWins double-counted any win that had both a client_won_date and a victories row.
+  const wins = contactWins + victoryWins;
 
   document.getElementById('funnelLabel').textContent = `${tagLabel()} · ${windowLabel()}`;
   document.getElementById('funnel').innerHTML = `
@@ -1983,7 +1983,7 @@ function analyticsSections() {
         return lineCfg(b.labels,b.counts,'Emails sent');
       }},
     // 5. CAMPAIGNS — reply rate / volume by campaign
-    { key:'campaigns', title:'Campaigns', types:['Reply rate','Volume'],
+    { key:'campaigns', title:'Campaigns', types:['Reply rate','Volume','By workflow'],
       build(type){
         const stats={};
         emails.forEach(e=>{const c=e.campaign||'Direct';if(!stats[c])stats[c]={sent:0,rep:0};
@@ -1997,7 +1997,7 @@ function analyticsSections() {
         return barCfg(r.map(x=>x.k),r.map(x=>x.s),'Sent');
       }},
     // 6. TAGS — contacts per tag / deals per tag
-    { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags'],
+    { key:'tags', title:'Tags', types:['Contacts per tag','Deal tags','Engagement by tag'],
       build(type){
         const counts={};
         scoped.forEach(c=>(c.tags||'').split(',').forEach(t=>{t=t.trim().toLowerCase();if(!t||t.length<2)return;
