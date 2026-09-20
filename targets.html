@@ -435,6 +435,28 @@ async function expressInterest(targetId) {
   } catch (e) { alert('Request failed: ' + e.message); }
 }
 
+// The ECA/GT handoff. Reuses the existing /emails/send webhook - no new
+// workflow. This is a request for a conversation, not a binding engagement;
+// any actual advisory/financing relationship and fee is a separate matter
+// handled outside the platform, not created by this button.
+async function helpMeBuy(targetId, targetLabel) {
+  if (!confirm('This lets Andrew know you would like help evaluating, financing and executing this acquisition. Continue?')) return;
+  try {
+    const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/emails/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: 'glaze@vvdoh.com', from: 'glaze@vvdoh.com', to: 'glaze@vvdoh.com',
+        subject: 'Help Me Buy request: ' + CUSTOMER_ID + ' -> ' + targetLabel,
+        body: CUSTOMER_ID + ' clicked "Help Me Buy This Company" for ' + targetLabel + ' (target id ' + targetId + ').' +
+          String.fromCharCode(10, 10) + 'They are asking for help evaluating, financing and executing this acquisition.',
+        attachments: [], draft: false
+      })
+    });
+    const result = await res.json();
+    alert('Request sent. Andrew will follow up with you directly.');
+  } catch (e) { alert('Request failed: ' + e.message); }
+}
+
 async function openDealRoom(dealId, dealLabel) {
   currentDealRoomDealId = dealId;
   document.getElementById('dealRoomTitle').textContent = 'Deal Room \u2014 ' + dealLabel;
