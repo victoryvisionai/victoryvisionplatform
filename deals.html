@@ -381,6 +381,8 @@ function renderTargets() {
   const container = document.getElementById('targetsContainer');
   if (!list.length) { container.innerHTML = '<div class="empty-state">No targets match this view yet.</div>'; return; }
 
+  if (currentTargetView === 'table') { container.innerHTML = renderTargetsTable(list); return; }
+
   container.innerHTML = '<div class="targets-grid">' + list.map(({ t, fit }) => `
     <div class="target-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
