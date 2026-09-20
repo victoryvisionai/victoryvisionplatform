@@ -238,6 +238,12 @@ let acquisitionProfile = null;
 // badge) when the member has not filled in a profile yet - a guessed score
 // would be worse than no score.
 function computeFitScore(t) {
+  // Prefer a real AI score if one has already been cached for this member -
+  // it reasons over the full description and gives a likelihood-to-close
+  // estimate the deterministic version below can't. Falls back to the
+  // deterministic heuristic when nothing has been scored yet (e.g. AI scoring
+  // is rate-limited or hasn't run for this member/target pair).
+  if (t.ai_scores && t.ai_scores[CUSTOMER_ID]) return t.ai_scores[CUSTOMER_ID].fit_score;
   if (!acquisitionProfile) return null;
   const p = acquisitionProfile;
   let points = 0, possible = 0;
