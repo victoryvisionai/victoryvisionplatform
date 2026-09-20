@@ -328,7 +328,8 @@ function renderTargets() {
     (!maxPriceF || !t.asking_price_usd || Number(t.asking_price_usd) <= maxPriceF) &&
     (!minCashFlowF || (t.cash_flow_usd && Number(t.cash_flow_usd) >= minCashFlowF)) &&
     (!sellerFinF || t.seller_financing) &&
-    (!mgmtStayF || t.management_staying)
+    (!mgmtStayF || t.management_staying) &&
+    (!document.getElementById('filterSavedOnly').checked || savedTargets.includes(t.id))
   );
 
   list = list.map(t => ({ t, fit: computeFitScore(t) }));
