@@ -387,7 +387,8 @@ function renderTargets() {
     (!minCashFlowF || (t.cash_flow_usd && Number(t.cash_flow_usd) >= minCashFlowF)) &&
     (!sellerFinF || t.seller_financing) &&
     (!mgmtStayF || t.management_staying) &&
-    (!document.getElementById('filterSavedOnly').checked || savedTargets.includes(t.id))
+    (!document.getElementById('filterSavedOnly').checked || savedTargets.includes(t.id)) &&
+    (!document.getElementById('filterHideFbaEcom').checked || !['amazon fba','amazon fbm','ecommerce'].includes((t.industry || '').toLowerCase()))
   );
 
   list = list.map(t => ({ t, fit: computeFitScore(t) }));
