@@ -232,6 +232,14 @@ function fmtMoney(n) {
 }
 
 let acquisitionProfile = null;
+let savedTargets = [];
+
+async function toggleBookmark(targetId) {
+  const idx = savedTargets.indexOf(targetId);
+  if (idx >= 0) savedTargets.splice(idx, 1); else savedTargets.push(targetId);
+  await supabaseClient.from('users').update({ saved_targets: savedTargets.join(',') }).eq('email', CUSTOMER_ID);
+  renderTargets();
+}
 
 // Simple, deterministic, no-AI-cost fit score for v1. Compares target attributes
 // against the member's stored acquisition_profile. Returns null (shown as no
@@ -272,8 +280,9 @@ function computeFitScore(t) {
 }
 
 async function loadAcquisitionProfile() {
-  const { data } = await supabaseClient.from('users').select('acquisition_profile').eq('email', CUSTOMER_ID).limit(1);
+  const { data } = await supabaseClient.from('users').select('acquisition_profile, saved_targets').eq('email', CUSTOMER_ID).limit(1);
   acquisitionProfile = (data && data[0] && data[0].acquisition_profile) || null;
+  savedTargets = ((data && data[0] && data[0].saved_targets) || '').split(',').map(s => s.trim()).filter(Boolean);
 }
 
 async function loadTargets() {
