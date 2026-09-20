@@ -123,6 +123,16 @@
       <select id="filterIndustry" onchange="renderTargets()">
         <option value="">All industries</option>
       </select>
+      <input type="text" id="filterLocation" placeholder="Location" oninput="renderTargets()" style="width:110px;"/>
+      <input type="number" id="filterMaxPrice" placeholder="Max price $" oninput="renderTargets()" style="width:120px;"/>
+      <input type="number" id="filterMinCashFlow" placeholder="Min EBITDA/SDE $" oninput="renderTargets()" style="width:140px;"/>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSellerFinancing" onchange="renderTargets()"/> Seller financing</label>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterMgmtStaying" onchange="renderTargets()"/> Management staying</label>
+      <select id="sortBy" onchange="renderTargets()">
+        <option value="fit">Recommended for Me</option>
+        <option value="newest">Newest</option>
+        <option value="affordable">Largest I Can Afford</option>
+      </select>
     </div>
 
     <div id="targetsContainer"><div class="empty-state">Loading...</div></div>
