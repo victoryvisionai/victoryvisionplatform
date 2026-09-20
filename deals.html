@@ -1951,9 +1951,9 @@ function updatePipelineSummary() {
 
   allDeals.forEach(d => {
     const status = (d.status || '').toLowerCase();
-    const gross = Number(d.gross_value_usd || 0);
-    const pwv = Number(d.pwv_usd || 0);
-    const closedVal = Number(d.closed_value_usd || 0);
+    const gross = Number(d.effective_pipeline_value_usd || 0);
+    const pwv = Number(d.effective_stage_weighted_pwv_usd || 0);
+    const closedVal = Number(d.effective_closed_value_usd || 0);
 
     if (status === 'closed') {
       closedYtd += gross;
