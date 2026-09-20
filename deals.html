@@ -113,8 +113,14 @@
   <div class="card">
     <div class="section-header">
       <h2>Available Targets (<span id="targetCount">0</span>)</h2>
-      <div id="curatorControls" style="display:none;">
-        <button class="icon-btn" onclick="openAddTargetModal()">+ Add Target</button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div class="view-toggle" id="viewToggle">
+          <button class="active" data-view="cards" onclick="setTargetView('cards')">\u25a6 Cards</button>
+          <button data-view="table" onclick="setTargetView('table')">\u2261 Table</button>
+        </div>
+        <div id="curatorControls" style="display:none;">
+          <button class="icon-btn" onclick="openAddTargetModal()">+ Add Target</button>
+        </div>
       </div>
     </div>
 
