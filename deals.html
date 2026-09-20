@@ -1746,7 +1746,7 @@ function renderDealsCards(filtered) {
         ${d.counterparty_name ? `<div class="deal-card-meta"><strong>${esc(d.counterparty_name)}</strong>${d.counterparty_company ? ' · '+esc(d.counterparty_company) : ''}</div>` : ''}
         <div class="deal-card-meta">${esc(advisorLine)} · ${daysLine}</div>
         ${attentionChips.length > 0 ? `<div class="deal-attention">${attentionChips.join('')}</div>` : ''}
-        ${grossValue > 0 ? `
+        ${d.economics_model === 'transaction' && grossValue > 0 ? `
         <div class="deal-card-pricing">
           <div>
             <div class="label">Gross</div>
@@ -1757,6 +1757,19 @@ function renderDealsCards(filtered) {
             <div class="label">PWV</div>
             <div class="amount" style="color:#0d6b4d;">$${formatMoney(pwv)}</div>
             <div class="sub">@ ${closeProb}% close</div>
+          </div>
+        </div>` : ''}
+        ${d.economics_model !== 'transaction' && Number(d.effective_pipeline_value_usd || 0) > 0 ? `
+        <div class="deal-card-pricing">
+          <div>
+            <div class="label">Pipeline</div>
+            <div class="amount" style="color:#1a3a6e;">$${formatMoney(Number(d.effective_pipeline_value_usd || 0))}</div>
+            <div class="sub">${d.total_prospects} × $${formatMoney(Number(d.unit_price_usd || 0))}</div>
+          </div>
+          <div>
+            <div class="label">PWV</div>
+            <div class="amount" style="color:#0d6b4d;">$${formatMoney(Number(d.effective_stage_weighted_pwv_usd || 0))}</div>
+            <div class="sub">stage-weighted</div>
           </div>
         </div>` : ''}
         ${d.next_action ? `<div style="font-size:0.78rem; color:#0c5460; background:#f0f8ff; padding:6px 8px; border-radius:4px; margin-top:6px;">
