@@ -148,6 +148,9 @@
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSellerFinancing" onchange="renderTargets()"/> Seller financing</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterMgmtStaying" onchange="renderTargets()"/> Management staying</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSavedOnly" onchange="renderTargets()"/> \u2605 Saved only</label>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;" title="On by default - Amazon FBA and eCommerce are most of this feed and can crowd out everything else">
+        <input type="checkbox" id="filterHideFbaEcom" checked onchange="renderTargets()"/> Hide Amazon FBA & eCommerce
+      </label>
       <select id="sortBy" onchange="renderTargets()">
         <option value="fit">Recommended for Me</option>
         <option value="newest">Newest</option>
