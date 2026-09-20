@@ -137,6 +137,11 @@
       <select id="filterIndustry" onchange="renderTargets()">
         <option value="">All industries</option>
       </select>
+      <select id="filterSource" onchange="renderTargets()">
+        <option value="">All sources</option>
+      </select>
+      <input type="number" id="filterMinPrice" placeholder="Min price $" oninput="renderTargets()" style="width:110px;"/>
+      <input type="number" id="filterMinRevenue" placeholder="Min revenue $" oninput="renderTargets()" style="width:120px;"/>
       <input type="text" id="filterLocation" placeholder="Location" oninput="renderTargets()" style="width:110px;"/>
       <input type="number" id="filterMaxPrice" placeholder="Max price $" oninput="renderTargets()" style="width:120px;"/>
       <input type="number" id="filterMinCashFlow" placeholder="Min EBITDA/SDE $" oninput="renderTargets()" style="width:140px;"/>
