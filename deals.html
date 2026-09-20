@@ -225,6 +225,31 @@ let CUSTOMER_ID = null;
 let IS_CURATOR = false;
 let allTargets = [];
 let currentDealRoomDealId = null;
+let currentTargetView = 'cards';
+function setTargetView(v) {
+  currentTargetView = v;
+  document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  renderTargets();
+}
+function renderTargetsTable(list) {
+  return '<div style="overflow-x:auto;"><table class="targets-table"><thead><tr>' +
+    '<th>Name</th><th>Industry</th><th>Location</th><th>Asking</th><th>Cash Flow</th><th>Fit</th><th>Status</th><th></th>' +
+    '</tr></thead><tbody>' + list.map(({ t, fit }) => `
+      <tr>
+        <td><strong>${esc(t.name)}</strong>${t.listing_url ? ` <a href="${esc(t.listing_url)}" target="_blank" rel="noopener" style="font-size:0.75rem;">\u2197</a>` : ''}</td>
+        <td>${esc(t.industry || '\u2014')}</td>
+        <td>${esc(t.location || '\u2014')}</td>
+        <td>${t.asking_price_usd ? fmtMoney(t.asking_price_usd) : '\u2014'}</td>
+        <td>${t.cash_flow_usd ? fmtMoney(t.cash_flow_usd) : '\u2014'}</td>
+        <td>${fit != null ? fit + '%' : '\u2014'}</td>
+        <td><span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span></td>
+        <td style="white-space:nowrap;">
+          ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">Interested</button>` : ''}
+          ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
+        </td>
+      </tr>
+    `).join('') + '</tbody></table></div>';
+}
 
 async function checkAuthentication() {
   try {
