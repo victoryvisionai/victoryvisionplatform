@@ -530,10 +530,38 @@ async function uploadDealRoomFile() {
   } catch (e) { statusEl.textContent = 'Upload failed: ' + e.message; }
 }
 
+// Filter state lives in the URL, so any filtered/sorted view is a real,
+// shareable, bookmarkable browser URL - not just individual saved targets.
+const FILTER_FIELDS = ['filterStatus','filterIndustry','filterLocation','filterMaxPrice','filterMinCashFlow','sortBy'];
+const FILTER_CHECKBOXES = ['filterSellerFinancing','filterMgmtStaying','filterSavedOnly'];
+
+function restoreFiltersFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  FILTER_FIELDS.forEach(id => { const v = params.get(id); if (v != null) document.getElementById(id).value = v; });
+  FILTER_CHECKBOXES.forEach(id => { if (params.get(id) === '1') document.getElementById(id).checked = true; });
+}
+
+function syncFiltersToUrl() {
+  const params = new URLSearchParams();
+  FILTER_FIELDS.forEach(id => { const v = document.getElementById(id).value; if (v) params.set(id, v); });
+  FILTER_CHECKBOXES.forEach(id => { if (document.getElementById(id).checked) params.set(id, '1'); });
+  const qs = params.toString();
+  history.replaceState(null, '', qs ? ('?' + qs) : window.location.pathname);
+}
+
 (async function init() {
   const ok = await checkAuthentication();
   if (!ok) { redirectToLogin(); return; }
+  restoreFiltersFromUrl();
   await loadTargets();
+  if (!IS_CURATOR && acquisitionProfile) {
+    // Fire-and-forget: scores whatever's new since last visit, then
+    // silently refreshes once done. Never blocks the initial render.
+    fetch('https://victoryvision.app.n8n.cloud/webhook/targets/score-fit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_cus_id: CUSTOMER_ID })
+    }).then(r => r.json()).then(result => { if (result && result.saved) loadTargets(); }).catch(() => {});
+  }
 })();
 </script>
 </body>
