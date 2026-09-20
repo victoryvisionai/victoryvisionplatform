@@ -363,6 +363,9 @@ function renderTargets() {
   if (typeof syncFiltersToUrl === 'function') syncFiltersToUrl();
   const statusF = document.getElementById('filterStatus').value;
   const indF = document.getElementById('filterIndustry').value;
+  const srcF = document.getElementById('filterSource').value;
+  const minPriceF = parseFloat(document.getElementById('filterMinPrice').value) || null;
+  const minRevenueF = parseFloat(document.getElementById('filterMinRevenue').value) || null;
   const locF = (document.getElementById('filterLocation').value || '').toLowerCase().trim();
   const maxPriceF = parseFloat(document.getElementById('filterMaxPrice').value) || null;
   const minCashFlowF = parseFloat(document.getElementById('filterMinCashFlow').value) || null;
@@ -373,6 +376,9 @@ function renderTargets() {
   let list = allTargets.filter(t =>
     (!statusF || t.status === statusF) &&
     (!indF || t.industry === indF) &&
+    (!srcF || t.source === srcF) &&
+    (!minPriceF || (t.asking_price_usd && Number(t.asking_price_usd) >= minPriceF)) &&
+    (!minRevenueF || (t.revenue_usd && Number(t.revenue_usd) >= minRevenueF)) &&
     (!locF || (t.location || '').toLowerCase().includes(locF)) &&
     (!maxPriceF || !t.asking_price_usd || Number(t.asking_price_usd) <= maxPriceF) &&
     (!minCashFlowF || (t.cash_flow_usd && Number(t.cash_flow_usd) >= minCashFlowF)) &&
