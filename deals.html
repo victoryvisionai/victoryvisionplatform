@@ -607,6 +607,7 @@ function syncFiltersToUrl() {
   const params = new URLSearchParams();
   FILTER_FIELDS.forEach(id => { const v = document.getElementById(id).value; if (v) params.set(id, v); });
   FILTER_CHECKBOXES.forEach(id => { if (document.getElementById(id).checked) params.set(id, '1'); });
+  FILTER_CHECKBOXES_DEFAULT_ON.forEach(id => { if (!document.getElementById(id).checked) params.set(id, '0'); });
   const qs = params.toString();
   history.replaceState(null, '', qs ? ('?' + qs) : window.location.pathname);
 }
