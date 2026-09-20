@@ -298,17 +298,40 @@ async function loadTargets() {
 function renderTargets() {
   const statusF = document.getElementById('filterStatus').value;
   const indF = document.getElementById('filterIndustry').value;
-  let list = allTargets.filter(t => (!statusF || t.status === statusF) && (!indF || t.industry === indF));
-  document.getElementById('targetCount').textContent = list.length;
+  const locF = (document.getElementById('filterLocation').value || '').toLowerCase().trim();
+  const maxPriceF = parseFloat(document.getElementById('filterMaxPrice').value) || null;
+  const minCashFlowF = parseFloat(document.getElementById('filterMinCashFlow').value) || null;
+  const sellerFinF = document.getElementById('filterSellerFinancing').checked;
+  const mgmtStayF = document.getElementById('filterMgmtStaying').checked;
+  const sortBy = document.getElementById('sortBy').value;
 
+  let list = allTargets.filter(t =>
+    (!statusF || t.status === statusF) &&
+    (!indF || t.industry === indF) &&
+    (!locF || (t.location || '').toLowerCase().includes(locF)) &&
+    (!maxPriceF || !t.asking_price_usd || Number(t.asking_price_usd) <= maxPriceF) &&
+    (!minCashFlowF || (t.cash_flow_usd && Number(t.cash_flow_usd) >= minCashFlowF)) &&
+    (!sellerFinF || t.seller_financing) &&
+    (!mgmtStayF || t.management_staying)
+  );
+
+  list = list.map(t => ({ t, fit: computeFitScore(t) }));
+  if (sortBy === 'newest') list.sort((a, b) => new Date(b.t.created_at) - new Date(a.t.created_at));
+  else if (sortBy === 'affordable') list.sort((a, b) => (Number(b.t.asking_price_usd) || 0) - (Number(a.t.asking_price_usd) || 0));
+  else list.sort((a, b) => (b.fit == null ? -1 : b.fit) - (a.fit == null ? -1 : a.fit));
+
+  document.getElementById('targetCount').textContent = list.length;
   const container = document.getElementById('targetsContainer');
   if (!list.length) { container.innerHTML = '<div class="empty-state">No targets match this view yet.</div>'; return; }
 
-  container.innerHTML = '<div class="targets-grid">' + list.map(t => `
+  container.innerHTML = '<div class="targets-grid">' + list.map(({ t, fit }) => `
     <div class="target-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div class="target-name">${esc(t.name)}</div>
-        <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${fit != null ? `<span class="status-pill" style="background:${fit >= 70 ? '#d4edda' : fit >= 40 ? '#fff3cd' : '#f8d7da'}; color:${fit >= 70 ? '#155724' : fit >= 40 ? '#856404' : '#721c24'};">AI Fit: ${fit}%</span>` : ''}
+          <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
+        </div>
       </div>
       <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>
       ${t.description ? `<div class="target-desc">${esc(t.description)}</div>` : ''}
@@ -317,6 +340,10 @@ function renderTargets() {
         <div><div class="stat-label">Revenue</div><div class="stat-value">${t.revenue_usd ? fmtMoney(t.revenue_usd) : '\u2014'}</div></div>
         <div><div class="stat-label">Cash Flow</div><div class="stat-value">${t.cash_flow_usd ? fmtMoney(t.cash_flow_usd) : '\u2014'}</div></div>
       </div>
+      <div style="font-size:0.78rem; color:#666; display:flex; gap:10px; flex-wrap:wrap;">
+        ${t.seller_financing ? '<span>\u2713 Seller financing</span>' : ''}
+        ${t.management_staying ? '<span>\u2713 Management staying</span>' : ''}
+      </div>
       ${t.broker_name ? `<div style="font-size:0.8rem; color:#666;">Broker: ${esc(t.broker_name)}${t.broker_contact ? ' \u00b7 ' + esc(t.broker_contact) : ''}</div>` : ''}
       ${t.listing_url ? `<div style="font-size:0.8rem; margin-top:4px;"><a href="${esc(t.listing_url)}" target="_blank" rel="noopener">View listing \u2197</a></div>` : ''}
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
@@ -324,6 +351,7 @@ function renderTargets() {
         ${t.status === 'graduated' && t.graduated_deal_id && (IS_CURATOR || t.graduated_by === CUSTOMER_ID) ? `
           <button class="btn btn-outline btn-sm" onclick="openDealRoom('${t.graduated_deal_id}', '${esc(t.name).replace(/'/g,"\\'")}')">Deal Room</button>
           <a class="btn btn-outline btn-sm" href="deals?id=${esc(t.graduated_deal_id)}" style="text-decoration:none;">View Deal</a>
+          <button class="btn btn-primary btn-sm" onclick="helpMeBuy('${t.id}', '${esc(t.name).replace(/'/g,"\\'")}')">Help Me Buy This Company</button>
         ` : ''}
         ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
       </div>
