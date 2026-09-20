@@ -312,6 +312,7 @@ async function loadTargets() {
 }
 
 function renderTargets() {
+  if (typeof syncFiltersToUrl === 'function') syncFiltersToUrl();
   const statusF = document.getElementById('filterStatus').value;
   const indF = document.getElementById('filterIndustry').value;
   const locF = (document.getElementById('filterLocation').value || '').toLowerCase().trim();
