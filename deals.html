@@ -347,6 +347,10 @@ async function loadTargets() {
   const indSel = document.getElementById('filterIndustry');
   indSel.innerHTML = '<option value="">All industries</option>' + industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
 
+  const sources = [...new Set(allTargets.map(t => t.source).filter(Boolean))].sort();
+  const srcSel = document.getElementById('filterSource');
+  srcSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
   document.getElementById('curatorControls').style.display = IS_CURATOR ? 'flex' : 'none';
   document.getElementById('pageSubtitle').textContent = IS_CURATOR
     ? 'Full catalog - manage visibility and status for every member'
