@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Acquisition targets - browse companies for sale and express interest."/>
+  <meta name="author" content="Victory Vision"/>
+  <title>Victory Vision AI - Targets</title>
+  <script>
+  window.VV_BUILD = { page: 'targets.html', version: '1', published: '2026-09-20' };
+  console.log('%ctargets.html build 1', 'background:#0A3161;color:#fff;padding:2px 6px;border-radius:3px');
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .navbar { background-color: #0A3161; color: white; padding: 15px;
+              display: flex; justify-content: space-between; align-items: center; }
+    .navbar nav ul { display: flex; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+    .navbar nav ul li { margin: 0 10px; }
+    .navbar nav ul li a { color: white; text-decoration: none; }
+    .navbar nav ul li a.active { font-weight: bold; border-bottom: 2px solid #fff; padding-bottom: 4px; }
+    .navbar .user-info { display: flex; align-items: center; gap: 10px; }
+    .logo img { height: 60px; width: auto; max-height: 100px; }
+    .content { padding: 20px 4px; max-width: 1400px; margin: 0 auto; }
+    .page-header { margin-bottom: 16px; padding: 0 16px; }
+    .page-title { font-size: 2.2rem; font-weight: bold; color: #0A3161; margin-bottom: 0.25rem; }
+    .page-subtitle { font-size: 1.05rem; color: #666; margin: 0; }
+    .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px; margin: 0 16px 20px 16px; }
+    .section-header { background: linear-gradient(135deg, #0A3161, #1a4c80); color: white;
+                      padding: 15px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0;
+                      display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .section-header h2 { margin: 0; font-size: 1.1rem; }
+    .btn { padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-primary { background: #0A3161; color: white; }
+    .btn-success { background: #198754; color: white; }
+    .btn-outline { background: white; color: #0A3161; border: 1px solid #0A3161; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+    .icon-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+                color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .icon-btn:hover { background: rgba(255,255,255,0.25); }
+    .targets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .target-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+                   box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+    .target-name { font-weight: bold; font-size: 1.05rem; color: #0A3161; margin-bottom: 4px; }
+    .target-meta { font-size: 0.82rem; color: #666; margin-bottom: 10px; }
+    .target-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0;
+                    padding: 10px 0; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; }
+    .target-stats .stat-label { font-size: 0.68rem; color: #888; text-transform: uppercase; }
+    .target-stats .stat-value { font-size: 1rem; font-weight: bold; color: #0A3161; }
+    .target-desc { font-size: 0.85rem; color: #444; margin: 10px 0; max-height: 60px; overflow: hidden; }
+    .status-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem;
+                   font-weight: bold; text-transform: uppercase; }
+    .status-new { background: #e7f1ff; color: #0A3161; }
+    .status-reviewing { background: #fff3cd; color: #856404; }
+    .status-shown { background: #d1ecf1; color: #0c5460; }
+    .status-interested { background: #d4edda; color: #155724; }
+    .status-graduated { background: #0A3161; color: white; }
+    .status-passed { background: #f8d7da; color: #721c24; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #444; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.9rem; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+                     align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: white; border-radius: 8px; padding: 24px; width: 520px; max-width: 92vw;
+                 max-height: 88vh; overflow-y: auto; }
+    .modal-box h3 { margin-top: 0; color: #0A3161; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #888; }
+    .deal-room-files { margin-top: 10px; }
+    .file-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0;
+                border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; }
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .filter-bar select, .filter-bar input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="logo.jpg" alt="Victory Vision Logo"
+         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%230A3161%22 /><text x=%225%22 y=%2225%22 font-size=%2220%22 fill=%22white%22>VV</text></svg>'"/>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="ai">AI</a></li><li><a href="meetings-analysis">Meetings</a></li><li><a href="calls">Calls</a></li>
+      <li><a href="deals">Deals</a></li><li><a href="targets" class="active">Targets</a></li>
+      <li><a href="messages">Messages</a></li><li><a href="contacts">Contacts</a></li><li><a href="social">Social</a></li>
+      <li><a href="ads">Ads</a></li><li><a href="campaigns">Campaigns</a></li><li><a href="media">Media</a></li>
+      <li><a href="pages">Pages</a></li><li><a href="companyprofile">Profile</a></li><li><a href="settings">Settings</a></li>
+    </ul>
+  </nav>
+  <div class="user-info"><span id="userEmail"></span></div>
+</header>
+
+<div id="statusBanner"></div>
+
+<div class="content">
+  <div class="page-header">
+    <h1 class="page-title">Targets</h1>
+    <p class="page-subtitle" id="pageSubtitle">Acquisition candidates worth pursuing</p>
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h2>Available Targets (<span id="targetCount">0</span>)</h2>
+      <div id="curatorControls" style="display:none;">
+        <button class="icon-btn" onclick="openAddTargetModal()">+ Add Target</button>
+      </div>
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+      <select id="filterStatus" onchange="renderTargets()">
+        <option value="">All statuses</option>
+        <option value="new">New</option>
+        <option value="reviewing">Reviewing</option>
+        <option value="shown">Shown</option>
+        <option value="interested">Interested</option>
+        <option value="graduated">Graduated</option>
+        <option value="passed">Passed</option>
+      </select>
+      <select id="filterIndustry" onchange="renderTargets()">
+        <option value="">All industries</option>
+      </select>
+    </div>
+
+    <div id="targetsContainer"><div class="empty-state">Loading...</div></div>
+  </div>
+</div>
+
+<!-- Add / Edit Target Modal (curator only) -->
+<div class="modal-overlay" id="targetModal">
+  <div class="modal-box">
+    <h3 id="targetModalTitle">Add Target</h3>
+    <input type="hidden" id="editTargetId"/>
+    <div class="form-group"><label>Business Name *</label><input type="text" id="fName"/></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group"><label>Industry</label><input type="text" id="fIndustry"/></div>
+      <div class="form-group"><label>Location</label><input type="text" id="fLocation"/></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="fDescription" rows="3"></textarea></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+      <div class="form-group"><label>Asking Price ($)</label><input type="number" id="fAskingPrice"/></div>
+      <div class="form-group"><label>Revenue ($)</label><input type="number" id="fRevenue"/></div>
+      <div class="form-group"><label>Cash Flow / SDE ($)</label><input type="number" id="fCashFlow"/></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group"><label>Source</label>
+        <select id="fSource">
+          <option value="manual">Manual</option>
+          <option value="bizbuysell">BizBuySell</option>
+          <option value="axial">Axial</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Listing URL</label><input type="text" id="fListingUrl"/></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group"><label>Broker Name</label><input type="text" id="fBrokerName"/></div>
+      <div class="form-group"><label>Broker Contact</label><input type="text" id="fBrokerContact"/></div>
+    </div>
+    <div class="form-group">
+      <label>Visible To (comma-separated member emails, or "all")</label>
+      <input type="text" id="fVisibleTo" placeholder="jgonzalez2066@mac.com, all"/>
+    </div>
+    <div class="form-group"><label>Notes (internal, not shown to members)</label><textarea id="fNotes" rows="2"></textarea></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeTargetModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTarget()">Save Target</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deal Room Modal (member + curator, once graduated) -->
+<div class="modal-overlay" id="dealRoomModal">
+  <div class="modal-box">
+    <h3 id="dealRoomTitle">Deal Room</h3>
+    <p style="font-size:0.85rem; color:#666;">Files here are only reachable from inside your Victory Vision login - never posted on a public page. This is not the same as a fully access-controlled data room; do not treat the link itself as safe to forward.</p>
+    <div id="dealRoomFiles" class="deal-room-files"></div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>Upload a file (teaser, financials, presentation)</label>
+      <input type="file" id="dealRoomFileInput"/>
+    </div>
+    <div id="dealRoomUploadStatus" style="font-size:0.82rem; color:#666;"></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeDealRoomModal()">Close</button>
+      <button class="btn btn-primary" onclick="uploadDealRoomFile()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+const CURATOR_EMAILS = ['glaze@vvdoh.com', 'glaze@equitablecap.com'];
+let CUSTOMER_ID = null;
+let IS_CURATOR = false;
+let allTargets = [];
+let currentDealRoomDealId = null;
+
+async function checkAuthentication() {
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session || !session.user) return false;
+    CUSTOMER_ID = session.user.email;
+    IS_CURATOR = CURATOR_EMAILS.includes(CUSTOMER_ID.toLowerCase());
+    document.getElementById('userEmail').textContent = CUSTOMER_ID;
+    return true;
+  } catch (e) { console.error('Auth check error:', e); return false; }
+}
+function redirectToLogin() { window.location.href = 'login.html'; }
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n) {
+  n = Number(n || 0);
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+  if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+  return '$' + n.toLocaleString();
+}
+
+async function loadTargets() {
+  let query = supabaseClient.from('targets').select('*').order('created_at', { ascending: false });
+  const { data, error } = await query;
+  if (error) { console.error('loadTargets error:', error); document.getElementById('targetsContainer').innerHTML = '<div class="empty-state">Could not load targets.</div>'; return; }
+
+  allTargets = (data || []).filter(t => {
+    if (IS_CURATOR) return true;
+    const vis = (t.visible_to || '').toLowerCase();
+    if (!vis) return false;
+    return vis.split(',').map(x => x.trim()).some(x => x === 'all' || x === CUSTOMER_ID.toLowerCase());
+  });
+
+  const industries = [...new Set(allTargets.map(t => t.industry).filter(Boolean))].sort();
+  const indSel = document.getElementById('filterIndustry');
+  indSel.innerHTML = '<option value="">All industries</option>' + industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+
+  document.getElementById('curatorControls').style.display = IS_CURATOR ? 'flex' : 'none';
+  document.getElementById('pageSubtitle').textContent = IS_CURATOR
+    ? 'Full catalog - manage visibility and status for every member'
+    : 'Companies worth pursuing, matched to you';
+
+  renderTargets();
+}
+
+function renderTargets() {
+  const statusF = document.getElementById('filterStatus').value;
+  const indF = document.getElementById('filterIndustry').value;
+  let list = allTargets.filter(t => (!statusF || t.status === statusF) && (!indF || t.industry === indF));
+  document.getElementById('targetCount').textContent = list.length;
+
+  const container = document.getElementById('targetsContainer');
+  if (!list.length) { container.innerHTML = '<div class="empty-state">No targets match this view yet.</div>'; return; }
+
+  container.innerHTML = '<div class="targets-grid">' + list.map(t => `
+    <div class="target-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="target-name">${esc(t.name)}</div>
+        <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
+      </div>
+      <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>
+      ${t.description ? `<div class="target-desc">${esc(t.description)}</div>` : ''}
+      <div class="target-stats">
+        <div><div class="stat-label">Asking</div><div class="stat-value">${t.asking_price_usd ? fmtMoney(t.asking_price_usd) : '\u2014'}</div></div>
+        <div><div class="stat-label">Revenue</div><div class="stat-value">${t.revenue_usd ? fmtMoney(t.revenue_usd) : '\u2014'}</div></div>
+        <div><div class="stat-label">Cash Flow</div><div class="stat-value">${t.cash_flow_usd ? fmtMoney(t.cash_flow_usd) : '\u2014'}</div></div>
+      </div>
+      ${t.broker_name ? `<div style="font-size:0.8rem; color:#666;">Broker: ${esc(t.broker_name)}${t.broker_contact ? ' \u00b7 ' + esc(t.broker_contact) : ''}</div>` : ''}
+      ${t.listing_url ? `<div style="font-size:0.8rem; margin-top:4px;"><a href="${esc(t.listing_url)}" target="_blank" rel="noopener">View listing \u2197</a></div>` : ''}
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">I'm Interested</button>` : ''}
+        ${t.status === 'graduated' && t.graduated_deal_id && (IS_CURATOR || t.graduated_by === CUSTOMER_ID) ? `
+          <button class="btn btn-outline btn-sm" onclick="openDealRoom('${t.graduated_deal_id}', '${esc(t.name).replace(/'/g,"\\'")}')">Deal Room</button>
+          <a class="btn btn-outline btn-sm" href="deals?id=${esc(t.graduated_deal_id)}" style="text-decoration:none;">View Deal</a>
+        ` : ''}
+        ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function openAddTargetModal() {
+  document.getElementById('targetModalTitle').textContent = 'Add Target';
+  document.getElementById('editTargetId').value = '';
+  ['fName','fIndustry','fLocation','fDescription','fAskingPrice','fRevenue','fCashFlow','fListingUrl','fBrokerName','fBrokerContact','fVisibleTo','fNotes']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fSource').value = 'manual';
+  document.getElementById('targetModal').classList.add('active');
+}
+function openEditTargetModal(id) {
+  const t = allTargets.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('targetModalTitle').textContent = 'Edit Target';
+  document.getElementById('editTargetId').value = t.id;
+  document.getElementById('fName').value = t.name || '';
+  document.getElementById('fIndustry').value = t.industry || '';
+  document.getElementById('fLocation').value = t.location || '';
+  document.getElementById('fDescription').value = t.description || '';
+  document.getElementById('fAskingPrice').value = t.asking_price_usd || '';
+  document.getElementById('fRevenue').value = t.revenue_usd || '';
+  document.getElementById('fCashFlow').value = t.cash_flow_usd || '';
+  document.getElementById('fSource').value = t.source || 'manual';
+  document.getElementById('fListingUrl').value = t.listing_url || '';
+  document.getElementById('fBrokerName').value = t.broker_name || '';
+  document.getElementById('fBrokerContact').value = t.broker_contact || '';
+  document.getElementById('fVisibleTo').value = t.visible_to || '';
+  document.getElementById('fNotes').value = t.notes || '';
+  document.getElementById('targetModal').classList.add('active');
+}
+function closeTargetModal() { document.getElementById('targetModal').classList.remove('active'); }
+
+async function saveTarget() {
+  const id = document.getElementById('editTargetId').value;
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { alert('Business name is required.'); return; }
+  const payload = {
+    name,
+    industry: document.getElementById('fIndustry').value.trim() || null,
+    location: document.getElementById('fLocation').value.trim() || null,
+    description: document.getElementById('fDescription').value.trim() || null,
+    asking_price_usd: parseFloat(document.getElementById('fAskingPrice').value) || null,
+    revenue_usd: parseFloat(document.getElementById('fRevenue').value) || null,
+    cash_flow_usd: parseFloat(document.getElementById('fCashFlow').value) || null,
+    source: document.getElementById('fSource').value,
+    listing_url: document.getElementById('fListingUrl').value.trim() || null,
+    broker_name: document.getElementById('fBrokerName').value.trim() || null,
+    broker_contact: document.getElementById('fBrokerContact').value.trim() || null,
+    visible_to: document.getElementById('fVisibleTo').value.trim() || null,
+    notes: document.getElementById('fNotes').value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  let error;
+  if (id) {
+    ({ error } = await supabaseClient.from('targets').update(payload).eq('id', id));
+  } else {
+    payload.created_by = CUSTOMER_ID;
+    ({ error } = await supabaseClient.from('targets').insert(payload));
+  }
+  if (error) { alert('Save failed: ' + error.message); return; }
+  closeTargetModal();
+  await loadTargets();
+}
+
+async function expressInterest(targetId) {
+  if (!confirm('This creates a real deal in your pipeline and notifies Andrew. Continue?')) return;
+  try {
+    const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/targets/express-interest', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_id: targetId, member_cus_id: CUSTOMER_ID })
+    });
+    const result = await res.json();
+    if (!result.ok) { alert('Could not register interest: ' + (result.error || 'unknown error')); return; }
+    alert('Deal created: ' + result.deal_name + '. Andrew has been notified.');
+    await loadTargets();
+  } catch (e) { alert('Request failed: ' + e.message); }
+}
+
+async function openDealRoom(dealId, dealLabel) {
+  currentDealRoomDealId = dealId;
+  document.getElementById('dealRoomTitle').textContent = 'Deal Room \u2014 ' + dealLabel;
+  document.getElementById('dealRoomUploadStatus').textContent = '';
+  await loadDealRoomFiles();
+  document.getElementById('dealRoomModal').classList.add('active');
+}
+function closeDealRoomModal() { document.getElementById('dealRoomModal').classList.remove('active'); currentDealRoomDealId = null; }
+
+async function loadDealRoomFiles() {
+  const { data, error } = await supabaseClient.from('campaigns_files').select('*')
+    .eq('campaign_id', String(currentDealRoomDealId)).order('created_at', { ascending: false });
+  const el = document.getElementById('dealRoomFiles');
+  if (error) { el.innerHTML = '<div style="color:#888;">Could not load files.</div>'; return; }
+  if (!data || !data.length) { el.innerHTML = '<div style="color:#888; font-size:0.85rem;">No files yet.</div>'; return; }
+  el.innerHTML = data.map(f => `
+    <div class="file-row">
+      <span>${esc(f.name || 'Untitled')} ${f.file_size ? '(' + esc(f.file_size) + ')' : ''}</span>
+      <a href="${esc(f.URL)}" target="_blank" rel="noopener">Open</a>
+    </div>
+  `).join('');
+}
+
+function guessFileType(file) {
+  const mt = (file.type || '').toLowerCase();
+  if (mt.startsWith('image/')) return 'image';
+  if (mt.startsWith('video/')) return 'video';
+  if (mt === 'application/pdf' || mt.includes('presentation') || mt.includes('powerpoint')) return 'presentation';
+  return 'document';
+}
+
+async function uploadDealRoomFile() {
+  const input = document.getElementById('dealRoomFileInput');
+  const file = input.files[0];
+  if (!file) { alert('Choose a file first.'); return; }
+  const statusEl = document.getElementById('dealRoomUploadStatus');
+  statusEl.textContent = 'Uploading...';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', guessFileType(file));
+    formData.append('customer_id', CUSTOMER_ID);
+    formData.append('campaign_id', String(currentDealRoomDealId));
+    const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/media/upload', { method: 'POST', body: formData });
+    const result = await res.json();
+    if (!result.success) { statusEl.textContent = 'Upload failed: ' + (result.error || 'unknown error'); return; }
+    statusEl.textContent = 'Uploaded.';
+    input.value = '';
+    await loadDealRoomFiles();
+  } catch (e) { statusEl.textContent = 'Upload failed: ' + e.message; }
+}
+
+(async function init() {
+  const ok = await checkAuthentication();
+  if (!ok) { redirectToLogin(); return; }
+  await loadTargets();
+})();
+</script>
+</body>
+</html>
