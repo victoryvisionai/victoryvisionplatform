@@ -589,13 +589,18 @@ async function uploadDealRoomFile() {
 
 // Filter state lives in the URL, so any filtered/sorted view is a real,
 // shareable, bookmarkable browser URL - not just individual saved targets.
-const FILTER_FIELDS = ['filterStatus','filterIndustry','filterLocation','filterMaxPrice','filterMinCashFlow','sortBy'];
+const FILTER_FIELDS = ['filterStatus','filterIndustry','filterSource','filterMinPrice','filterMinRevenue','filterLocation','filterMaxPrice','filterMinCashFlow','sortBy'];
 const FILTER_CHECKBOXES = ['filterSellerFinancing','filterMgmtStaying','filterSavedOnly'];
+// Default-on checkboxes persist the opposite way: present in the URL only
+// when explicitly turned OFF, so a fresh visit (no query string) keeps the
+// safer default rather than needing every link to carry it explicitly.
+const FILTER_CHECKBOXES_DEFAULT_ON = ['filterHideFbaEcom'];
 
 function restoreFiltersFromUrl() {
   const params = new URLSearchParams(window.location.search);
   FILTER_FIELDS.forEach(id => { const v = params.get(id); if (v != null) document.getElementById(id).value = v; });
   FILTER_CHECKBOXES.forEach(id => { if (params.get(id) === '1') document.getElementById(id).checked = true; });
+  FILTER_CHECKBOXES_DEFAULT_ON.forEach(id => { if (params.get(id) === '0') document.getElementById(id).checked = false; });
 }
 
 function syncFiltersToUrl() {
