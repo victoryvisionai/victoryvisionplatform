@@ -128,6 +128,7 @@
       <input type="number" id="filterMinCashFlow" placeholder="Min EBITDA/SDE $" oninput="renderTargets()" style="width:140px;"/>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSellerFinancing" onchange="renderTargets()"/> Seller financing</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterMgmtStaying" onchange="renderTargets()"/> Management staying</label>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSavedOnly" onchange="renderTargets()"/> \u2605 Saved only</label>
       <select id="sortBy" onchange="renderTargets()">
         <option value="fit">Recommended for Me</option>
         <option value="newest">Newest</option>
@@ -346,6 +347,7 @@ function renderTargets() {
         <div style="display:flex; gap:6px; align-items:center;">
           ${fit != null ? `<span class="status-pill" style="background:${fit >= 70 ? '#d4edda' : fit >= 40 ? '#fff3cd' : '#f8d7da'}; color:${fit >= 70 ? '#155724' : fit >= 40 ? '#856404' : '#721c24'};">AI Fit: ${fit}%</span>` : ''}
           <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
+          ${!IS_CURATOR ? `<button onclick="toggleBookmark('${t.id}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem; color:${savedTargets.includes(t.id) ? '#FFA500' : '#ccc'};" title="Save for later">\u2605</button>` : ''}
         </div>
       </div>
       <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>
