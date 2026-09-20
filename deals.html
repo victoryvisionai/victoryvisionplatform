@@ -340,7 +340,10 @@ function renderTargets() {
         </div>
       </div>
       <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>
-      ${t.description ? `<div class="target-desc">${esc(t.description)}</div>` : ''}
+      ${t.ai_scores && t.ai_scores[CUSTOMER_ID] ? `
+        <div style="font-size:0.8rem; color:#0A3161; margin:6px 0;">
+          <strong>Likelihood to close: ${t.ai_scores[CUSTOMER_ID].likelihood_to_close}%</strong> \u2014 ${esc(t.ai_scores[CUSTOMER_ID].why_it_fits || '')}
+        </div>` : (t.description ? `<div class="target-desc">${esc(t.description)}</div>` : '')}
       <div class="target-stats">
         <div><div class="stat-label">Asking</div><div class="stat-value">${t.asking_price_usd ? fmtMoney(t.asking_price_usd) : '\u2014'}</div></div>
         <div><div class="stat-label">Revenue</div><div class="stat-value">${t.revenue_usd ? fmtMoney(t.revenue_usd) : '\u2014'}</div></div>
