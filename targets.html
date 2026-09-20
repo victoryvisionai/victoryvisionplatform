@@ -231,7 +231,47 @@ function fmtMoney(n) {
   return '$' + n.toLocaleString();
 }
 
+let acquisitionProfile = null;
+
+// Simple, deterministic, no-AI-cost fit score for v1. Compares target attributes
+// against the member's stored acquisition_profile. Returns null (shown as no
+// badge) when the member has not filled in a profile yet - a guessed score
+// would be worse than no score.
+function computeFitScore(t) {
+  if (!acquisitionProfile) return null;
+  const p = acquisitionProfile;
+  let points = 0, possible = 0;
+
+  if (Array.isArray(p.industries_wanted) && p.industries_wanted.length) {
+    possible += 30;
+    if (t.industry && p.industries_wanted.some(i => t.industry.toLowerCase().includes(i.toLowerCase()))) points += 30;
+  }
+  if (Array.isArray(p.industries_excluded) && p.industries_excluded.length) {
+    if (t.industry && p.industries_excluded.some(i => t.industry.toLowerCase().includes(i.toLowerCase()))) return 0;
+  }
+  if (p.max_purchase_price) {
+    possible += 30;
+    if (t.asking_price_usd && Number(t.asking_price_usd) <= Number(p.max_purchase_price)) points += 30;
+  }
+  if (p.min_cash_flow) {
+    possible += 25;
+    if (t.cash_flow_usd && Number(t.cash_flow_usd) >= Number(p.min_cash_flow)) points += 25;
+  }
+  if (p.seller_financing_acceptable === true) {
+    possible += 15;
+    if (t.seller_financing) points += 15;
+  }
+  if (possible === 0) return null;
+  return Math.round((points / possible) * 100);
+}
+
+async function loadAcquisitionProfile() {
+  const { data } = await supabaseClient.from('users').select('acquisition_profile').eq('email', CUSTOMER_ID).limit(1);
+  acquisitionProfile = (data && data[0] && data[0].acquisition_profile) || null;
+}
+
 async function loadTargets() {
+  if (!IS_CURATOR) await loadAcquisitionProfile();
   let query = supabaseClient.from('targets').select('*').order('created_at', { ascending: false });
   const { data, error } = await query;
   if (error) { console.error('loadTargets error:', error); document.getElementById('targetsContainer').innerHTML = '<div class="empty-state">Could not load targets.</div>'; return; }
