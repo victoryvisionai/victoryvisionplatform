@@ -528,7 +528,7 @@ function renderUsersTable() {
   if (!allUsers.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No users</td></tr>'; return; }
   tb.innerHTML = allUsers.map(u => {
     const plan = u.subscription_plan||'Bronze', st = u.subscription_status||'trial';
-    const cr = (u.campaign_credits||0)+(u.video_credits||0)+(u.image_credits||0)+(u.contact_credits||0)+(u.social_credits||0)+(u.email_credits||0);
+    const cr = u.credits || 0; // real single credits field - the multi-pool fields (campaign_credits etc.) do not exist in the schema; that's the credit-tracking project coming next, not this one.
     const la = lastAct(u);
     return `<tr>
       <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email||u.id)}</div></td>
