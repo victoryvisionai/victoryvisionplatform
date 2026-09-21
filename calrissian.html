@@ -402,14 +402,30 @@ function nav(id, btn) {
 // ═══════════════════════════════════════════════
 async function loadUsers() {
   try {
-    const res = await GET(EP.allUsers);
-    allUsers = Array.isArray(res) ? res : (res.users || [res]);
+    // Queries user_onboarding_progress_v directly - no n8n round-trip for a
+    // read-only dashboard load. company_name/credits/title are already
+    // joined into the view. Shapes each row so the existing utility
+    // functions (lastAct/daysAgo/moSub/isRisk) work with minimal changes:
+    // last_active carries the real cross-table activity signal, not just
+    // last_sign_in_at, which would have misflagged active daily users.
+    const { data, error } = await sb.from('user_onboarding_progress_v').select('*');
+    if (error) throw error;
+    allUsers = (data || [])
+      .filter(u => u.tier !== 'none')
+      .map(u => ({
+        ...u,
+        id: u.email,
+        subscription_plan: u.tier,
+        subscription_status: u.tier === 'past-user' ? 'cancelled' : 'active',
+        last_active: u.last_activity_at,
+        pct_complete: (u.setup_total + u.pages_total) ? Math.round(100 * (u.setup_done + u.pages_done) / (u.setup_total + u.pages_total)) : null
+      }));
     document.getElementById('badgeTotal').textContent = allUsers.length;
     fillDD();
     renderOverview();
     renderUsersTable();
     renderChurn();
-    loadStats(allIds(), 30, 'overview');
+    renderOnboardingTable();
   } catch (e) {
     console.error(e);
     showToast('Failed to load users: ' + e.message, 'err');
