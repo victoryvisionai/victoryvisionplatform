@@ -476,8 +476,9 @@ function renderOverview() {
   const act = allUsers.filter(u => { const la = lastAct(u); return la && daysAgo(la) <= 30; }).length;
   const paid = allUsers.filter(u => u.subscription_status === 'active').length;
   const churn = allUsers.filter(isRisk).length;
+  // Real prices established for these tiers: Starter $999/yr, Gold $12,500/yr.
   let mrr = 0;
-  allUsers.forEach(u => { if (u.subscription_status === 'active') { const p = (u.subscription_plan||'').toLowerCase(); mrr += p==='gold'?799:p==='silver'?299:99; }});
+  allUsers.forEach(u => { if (u.subscription_status === 'active') { const p = (u.subscription_plan||'').toLowerCase(); mrr += p==='gold'?(12500/12):(p==='starter'||p==='starter-annual')?(999/12):0; }});
   document.getElementById('mTotal').textContent = tot;
   document.getElementById('mActive').textContent = act;
   document.getElementById('mActivePct').textContent = tot ? Math.round(act/tot*100)+'% of total' : '';
