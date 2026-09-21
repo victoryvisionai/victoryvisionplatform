@@ -226,8 +226,14 @@
 
 <!-- ═══════ ONBOARDING ═══════ -->
 <div id="p-onboarding" class="panel">
-  <div class="ph"><h1 id="obTitle">Onboarding Status</h1><p>Select a user to view setup checklist</p></div>
-  <div class="card"><div class="ct-title">📋 Checklist</div><div id="obChecklist"><p style="color:var(--text-dim)">Select a user from the dropdown.</p></div></div>
+  <div class="ph"><h1>Onboarding & Customer Success</h1><p>Every customer's real, live activation status - tier-aware, not a universal checklist</p></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">\ud83c\udfaf Activation Status</div>
+    <table><thead><tr><th>Customer</th><th>Tier</th><th>Activation</th><th>Current Step</th><th>Last Activity</th><th>Victories</th><th>Risk</th></tr></thead>
+    <tbody id="tblOnboarding"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
+  <div class="ph" style="margin-top:24px;"><h1 id="obTitle" style="font-size:18px;">Single-User Checklist</h1><p>Select a user for the detailed live-state checklist</p></div>
+  <div class="card"><div class="ct-title">\ud83d\udccb Checklist</div><div id="obChecklist"><p style="color:var(--text-dim)">Select a user from the dropdown.</p></div></div>
   <div class="two-col" style="margin-top:16px">
     <div class="card"><div class="ct-title">📧 Email Health</div><div id="obEmail"><p style="color:var(--text-dim)">Select a user.</p></div></div>
     <div class="card"><div class="ct-title">🔗 OAuth Status</div><div id="obOauth"><p style="color:var(--text-dim)">Select a user.</p></div></div>
