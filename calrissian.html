@@ -648,6 +648,30 @@ function renderChurn() {
 }
 
 // ═══════════════════════════════════════════════
+// PLATFORM ACTIVITY (30d) - real counts, not a nonexistent /admin/stats call
+// ═══════════════════════════════════════════════
+async function loadPlatformActivity() {
+  const since = new Date(Date.now() - 30*864e5).toISOString();
+  try {
+    const [contacts, calls, emails, meetings, victories, campaigns, files, social] = await Promise.all([
+      sb.from('contacts').select('id', { count: 'exact', head: true }).gte('created', since),
+      sb.from('calls').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      sb.from('email').select('id', { count: 'exact', head: true }).gte('sent_at', since),
+      sb.from('meetings').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      sb.from('victories').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      sb.from('campaigns').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      sb.from('campaigns_files').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      sb.from('social').select('id', { count: 'exact', head: true }).gte('created_at', since)
+    ]);
+    renderOverviewBars({
+      contacts: contacts.count||0, calls: calls.count||0, emails: emails.count||0,
+      meetings: meetings.count||0, victories: victories.count||0, campaigns: campaigns.count||0,
+      campaign_files: files.count||0, social: social.count||0
+    });
+  } catch (e) { console.error(e); document.getElementById('overviewBars').innerHTML = '<p style="color:var(--text-dim)">Could not load activity.</p>'; }
+}
+
+// ═══════════════════════════════════════════════
 // ONBOARDING - all-customer activation table
 // ═══════════════════════════════════════════════
 function renderOnboardingTable() {
