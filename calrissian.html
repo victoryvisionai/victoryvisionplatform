@@ -617,9 +617,18 @@ function renderOB(uid) {
 // ═══════════════════════════════════════════════
 // CHURN
 // ═══════════════════════════════════════════════
-function isRisk(u) { if (u.subscription_status==='inactive'||u.subscription_status==='cancelled') return false; const la=lastAct(u); if (!la) return true; const d=daysAgo(la); return d>=14||(u.subscription_status==='trial'&&d>=5); }
-function riskLvl(u) { const la=lastAct(u); if (!la) return 'high'; const d=daysAgo(la); return d>=30?'high':d>=14?'medium':'low'; }
-function riskWhy(u) { const la=lastAct(u); if (!la) return 'No activity'; const d=daysAgo(la); if (d>=30) return d+'d inactive'; if (d>=14) return 'Declining ('+d+'d)'; return 'Trial cold'; }
+// Risk now comes straight from user_onboarding_progress_v.risk_color, which
+// applies tier-specific thresholds (Gold 24-48h, Starter 2-3d, Community
+// 3d/10-14d) per the approved onboarding plan - not a flat 14d/30d rule that
+// treats a $12,500 Gold customer the same as a $99 community member.
+function isRisk(u) { return u.subscription_status !== 'cancelled' && u.risk_color !== 'green'; }
+function riskLvl(u) { return u.risk_color === 'red' ? 'high' : u.risk_color === 'yellow' ? 'medium' : 'low'; }
+function riskWhy(u) {
+  if (u.days_since_last_activity == null) return 'No activity since signup (' + u.days_since_signup + 'd)';
+  if (u.risk_color === 'red') return u.days_since_last_activity + 'd inactive \u00b7 stuck on ' + (u.next_step || '?');
+  if (u.risk_color === 'yellow') return 'Slowing \u00b7 next: ' + (u.next_step || '?');
+  return 'On track';
+}
 function renderChurn() {
   const at = allUsers.filter(isRisk).sort((a,b)=>({high:0,medium:1,low:2})[riskLvl(a)]-({high:0,medium:1,low:2})[riskLvl(b)]);
   const tb = document.getElementById('tblChurn');
