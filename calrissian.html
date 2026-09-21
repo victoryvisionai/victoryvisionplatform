@@ -490,12 +490,12 @@ function renderOverview() {
   renderSignupsChart();
 }
 function renderPlanChart() {
-  const c = {Bronze:0,Silver:0,Gold:0,Trial:0};
-  allUsers.forEach(u => { if (u.subscription_status==='trial') c.Trial++; else { const p=(u.subscription_plan||'').toLowerCase(); c[p==='gold'?'Gold':p==='silver'?'Silver':'Bronze']++; }});
+  const c = {Starter:0,Gold:0,'Past User':0};
+  allUsers.forEach(u => { const p=(u.subscription_plan||'').toLowerCase(); c[p==='gold'?'Gold':p==='past-user'?'Past User':'Starter']++; });
   if (charts.plan) charts.plan.destroy();
   charts.plan = new Chart(document.getElementById('cPlan'), {
     type:'doughnut',
-    data:{labels:['Bronze','Silver','Gold','Trial'],datasets:[{data:[c.Bronze,c.Silver,c.Gold,c.Trial],backgroundColor:['#CD7F32','#C0C0C0','#FFD700','#3b82f6'],borderColor:'#111c2e',borderWidth:3}]},
+    data:{labels:['Starter','Gold','Past User'],datasets:[{data:[c.Starter,c.Gold,c['Past User']],backgroundColor:['#60a5fa','#FFD700','#8899b0'],borderColor:'#111c2e',borderWidth:3}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#8899b0',font:{family:'DM Sans'}}}}}
   });
 }
