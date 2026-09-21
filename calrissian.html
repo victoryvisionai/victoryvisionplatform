@@ -432,6 +432,7 @@ async function loadUsers() {
     renderUsersTable();
     renderChurn();
     renderOnboardingTable();
+    loadPlatformActivity();
   } catch (e) {
     console.error(e);
     showToast('Failed to load users: ' + e.message, 'err');
