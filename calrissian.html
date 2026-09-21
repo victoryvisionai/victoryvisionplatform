@@ -1,154 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Victory Vision - Admin Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap');
-    :root{--navy:#0A3161;--navy-dark:#06203f;--red:#bb133e;--orange:#fd7e14;--green:#22c55e;--green-dark:#16a34a;--yellow:#eab308;--bg:#0c1421;--bg-card:#111c2e;--border:#1e3a5f;--text:#e2e8f0;--text-dim:#8899b0;--text-bright:#f8fafc}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-    .auth-loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
-    .spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}
-    .mini-spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* TOPBAR */
-    .topbar{background:var(--navy-dark);border-bottom:1px solid var(--border);padding:12px 32px;display:flex;align-items:center;justify-content:space-between}
-    .topbar .logo{font-weight:700;font-size:18px;color:var(--text-bright);display:flex;align-items:center;gap:8px}
-    .topbar .logo .badge{background:var(--red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:1px}
-    .topbar-right{display:flex;align-items:center;gap:16px}
-    .topbar-right span{font-size:13px;color:var(--text-dim)}
-    .btn-sign{background:var(--red);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-
-    /* LAYOUT */
-    .layout{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 53px)}
-    .sidebar{background:var(--navy-dark);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column}
-    .sb-section{padding:0 16px;margin-bottom:20px}
-    .sb-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:6px;padding:0 12px}
-    .sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text-dim);font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:.15s}
-    .sb-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
-    .sb-link.active{background:rgba(253,126,20,.12);color:var(--orange)}
-    .sb-link .ic{font-size:17px;width:22px;text-align:center}
-    .sb-link .ct{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
-    .user-sel{padding:14px 16px;border-top:1px solid var(--border);margin-top:auto}
-    .user-sel label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:4px}
-    .user-sel select{width:100%;padding:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-family:inherit}
-
-    /* MAIN */
-    .main{padding:28px 32px;overflow-y:auto;max-height:calc(100vh - 53px)}
-    .panel{display:none}.panel.active{display:block}
-    .ph h1{font-size:24px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
-    .ph p{font-size:14px;color:var(--text-dim);margin-bottom:20px}
-
-    /* METRICS */
-    .mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;transition:.15s}
-    .mcard:hover{border-color:#2a5080;transform:translateY(-1px)}
-    .mcard .ml{font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-    .mcard .mv{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--text-bright)}
-    .mcard .ms{font-size:11px;color:var(--text-dim);margin-top:4px}
-
-    /* CARDS & TABLES */
-    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}
-    .ct-title{font-size:15px;font-weight:700;color:var(--text-bright);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-    table{width:100%;border-collapse:collapse}
-    th,td{text-align:left;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border)}
-    th{font-weight:700;color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-    tr:last-child td{border-bottom:none}
-    tr:hover td{background:rgba(255,255,255,.02)}
-
-    /* BADGES */
-    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
-    .b-green{background:rgba(34,197,94,.15);color:var(--green)}
-    .b-blue{background:rgba(59,130,246,.15);color:#60a5fa}
-    .b-red{background:rgba(187,19,62,.15);color:#d91a4a}
-    .b-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
-    .plan-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
-    .plan-bronze{background:linear-gradient(135deg,rgba(205,127,50,.2),rgba(160,82,45,.2));color:#CD7F32;border:1px solid rgba(205,127,50,.3)}
-    .plan-silver{background:linear-gradient(135deg,rgba(192,192,192,.2),rgba(128,128,128,.2));color:#C0C0C0;border:1px solid rgba(192,192,192,.3)}
-    .plan-gold{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,165,0,.2));color:#FFD700;border:1px solid rgba(255,215,0,.3)}
-    .plan-starter,.plan-starter-annual{background:linear-gradient(135deg,rgba(96,165,250,.2),rgba(59,130,246,.2));color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
-    .plan-past-user,.plan-none{background:rgba(136,153,176,.15);color:var(--text-dim);border:1px solid var(--border)}
-
-    /* TIME BTNS */
-    .tw{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px}
-    .tb{background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
-    .tb.active{background:var(--orange);border-color:var(--orange);color:#000}
-
-    /* SPARK BARS */
-    .sbar{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
-    .sbar:last-child{border-bottom:none}
-    .sbar-l{font-size:13px;color:var(--text-dim);min-width:110px}
-    .sbar-t{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
-    .sbar-f{height:100%;border-radius:4px;transition:width .5s}
-    .sbar-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--text-bright);min-width:45px;text-align:right}
-    .c-blue{background:#3b82f6}.c-green{background:var(--green)}.c-orange{background:var(--orange)}.c-purple{background:#8b5cf6}.c-cyan{background:#06b6d4}.c-yellow{background:var(--yellow)}.c-red{background:var(--red)}
-
-    /* CHARTS */
-    .chart-box{position:relative;height:260px;margin-top:10px}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-
-    /* CHECKLIST */
-    .chk{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);margin-bottom:6px}
-    .chk-i{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-    .chk-i.ok{background:rgba(34,197,94,.15);color:var(--green)}
-    .chk-i.no{background:rgba(187,19,62,.15);color:#d91a4a}
-    .chk-i.wait{background:rgba(234,179,8,.15);color:var(--yellow)}
-    .chk-s{margin-left:auto;font-size:12px;font-weight:600}
-
-    /* FORMS */
-    .fg{display:flex;flex-direction:column;gap:4px}
-    .fg label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
-    .fg input,.fg select,.fg textarea{padding:9px 11px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:inherit}
-    .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--orange)}
-    .eg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .btn{border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
-    .btn-p{background:var(--orange);color:#000}.btn-p:hover{background:#e67012}
-    .btn-s{background:transparent;color:var(--text);border:1px solid var(--border)}.btn-s:hover{border-color:var(--text-dim)}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-
-    /* ASSUME ROLE ACTION CARDS */
-    .action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
-    .action-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:default}
-    .action-card h3{font-size:14px;color:var(--text-bright);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-    .action-card p{font-size:12px;color:var(--text-dim);margin-bottom:12px}
-    .action-card .btn{width:100%;text-align:center;font-size:13px;padding:8px}
-    .action-result{margin-top:10px;padding:10px;border-radius:6px;font-size:12px;font-family:'JetBrains Mono',monospace;display:none;max-height:120px;overflow-y:auto;word-break:break-all}
-    .action-result.show{display:block}
-    .action-result.ok{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
-    .action-result.err{background:rgba(187,19,62,.1);color:#d91a4a;border:1px solid rgba(187,19,62,.2)}
-
-    /* TOAST */
-    .toast{position:fixed;bottom:24px;right:24px;padding:14px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9000;transform:translateY(100px);opacity:0;transition:.3s}
-    .toast.vis{transform:translateY(0);opacity:1}
-    .toast.ok{background:var(--green-dark);color:#fff}
-    .toast.err{background:var(--red);color:#fff}
-
-    @media(max-width:1024px){
-      .layout{grid-template-columns:1fr}
-      .sidebar{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border);padding:10px 16px}
-      .sb-section{display:flex;gap:4px;margin-bottom:0;padding:0}.sb-title{display:none}
-      .user-sel{margin-top:0;border-top:none;padding:0 16px}
-      .main{padding:20px 16px;max-height:none}
-      .two-col,.eg{grid-template-columns:1fr}
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Victory Vision - Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{--navy:#0A3161;--navy-dark:#06203f;--red:#bb133e;--orange:#fd7e14;--green:#22c55e;--yellow:#eab308;--bg:#0c1421;--bg-card:#111c2e;--border:#1e3a5f;--text:#e2e8f0;--text-dim:#8899b0;--text-bright:#f8fafc}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.auth-loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+.spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}
+.mini-spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.topbar{background:var(--navy-dark);border-bottom:1px solid var(--border);padding:12px 32px;display:flex;align-items:center;justify-content:space-between}
+.topbar .logo{font-weight:700;font-size:18px;color:var(--text-bright);display:flex;align-items:center;gap:8px}
+.topbar .logo .badge{background:var(--red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:1px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-right span{font-size:13px;color:var(--text-dim)}
+.btn-sign{background:var(--red);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.layout{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 53px)}
+.sidebar{background:var(--navy-dark);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column}
+.sb-section{padding:0 16px;margin-bottom:20px}
+.sb-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:6px;padding:0 12px}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text-dim);font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:.15s}
+.sb-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.sb-link.active{background:rgba(253,126,20,.12);color:var(--orange)}
+.sb-link .ic{font-size:17px;width:22px;text-align:center}
+.sb-link .ct{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.user-sel{padding:14px 16px;border-top:1px solid var(--border);margin-top:auto}
+.user-sel label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:4px}
+.user-sel select{width:100%;padding:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-family:inherit}
+.main{padding:28px 32px;overflow-y:auto;max-height:calc(100vh - 53px)}
+.panel{display:none}.panel.active{display:block}
+.ph h1{font-size:24px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
+.ph p{font-size:14px;color:var(--text-dim);margin-bottom:20px}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;transition:.15s}
+.mcard:hover{border-color:#2a5080;transform:translateY(-1px)}
+.mcard .ml{font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.mcard .mv{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--text-bright)}
+.mcard .ms{font-size:11px;color:var(--text-dim);margin-top:4px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}
+.ct-title{font-size:15px;font-weight:700;color:var(--text-bright);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border)}
+th{font-weight:700;color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.b-green{background:rgba(34,197,94,.15);color:var(--green)}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa}
+.b-red{background:rgba(187,19,62,.15);color:#d91a4a}
+.b-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
+.plan-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.plan-gold{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,165,0,.2));color:#FFD700;border:1px solid rgba(255,215,0,.3)}
+.plan-starter{background:linear-gradient(135deg,rgba(96,165,250,.2),rgba(59,130,246,.2));color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
+.plan-none,.plan-past-user{background:rgba(136,153,176,.15);color:var(--text-dim);border:1px solid var(--border)}
+.tw{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.tb{background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.tb.active{background:var(--orange);border-color:var(--orange);color:#000}
+.sbar{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.sbar:last-child{border-bottom:none}
+.sbar-l{font-size:13px;color:var(--text-dim);min-width:110px}
+.sbar-t{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.sbar-f{height:100%;border-radius:4px;transition:width .5s}
+.sbar-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--text-bright);min-width:45px;text-align:right}
+.c-blue{background:#3b82f6}.c-green{background:var(--green)}.c-orange{background:var(--orange)}.c-purple{background:#8b5cf6}.c-cyan{background:#06b6d4}.c-yellow{background:var(--yellow)}.c-red{background:var(--red)}
+.chart-box{position:relative;height:260px;margin-top:10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chk{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);margin-bottom:6px}
+.chk-i{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.chk-i.ok{background:rgba(34,197,94,.15);color:var(--green)}
+.chk-i.no{background:rgba(187,19,62,.15);color:#d91a4a}
+.chk-s{margin-left:auto;font-size:12px;font-weight:600}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+.fg input,.fg select{padding:9px 10px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:14px;font-family:inherit}
+.eg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.btn{padding:9px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+.btn-p{background:var(--orange);color:#000}
+.btn-s{background:none;border:1px solid var(--border);color:var(--text)}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
+.filter-row .fg{min-width:160px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--border);padding:12px 20px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:10000}
+.toast.vis{opacity:1;transform:translateY(0)}
+.toast.err{border-color:var(--red);color:#ff8fa8}
+.event-row{font-size:12px;font-family:'JetBrains Mono',monospace}
+</style>
 </head>
 <body>
 <div id="authLoading" class="auth-loading"><div class="spinner"></div><p>Verifying access...</p></div>
 
 <div class="topbar">
-  <div class="logo">
-    <img src="logo.jpg" alt="VV" style="height:32px" onerror="this.style.display='none'"/>
-    Victory Vision <span class="badge">Admin</span>
-  </div>
+  <div class="logo"><img src="logo.jpg" alt="VV" style="height:32px" onerror="this.style.display='none'"/>Victory Vision <span class="badge">Admin</span></div>
   <div class="topbar-right">
     <span id="adminEmail"></span>
-    <a href="companyprofile" style="color:var(--text-dim);font-size:13px;text-decoration:none">← App</a>
+    <a href="companyprofile" style="color:var(--text-dim);font-size:13px;text-decoration:none">&larr; App</a>
     <button class="btn-sign" onclick="signOut()">Sign Out</button>
   </div>
 </div>
@@ -162,14 +112,13 @@
   </div>
   <div class="sb-section">
     <div class="sb-title">Management</div>
-    <button class="sb-link" data-p="engagement" onclick="nav('engagement',this)"><span class="ic">📈</span>Engagement</button>
     <button class="sb-link" data-p="onboarding" onclick="nav('onboarding',this)"><span class="ic">🚀</span>Onboarding</button>
     <button class="sb-link" data-p="churn" onclick="nav('churn',this)"><span class="ic">⚠️</span>Churn Risk<span class="ct" id="badgeChurn" style="background:var(--yellow);color:#000">0</span></button>
+    <button class="sb-link" data-p="events" onclick="nav('events',this)"><span class="ic">📡</span>User Events</button>
   </div>
   <div class="sb-section">
     <div class="sb-title">Actions</div>
     <button class="sb-link" data-p="edit" onclick="nav('edit',this)"><span class="ic">✏️</span>Edit User</button>
-    <button class="sb-link" data-p="assume" onclick="nav('assume',this)"><span class="ic">🎭</span>Assume Role</button>
   </div>
   <div class="user-sel">
     <label>Select User</label>
@@ -179,9 +128,9 @@
 
 <main class="main">
 
-<!-- ═══════ OVERVIEW ═══════ -->
+<!-- OVERVIEW -->
 <div id="p-overview" class="panel active">
-  <div class="ph"><h1>Platform Overview</h1><p>Real-time health metrics</p></div>
+  <div class="ph"><h1>Platform Overview</h1><p>Real-time health metrics — Gold and Starter</p></div>
   <div class="mrow">
     <div class="mcard"><div class="ml">Total Users</div><div class="mv" id="mTotal">—</div></div>
     <div class="mcard"><div class="ml">Active (30d)</div><div class="mv" id="mActive">—</div><div class="ms" id="mActivePct"></div></div>
@@ -196,7 +145,7 @@
   <div class="card"><div class="ct-title">🏆 Platform Activity (30d)</div><div id="overviewBars"><p style="color:var(--text-dim)"><span class="mini-spin"></span>Loading...</p></div></div>
 </div>
 
-<!-- ═══════ ALL USERS ═══════ -->
+<!-- ALL USERS -->
 <div id="p-users" class="panel">
   <div class="ph"><h1>All Users</h1><p>Full roster</p></div>
   <div class="card" style="overflow-x:auto">
@@ -205,51 +154,53 @@
   </div>
 </div>
 
-<!-- ═══════ ENGAGEMENT ═══════ -->
-<div id="p-engagement" class="panel">
-  <div class="ph"><h1 id="engTitle">Platform Engagement</h1><p id="engSub">Rows added across tables</p></div>
-  <div class="tw">
-    <button class="tb" onclick="setWin(1,this)">1d</button>
-    <button class="tb active" onclick="setWin(7,this)">7d</button>
-    <button class="tb" onclick="setWin(14,this)">14d</button>
-    <button class="tb" onclick="setWin(30,this)">30d</button>
-    <button class="tb" onclick="setWin(60,this)">60d</button>
-    <button class="tb" onclick="setWin(90,this)">90d</button>
-  </div>
-  <div class="mrow" id="engMetrics"><p style="color:var(--text-dim)"><span class="mini-spin"></span>Loading stats...</p></div>
-  <div class="two-col">
-    <div class="card"><div class="ct-title">📊 Rows by Table</div><div class="chart-box"><canvas id="cEng"></canvas></div></div>
-    <div class="card"><div class="ct-title">📋 Breakdown</div><div id="engBars"><p style="color:var(--text-dim)"><span class="mini-spin"></span></p></div></div>
-  </div>
-  <div class="card"><div class="ct-title">📧 Email Performance</div><div id="emailPerf"><p style="color:var(--text-dim)"><span class="mini-spin"></span></p></div></div>
-</div>
-
-<!-- ═══════ ONBOARDING ═══════ -->
+<!-- ONBOARDING -->
 <div id="p-onboarding" class="panel">
-  <div class="ph"><h1>Onboarding & Customer Success</h1><p>Every customer's real, live activation status - tier-aware, not a universal checklist</p></div>
+  <div class="ph"><h1>Onboarding &amp; Customer Success</h1><p>Every customer's real, live activation status — tier-aware, not a universal checklist</p></div>
   <div class="card" style="overflow-x:auto">
-    <div class="ct-title">\ud83c\udfaf Activation Status</div>
+    <div class="ct-title">🎯 Activation Status</div>
     <table><thead><tr><th>Customer</th><th>Tier</th><th>Activation</th><th>Current Step</th><th>Last Activity</th><th>Victories</th><th>Risk</th></tr></thead>
     <tbody id="tblOnboarding"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
   </div>
-  <div class="ph" style="margin-top:24px;"><h1 id="obTitle" style="font-size:18px;">Single-User Checklist</h1><p>Select a user for the detailed live-state checklist</p></div>
-  <div class="card"><div class="ct-title">\ud83d\udccb Checklist</div><div id="obChecklist"><p style="color:var(--text-dim)">Select a user from the dropdown.</p></div></div>
-  <div class="two-col" style="margin-top:16px">
-    <div class="card"><div class="ct-title">📧 Email Health</div><div id="obEmail"><p style="color:var(--text-dim)">Select a user.</p></div></div>
-    <div class="card"><div class="ct-title">🔗 OAuth Status</div><div id="obOauth"><p style="color:var(--text-dim)">Select a user.</p></div></div>
-  </div>
+  <div class="ph" style="margin-top:24px;"><h1 style="font-size:18px;">Single-User Checklist</h1><p>Select a user from the dropdown for the detailed live-state checklist</p></div>
+  <div class="card"><div class="ct-title">📋 Checklist</div><div id="obChecklist"><p style="color:var(--text-dim)">Select a user from the dropdown.</p></div></div>
 </div>
 
-<!-- ═══════ CHURN ═══════ -->
+<!-- CHURN -->
 <div id="p-churn" class="panel">
-  <div class="ph"><h1>Churn Risk Monitor</h1><p>Users with declining engagement</p></div>
+  <div class="ph"><h1>Churn Risk Monitor</h1><p>Tier-aware thresholds: Gold escalates in 24-48h, Starter in 2-5 days</p></div>
   <div class="card" style="overflow-x:auto">
     <table><thead><tr><th>User</th><th>Plan</th><th>Risk</th><th>Days Inactive</th><th>Months</th><th>Reason</th><th></th></tr></thead>
     <tbody id="tblChurn"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
   </div>
 </div>
 
-<!-- ═══════ EDIT USER ═══════ -->
+<!-- USER EVENTS -->
+<div id="p-events" class="panel">
+  <div class="ph"><h1>User Events</h1><p>Every workflow executed on the platform, across every table that captures it</p></div>
+  <div class="filter-row">
+    <div class="tw" id="evWinButtons">
+      <button class="tb" onclick="setEvWin(1,this)">24h</button>
+      <button class="tb" onclick="setEvWin(7,this)">7d</button>
+      <button class="tb active" onclick="setEvWin(30,this)">30d</button>
+      <button class="tb" onclick="setEvWin(90,this)">90d</button>
+    </div>
+    <div class="fg"><label>Custom Range</label><input type="date" id="evFrom" onchange="setEvCustom()"/></div>
+    <div class="fg"><label>&nbsp;</label><input type="date" id="evTo" onchange="setEvCustom()"/></div>
+    <div class="fg"><label>Customer</label><input type="text" id="evName" placeholder="Name or email" oninput="renderEvents()"/></div>
+    <div class="fg"><label>Company</label><input type="text" id="evCompany" placeholder="Company" oninput="renderEvents()"/></div>
+    <div class="fg"><label>Tag / Feature</label><select id="evTag" onchange="renderEvents()"><option value="">All</option></select></div>
+  </div>
+  <div class="mrow" id="evMetrics"></div>
+  <div class="card"><div class="ct-title">📊 Event Volume by Feature</div><div class="chart-box"><canvas id="cEvents"></canvas></div></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">📜 Raw Event Stream <span style="font-weight:400;color:var(--text-dim);font-size:12px;" id="evCount"></span></div>
+    <table><thead><tr><th>Time</th><th>User</th><th>Company</th><th>Tier</th><th>Feature</th><th>Action</th><th>Status</th></tr></thead>
+    <tbody id="tblEvents"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- EDIT USER -->
 <div id="p-edit" class="panel">
   <div class="ph"><h1>Edit User</h1><p>Manage credits, plan, status</p></div>
   <div id="editPlaceholder" class="card"><p style="color:var(--text-dim)">Select a user from the dropdown.</p></div>
@@ -257,14 +208,9 @@
     <div class="card">
       <div class="ct-title">👤 <span id="editEmail" style="color:var(--orange)"></span></div>
       <div class="eg">
-        <div class="fg"><label>Plan</label><select id="ePlan"><option value="Bronze">Bronze</option><option value="Silver">Silver</option><option value="Gold">Gold</option></select></div>
-        <div class="fg"><label>Status</label><select id="eStatus"><option value="trial">Trial</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="cancelled">Cancelled</option></select></div>
-        <div class="fg"><label>Campaign Credits</label><input type="number" id="eCamp" min="0"/></div>
-        <div class="fg"><label>Video Credits</label><input type="number" id="eVid" min="0"/></div>
-        <div class="fg"><label>Image Credits</label><input type="number" id="eImg" min="0"/></div>
-        <div class="fg"><label>Contact Credits</label><input type="number" id="eCon" min="0"/></div>
-        <div class="fg"><label>Social Credits</label><input type="number" id="eSoc" min="0"/></div>
-        <div class="fg"><label>Email Credits</label><input type="number" id="eEml" min="0"/></div>
+        <div class="fg"><label>Plan</label><select id="ePlan"><option value="Starter">Starter</option><option value="Gold">Gold</option></select></div>
+        <div class="fg"><label>Status</label><select id="eStatus"><option value="active">Active</option><option value="cancelled">Cancelled</option></select></div>
+        <div class="fg"><label>Credits</label><input type="number" id="eCredits" min="0"/></div>
       </div>
       <div style="display:flex;gap:12px;margin-top:18px">
         <button class="btn btn-p" onclick="saveEdits()">💾 Save</button>
@@ -274,98 +220,22 @@
   </div>
 </div>
 
-<!-- ═══════ ASSUME ROLE ═══════ -->
-<div id="p-assume" class="panel">
-  <div class="ph">
-    <h1>🎭 Assume Role</h1>
-    <p>Act as a selected user to test their integrations. Calls use <code>user.number</code> and <code>user.email</code>.</p>
-  </div>
-  <div id="assumePlaceholder" class="card"><p style="color:var(--text-dim)">Select a user from the dropdown to assume their role and trigger test actions.</p></div>
-  <div id="assumePanel" style="display:none">
-    <div class="card">
-      <div class="ct-title">Acting as: <span id="assumeUser" style="color:var(--orange)"></span></div>
-      <p style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Phone: <span id="assumePhone" style="color:var(--text-bright)">—</span></p>
-      <p style="font-size:13px;color:var(--text-dim)">Email: <span id="assumeEmail2" style="color:var(--text-bright)">—</span></p>
-    </div>
-    <div class="action-grid">
-
-      <!-- SEND EMAIL -->
-      <div class="action-card">
-        <h3>📧 Send Test Email</h3>
-        <p>Triggers <code>emails/send</code> as this user to their own email.</p>
-        <button class="btn btn-p" id="btnEmail" onclick="assumeAction('email')">Send Test Email</button>
-        <div class="action-result" id="resEmail"></div>
-      </div>
-
-      <!-- SEND SMS -->
-      <div class="action-card">
-        <h3>💬 Send Test SMS</h3>
-        <p>Triggers <code>sms/send</code> to user.number.</p>
-        <button class="btn btn-p" id="btnSms" onclick="assumeAction('sms')">Send Test SMS</button>
-        <div class="action-result" id="resSms"></div>
-      </div>
-
-      <!-- MAKE CALL -->
-      <div class="action-card">
-        <h3>📞 Make Test Call</h3>
-        <p>Triggers <code>call/make</code> to user.number.</p>
-        <button class="btn btn-p" id="btnCall" onclick="assumeAction('call')">Make Test Call</button>
-        <div class="action-result" id="resCall"></div>
-      </div>
-
-      <!-- CREATE CONTACT -->
-      <div class="action-card">
-        <h3>👤 Create Admin Contact</h3>
-        <p>Triggers <code>contacts/create</code> — adds admin as a contact for this user.</p>
-        <button class="btn btn-p" id="btnContact" onclick="assumeAction('contact')">Create Contact</button>
-        <div class="action-result" id="resContact"></div>
-      </div>
-
-      <!-- CHECK OPENS -->
-      <div class="action-card">
-        <h3>👁️ Check Email Opens</h3>
-        <p>Triggers <code>emailopen/get</code> — returns boolean if opens tracking works.</p>
-        <button class="btn btn-p" id="btnOpens" onclick="assumeAction('opens')">Check Opens</button>
-        <div class="action-result" id="resOpens"></div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 </main>
 </div>
-
 <div id="toast" class="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════
 const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
 const sb = supabase.createClient(supabaseUrl, supabaseKey);
-const B = 'https://victoryvision.app.n8n.cloud/webhook';
-const EP = {
-  allUsers:    B + '/admin/allusers',
-  stats:       B + '/admin/stats',
-  updateUser:  B + '/user/update',
-  sendEmail:   B + '/emails/send',
-  sendSms:     B + '/sms/send',
-  makeCall:    B + '/call/make',
-  createContact: B + '/contacts/create',
-  emailOpenGet:  B + '/emailopen/get'
-};
 
 let CUSTOMER_ID = null, authToken = null;
-let allUsers = [], selId = null, timeWin = 7, charts = {}, cache = {};
+let allUsers = [], selId = null, charts = {};
+let allEvents = [], evWin = 30, evCustomFrom = null, evCustomTo = null;
 
-// ═══════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session?.user) { window.location.href = 'login.html'; return false; }
+  if (!session || !session.user) { window.location.href = 'login.html'; return false; }
   CUSTOMER_ID = session.user.email;
   authToken = session.access_token;
   document.getElementById('adminEmail').textContent = CUSTOMER_ID;
@@ -373,58 +243,36 @@ async function checkAuth() {
 }
 function signOut() { sb.auth.signOut().then(() => location.href = 'login.html'); }
 
-// ═══════════════════════════════════════════════
-// API
-// ═══════════════════════════════════════════════
-const hdrs = () => ({
-  'Content-Type': 'application/json',
-  'X-Customer-ID': CUSTOMER_ID,
-  'Authorization': authToken ? 'Bearer ' + authToken : ''
-});
-async function GET(url) {
-  const r = await fetch(url, { headers: hdrs() });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-async function POST(url, body) {
-  const r = await fetch(url, { method: 'POST', headers: hdrs(), body: JSON.stringify(body) });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-
-// ═══════════════════════════════════════════════
-// NAV
-// ═══════════════════════════════════════════════
 function nav(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('p-' + id).classList.add('active');
   document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (id === 'engagement') refreshEng();
+  if (id === 'events' && !allEvents.length) loadEvents();
 }
 
+function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function daysAgo(d) { return Math.floor((Date.now() - new Date(d).getTime()) / 864e5); }
+function ago(d) { const n = daysAgo(d); return n===0?'Today':n===1?'Yesterday':n<7?n+'d ago':n<30?Math.floor(n/7)+'w ago':Math.floor(n/30)+'mo ago'; }
+function moSub(u) { const c = u.created_at; return c ? Math.max(1, Math.floor(daysAgo(c)/30)) : '—'; }
+function showToast(m,t) { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+(t||'')+' vis'; setTimeout(()=>el.classList.remove('vis'),3500); }
+
 // ═══════════════════════════════════════════════
-// LOAD USERS (n8n)
+// LOAD USERS — direct query against the tier-aware
+// onboarding/risk view. No n8n round-trip for a read.
 // ═══════════════════════════════════════════════
 async function loadUsers() {
   try {
-    // Queries user_onboarding_progress_v directly - no n8n round-trip for a
-    // read-only dashboard load. company_name/credits/title are already
-    // joined into the view. Shapes each row so the existing utility
-    // functions (lastAct/daysAgo/moSub/isRisk) work with minimal changes:
-    // last_active carries the real cross-table activity signal, not just
-    // last_sign_in_at, which would have misflagged active daily users.
     const { data, error } = await sb.from('user_onboarding_progress_v').select('*');
     if (error) throw error;
     allUsers = (data || [])
-      .filter(u => u.tier !== 'none')
+      .filter(u => u.tier === 'Gold' || u.tier === 'starter' || u.tier === 'starter-annual')
       .map(u => ({
         ...u,
-        id: u.email,
-        subscription_plan: u.tier,
-        subscription_status: u.tier === 'past-user' ? 'cancelled' : 'active',
+        subscription_plan: u.tier === 'Gold' ? 'Gold' : 'Starter',
+        subscription_status: 'active',
         last_active: u.last_activity_at,
-        pct_complete: (u.setup_total + u.pages_total) ? Math.round(100 * (u.setup_done + u.pages_done) / (u.setup_total + u.pages_total)) : null
+        pct_complete: (u.setup_total + u.pages_total) ? Math.round(100*(u.setup_done+u.pages_done)/(u.setup_total+u.pages_total)) : null
       }));
     document.getElementById('badgeTotal').textContent = allUsers.length;
     fillDD();
@@ -433,443 +281,250 @@ async function loadUsers() {
     renderChurn();
     renderOnboardingTable();
     loadPlatformActivity();
-  } catch (e) {
-    console.error(e);
-    showToast('Failed to load users: ' + e.message, 'err');
-  }
+  } catch (e) { console.error(e); showToast('Failed to load users: ' + e.message, 'err'); }
 }
-function allIds() { return allUsers.map(u => u.id || u.email).filter(Boolean); }
 function fillDD() {
   const dd = document.getElementById('userDD');
   dd.innerHTML = '<option value="">-- All Users --</option>';
-  allUsers.forEach(u => {
-    const o = document.createElement('option');
-    o.value = u.email || u.id;
-    o.textContent = (u.company_name || u.email || u.id);
-    dd.appendChild(o);
-  });
+  allUsers.forEach(u => { const o=document.createElement('option'); o.value=u.email; o.textContent=u.company_name||u.email; dd.appendChild(o); });
 }
 
 // ═══════════════════════════════════════════════
-// LOAD STATS (n8n) — expects counts back
+// OVERVIEW — real tiers only (Gold/Starter), real pricing
 // ═══════════════════════════════════════════════
-async function loadStats(ids, days, ctx) {
-  const k = ids.join(',') + '_' + days;
-  if (cache[k]) { applyStats(cache[k], days, ctx); return cache[k]; }
-  try {
-    const res = await POST(EP.stats, { user_ids: ids, days });
-    const s = Array.isArray(res) ? res[0] : res;
-    cache[k] = s;
-    applyStats(s, days, ctx);
-    return s;
-  } catch (e) {
-    console.error(e);
-    showToast('Stats load failed', 'err');
-    return null;
-  }
+function isRisk(u) { return u.risk_color !== 'green'; }
+function riskLvl(u) { return u.risk_color === 'red' ? 'high' : u.risk_color === 'yellow' ? 'medium' : 'low'; }
+function riskWhy(u) {
+  if (u.days_since_last_activity == null) return 'No activity since signup (' + u.days_since_signup + 'd)';
+  if (u.risk_color === 'red') return u.days_since_last_activity + 'd inactive · stuck on ' + (u.next_step||'?');
+  if (u.risk_color === 'yellow') return 'Slowing · next: ' + (u.next_step||'?');
+  return 'On track';
 }
-function applyStats(s, days, ctx) {
-  if (!s) return;
-  const tc = s.summary?.table_counts || {};
-  if (ctx === 'overview') renderOverviewBars(tc);
-  if (ctx === 'engagement' || ctx === 'overview') renderEngPanel(s, tc, days);
-}
-
-// ═══════════════════════════════════════════════
-// OVERVIEW
-// ═══════════════════════════════════════════════
 function renderOverview() {
   const tot = allUsers.length;
-  const act = allUsers.filter(u => { const la = lastAct(u); return la && daysAgo(la) <= 30; }).length;
-  const paid = allUsers.filter(u => u.subscription_status === 'active').length;
+  const act = allUsers.filter(u => u.last_active && daysAgo(u.last_active) <= 30).length;
   const churn = allUsers.filter(isRisk).length;
-  // Real prices established for these tiers: Starter $999/yr, Gold $12,500/yr.
   let mrr = 0;
-  allUsers.forEach(u => { if (u.subscription_status === 'active') { const p = (u.subscription_plan||'').toLowerCase(); mrr += p==='gold'?(12500/12):(p==='starter'||p==='starter-annual')?(999/12):0; }});
+  allUsers.forEach(u => { mrr += u.subscription_plan === 'Gold' ? 12500/12 : 999/12; });
   document.getElementById('mTotal').textContent = tot;
   document.getElementById('mActive').textContent = act;
   document.getElementById('mActivePct').textContent = tot ? Math.round(act/tot*100)+'% of total' : '';
-  document.getElementById('mPaid').textContent = paid;
-  document.getElementById('mMRR').textContent = '$'+mrr.toLocaleString();
+  document.getElementById('mPaid').textContent = tot;
+  document.getElementById('mMRR').textContent = '$'+Math.round(mrr).toLocaleString();
   document.getElementById('mChurn').textContent = churn;
   document.getElementById('badgeChurn').textContent = churn;
   renderPlanChart();
   renderSignupsChart();
 }
 function renderPlanChart() {
-  const c = {Starter:0,Gold:0,'Past User':0};
-  allUsers.forEach(u => { const p=(u.subscription_plan||'').toLowerCase(); c[p==='gold'?'Gold':p==='past-user'?'Past User':'Starter']++; });
+  const c = { Gold: 0, Starter: 0 };
+  allUsers.forEach(u => c[u.subscription_plan]++);
   if (charts.plan) charts.plan.destroy();
   charts.plan = new Chart(document.getElementById('cPlan'), {
-    type:'doughnut',
-    data:{labels:['Starter','Gold','Past User'],datasets:[{data:[c.Starter,c.Gold,c['Past User']],backgroundColor:['#60a5fa','#FFD700','#8899b0'],borderColor:'#111c2e',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#8899b0',font:{family:'DM Sans'}}}}}
+    type: 'doughnut',
+    data: { labels: ['Gold','Starter'], datasets: [{ data: [c.Gold, c.Starter], backgroundColor: ['#FFD700','#60a5fa'], borderColor: '#111c2e', borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#8899b0', font: { family: 'DM Sans' } } } } }
   });
 }
 function renderSignupsChart() {
-  const now = new Date(), labels=[], data=[];
-  for (let i=29;i>=0;i--) { const d=new Date(now); d.setDate(d.getDate()-i); const k=d.toISOString().split('T')[0]; labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'})); data.push(allUsers.filter(u=>{const c=u.created_at||u.signup_date;return c&&c.startsWith(k);}).length); }
+  const now = new Date(), labels = [], data = [];
+  for (let i=29;i>=0;i--) { const d=new Date(now); d.setDate(d.getDate()-i); const k=d.toISOString().split('T')[0]; labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'})); data.push(allUsers.filter(u=>u.created_at && u.created_at.startsWith(k)).length); }
   if (charts.signups) charts.signups.destroy();
   charts.signups = new Chart(document.getElementById('cSignups'), {
-    type:'bar',data:{labels,datasets:[{label:'Signups',data,backgroundColor:'rgba(253,126,20,.6)',borderColor:'#fd7e14',borderWidth:1,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#8899b0',font:{size:10},maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'#8899b0',stepSize:1},grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true}},plugins:{legend:{display:false}}}
+    type: 'bar', data: { labels, datasets: [{ label: 'Signups', data, backgroundColor: 'rgba(253,126,20,.6)', borderColor: '#fd7e14', borderWidth: 1, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#8899b0', font: { size: 10 }, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: '#8899b0', stepSize: 1 }, grid: { color: 'rgba(255,255,255,.04)' }, beginAtZero: true } }, plugins: { legend: { display: false } } }
   });
 }
-function renderOverviewBars(tc) {
-  const el = document.getElementById('overviewBars');
-  if (!tc || !Object.keys(tc).length) { el.innerHTML = '<p style="color:var(--text-dim)">No data.</p>'; return; }
-  const cm = {contacts:'c-blue',calls:'c-purple',sms:'c-cyan',emails:'c-green',meetings:'c-yellow',victories:'c-green',campaigns:'c-orange',campaign_files:'c-red'};
-  const mx = Math.max(...Object.values(tc),1);
-  el.innerHTML = Object.entries(tc).map(([k,v])=>{
-    const pct = (v/mx)*100;
-    const lbl = k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    return `<div class="sbar"><span class="sbar-l">${lbl}</span><div class="sbar-t"><div class="sbar-f ${cm[k]||'c-blue'}" style="width:${pct}%"></div></div><span class="sbar-v">${v}</span></div>`;
-  }).join('');
+async function loadPlatformActivity() {
+  const since = new Date(Date.now() - 30*864e5).toISOString();
+  try {
+    const [contacts, calls, emails, meetings, victories, campaigns] = await Promise.all([
+      sb.from('contacts').select('id',{count:'exact',head:true}).gte('created', since),
+      sb.from('calls').select('id',{count:'exact',head:true}).gte('created_at', since),
+      sb.from('email').select('id',{count:'exact',head:true}).gte('sent_at', since),
+      sb.from('meetings').select('id',{count:'exact',head:true}).gte('created_at', since),
+      sb.from('victories').select('id',{count:'exact',head:true}).gte('created_at', since),
+      sb.from('campaigns').select('id',{count:'exact',head:true}).gte('created_at', since)
+    ]);
+    const tc = { contacts: contacts.count||0, calls: calls.count||0, emails: emails.count||0, meetings: meetings.count||0, victories: victories.count||0, campaigns: campaigns.count||0 };
+    const el = document.getElementById('overviewBars');
+    const mx = Math.max(...Object.values(tc), 1);
+    const cm = { contacts:'c-blue', calls:'c-purple', emails:'c-green', meetings:'c-yellow', victories:'c-orange', campaigns:'c-cyan' };
+    el.innerHTML = Object.entries(tc).map(([k,v]) => `<div class="sbar"><span class="sbar-l">${k[0].toUpperCase()+k.slice(1)}</span><div class="sbar-t"><div class="sbar-f ${cm[k]}" style="width:${v/mx*100}%"></div></div><span class="sbar-v">${v}</span></div>`).join('');
+  } catch (e) { console.error(e); document.getElementById('overviewBars').innerHTML = '<p style="color:var(--text-dim)">Could not load activity.</p>'; }
 }
 
 // ═══════════════════════════════════════════════
 // USERS TABLE
 // ═══════════════════════════════════════════════
+function stBadge(s) { return `<span class="badge b-green">active</span>`; }
 function renderUsersTable() {
   const tb = document.getElementById('tblUsers');
   if (!allUsers.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No users</td></tr>'; return; }
-  tb.innerHTML = allUsers.map(u => {
-    const plan = u.subscription_plan||'Bronze', st = u.subscription_status||'trial';
-    const cr = u.credits || 0; // real single credits field - the multi-pool fields (campaign_credits etc.) do not exist in the schema; that's the credit-tracking project coming next, not this one.
-    const la = lastAct(u);
-    return `<tr>
-      <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email||u.id)}</div></td>
-      <td><span class="plan-badge plan-${plan.toLowerCase()}">${plan}</span></td>
-      <td>${stBadge(st)}</td>
-      <td style="font-family:'JetBrains Mono';font-size:13px">${moSub(u)}</td>
-      <td style="font-family:'JetBrains Mono';font-size:13px">${cr}</td>
-      <td style="font-size:12px;color:var(--text-dim)">${la?ago(la):'Never'}</td>
-      <td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email||u.id)}')">Edit</button></td>
-    </tr>`;
-  }).join('');
-}
-function stBadge(s) { const m={active:'b-green',trial:'b-blue',inactive:'b-red',cancelled:'b-red'}; return `<span class="badge ${m[s]||'b-yellow'}">${s}</span>`; }
-
-// ═══════════════════════════════════════════════
-// ENGAGEMENT
-// ═══════════════════════════════════════════════
-function setWin(d, btn) { timeWin = d; document.querySelectorAll('.tb').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); refreshEng(); }
-async function refreshEng() {
-  const ids = selId ? [selId] : allIds();
-  document.getElementById('engTitle').textContent = selId ? 'Engagement: '+(allUsers.find(u=>(u.email||u.id)===selId)?.company_name||selId) : 'Platform Engagement';
-  document.getElementById('engSub').textContent = `Rows added — last ${timeWin} days`;
-  document.getElementById('engMetrics').innerHTML = '<p style="color:var(--text-dim)"><span class="mini-spin"></span>Loading...</p>';
-  await loadStats(ids, timeWin, 'engagement');
-}
-function renderEngPanel(s, tc, days) {
-  if (!s) return;
-  const ta = s.summary?.total_actions||0;
-  document.getElementById('engMetrics').innerHTML = `
-    <div class="mcard"><div class="ml">Total (${days}d)</div><div class="mv">${ta}</div></div>
-    <div class="mcard"><div class="ml">Contacts</div><div class="mv">${s.contacts?.total||0}</div></div>
-    <div class="mcard"><div class="ml">Emails</div><div class="mv">${s.emails?.total||0}</div></div>
-    <div class="mcard"><div class="ml">Campaigns</div><div class="mv">${s.campaigns?.total||0}</div></div>
-    <div class="mcard"><div class="ml">Victories</div><div class="mv">${s.victories?.total||0}</div></div>`;
-  // chart
-  const labels = Object.keys(tc).map(k=>k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
-  const vals = Object.values(tc);
-  if (charts.eng) charts.eng.destroy();
-  charts.eng = new Chart(document.getElementById('cEng'), {
-    type:'bar',data:{labels,datasets:[{label:'Rows',data:vals,backgroundColor:['#3b82f6','#8b5cf6','#06b6d4','#22c55e','#eab308','#22c55e','#fd7e14','#ef4444'],borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{ticks:{color:'#8899b0'},grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true},y:{ticks:{color:'#8899b0',font:{size:13}},grid:{display:false}}},plugins:{legend:{display:false}}}
-  });
-  // bars
-  const mx = Math.max(...vals,1);
-  const cm = {contacts:'c-blue',calls:'c-purple',sms:'c-cyan',emails:'c-green',meetings:'c-yellow',victories:'c-green',campaigns:'c-orange',campaign_files:'c-red'};
-  document.getElementById('engBars').innerHTML = Object.entries(tc).map(([k,v])=>{
-    const lbl = k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    return `<div class="sbar"><span class="sbar-l">${lbl}</span><div class="sbar-t"><div class="sbar-f ${cm[k]||'c-blue'}" style="width:${(v/mx)*100}%"></div></div><span class="sbar-v">${v}</span></div>`;
-  }).join('');
-  // email perf
-  const em = s.emails||{};
-  document.getElementById('emailPerf').innerHTML = `<div class="mrow" style="margin:0">
-    <div class="mcard"><div class="ml">Sent</div><div class="mv">${em.sent||0}</div></div>
-    <div class="mcard"><div class="ml">Opened</div><div class="mv">${em.opened||0}</div><div class="ms">Rate: ${em.open_rate||0}%</div></div>
-    <div class="mcard"><div class="ml">Replied</div><div class="mv">${em.replied||0}</div><div class="ms">Rate: ${em.reply_rate||0}%</div></div>
-    <div class="mcard"><div class="ml">Drafts</div><div class="mv">${em.drafted||0}</div></div>
-  </div>`;
+  tb.innerHTML = allUsers.map(u => `<tr>
+    <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td>
+    <td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td>
+    <td>${stBadge()}</td>
+    <td style="font-family:'JetBrains Mono';font-size:13px">${moSub(u)}</td>
+    <td style="font-family:'JetBrains Mono';font-size:13px">${u.credits||0}</td>
+    <td style="font-size:12px;color:var(--text-dim)">${u.last_active?ago(u.last_active):'Never'}</td>
+    <td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">Edit</button></td>
+  </tr>`).join('');
 }
 
 // ═══════════════════════════════════════════════
 // ONBOARDING
 // ═══════════════════════════════════════════════
+function renderOnboardingTable() {
+  const tb = document.getElementById('tblOnboarding');
+  const rows = [...allUsers].sort((a,b) => ({red:0,yellow:1,green:2}[a.risk_color]||3) - ({red:0,yellow:1,green:2}[b.risk_color]||3));
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No active customers.</td></tr>'; return; }
+  tb.innerHTML = rows.map(u => {
+    const riskBadge = u.risk_color==='red'?'b-red':u.risk_color==='yellow'?'b-yellow':'b-green';
+    const lastAct = u.days_since_last_activity==null ? 'Never' : u.days_since_last_activity===0 ? 'Today' : u.days_since_last_activity+'d ago';
+    return `<tr>
+      <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td>
+      <td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td>
+      <td style="font-family:'JetBrains Mono'">${u.pct_complete!=null?u.pct_complete+'%':'—'}</td>
+      <td style="font-size:13px;">${esc((u.next_step||'').replace(/_/g,' '))}</td>
+      <td style="font-size:12px;color:var(--text-dim)">${lastAct}</td>
+      <td style="font-family:'JetBrains Mono';text-align:center">${u.victories_count||0}${u.has_victory?' 🏆':''}</td>
+      <td><span class="badge ${riskBadge}">${u.risk_color}</span></td>
+    </tr>`;
+  }).join('');
+}
 function renderOB(uid) {
-  if (!uid) { ['obChecklist','obEmail','obOauth'].forEach(id => document.getElementById(id).innerHTML='<p style="color:var(--text-dim)">Select a user.</p>'); document.getElementById('obTitle').textContent='Onboarding Status'; return; }
-  const u = allUsers.find(x=>(x.email||x.id)===uid); if (!u) return;
-  document.getElementById('obTitle').textContent = 'Onboarding: '+(u.company_name||uid);
-  const checks = [
-    {l:'Company Profile',ok:!!(u.company_name&&u.company_description),d:u.company_name||'Missing'},
-    {l:'Logo Uploaded',ok:!!u.logo_URL,d:u.logo_URL?'Yes':'Missing'},
-    {l:'Brand Colors',ok:!!u.brand_colors,d:u.brand_colors||'Not set'},
-    {l:'Goals Set',ok:!!(u.goals&&(typeof u.goals==='string'?u.goals.length>2:true)),d:u.goals?'Yes':'No'},
-    {l:'Subscription Active',ok:u.subscription_status==='active',d:(u.subscription_plan||'—')+' / '+(u.subscription_status||'—')},
-    {l:'Website Setup',ok:!!(u.website_url||u.domain),d:u.website_url||u.domain||'Not set'}
-  ];
-  const done = checks.filter(c=>c.ok).length, pct = Math.round(done/checks.length*100);
-  document.getElementById('obChecklist').innerHTML = `
-    <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px"><div style="flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${pct===100?'var(--green)':'var(--orange)'};border-radius:4px"></div></div><span style="font-family:'JetBrains Mono';font-size:14px;font-weight:700;color:var(--text-bright)">${pct}%</span></div>
-    ${checks.map(c=>`<div class="chk"><div class="chk-i ${c.ok?'ok':'no'}">${c.ok?'✓':'✗'}</div><span style="font-size:14px">${c.l}</span><span class="chk-s" style="color:${c.ok?'var(--green)':'var(--text-dim)'}">${esc(c.d)}</span></div>`).join('')}`;
-  // email
-  const ec = [{l:'Email Domain',ok:!!(u.mailgun_domain||u.email_domain),d:u.mailgun_domain||u.email_domain||'None'},{l:'Email Confirmed',ok:u.email_confirmed!==false,d:u.email_confirmed!==false?'Yes':'No'},{l:'Opens Tracking',ok:!!u.track_opens,d:u.track_opens?'On':'Off'}];
-  document.getElementById('obEmail').innerHTML = ec.map(c=>`<div class="chk"><div class="chk-i ${c.ok?'ok':'no'}">${c.ok?'✓':'✗'}</div><span style="font-size:14px">${c.l}</span><span class="chk-s" style="color:${c.ok?'var(--green)':'var(--text-dim)'}">${c.d}</span></div>`).join('');
-  // oauth
-  const oa = [{l:'Calendly + Reminders',k:'calendly_token'},{l:'LinkedIn + Reminders',k:'linkedin_token'},{l:'Google Calendar',k:'google_token'},{l:'Stripe Billing',k:'stripe_customer_id'}];
-  document.getElementById('obOauth').innerHTML = oa.map(o=>{const c=!!u[o.k];return `<div class="chk"><div class="chk-i ${c?'ok':'wait'}">${c?'✓':'○'}</div><span style="font-size:14px">${o.l}</span><span class="chk-s" style="color:${c?'var(--green)':'var(--yellow)'}">${c?'Connected':'Not connected'}</span></div>`;}).join('');
+  const u = allUsers.find(x => x.email === uid);
+  const el = document.getElementById('obChecklist');
+  if (!u) { el.innerHTML = '<p style="color:var(--text-dim)">Select a user from the dropdown.</p>'; return; }
+  const steps = u.subscription_plan === 'Gold'
+    ? [['Profile', u.step_profile], ['ICP / Offer', u.step_icp_offer], ['Goal', u.step_goal], ['Domain', u.step_domain], ['Gmail', u.step_gmail], ['Signature', u.step_signature], ['Phone tested', u.did_call], ['Calendar tested', u.step_calendly], ['25+ contacts', u.step_contacts_25], ['First campaign', u.did_campaign], ['Campaign live', u.step_campaign_live]]
+    : [['Profile', u.step_profile], ['ICP / Offer', u.step_icp_offer], ['Goal', u.step_goal], ['25+ contacts', u.step_contacts_25], ['First campaign', u.did_campaign]];
+  el.innerHTML = steps.map(([label, done]) => `<div class="chk"><div class="chk-i ${done?'ok':'no'}">${done?'✓':'✕'}</div><span>${label}</span><span class="chk-s" style="color:${done?'var(--green)':'var(--text-dim)'}">${done?'Complete':'Pending'}</span></div>`).join('');
 }
 
 // ═══════════════════════════════════════════════
 // CHURN
 // ═══════════════════════════════════════════════
-// Risk now comes straight from user_onboarding_progress_v.risk_color, which
-// applies tier-specific thresholds (Gold 24-48h, Starter 2-3d, Community
-// 3d/10-14d) per the approved onboarding plan - not a flat 14d/30d rule that
-// treats a $12,500 Gold customer the same as a $99 community member.
-function isRisk(u) { return u.subscription_status !== 'cancelled' && u.risk_color !== 'green'; }
-function riskLvl(u) { return u.risk_color === 'red' ? 'high' : u.risk_color === 'yellow' ? 'medium' : 'low'; }
-function riskWhy(u) {
-  if (u.days_since_last_activity == null) return 'No activity since signup (' + u.days_since_signup + 'd)';
-  if (u.risk_color === 'red') return u.days_since_last_activity + 'd inactive \u00b7 stuck on ' + (u.next_step || '?');
-  if (u.risk_color === 'yellow') return 'Slowing \u00b7 next: ' + (u.next_step || '?');
-  return 'On track';
-}
 function renderChurn() {
-  const at = allUsers.filter(isRisk).sort((a,b)=>({high:0,medium:1,low:2})[riskLvl(a)]-({high:0,medium:1,low:2})[riskLvl(b)]);
+  const at = allUsers.filter(isRisk).sort((a,b) => ({high:0,medium:1,low:2}[riskLvl(a)]) - ({high:0,medium:1,low:2}[riskLvl(b)]));
   const tb = document.getElementById('tblChurn');
   if (!at.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--green)">🎉 No churn risk!</td></tr>'; return; }
-  tb.innerHTML = at.map(u=>{
-    const lv=riskLvl(u),la=lastAct(u),d=la?daysAgo(la):'—',bg=lv==='high'?'b-red':lv==='medium'?'b-yellow':'b-blue';
-    return `<tr><td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email||u.id)}</div></td><td><span class="plan-badge plan-${(u.subscription_plan||'bronze').toLowerCase()}">${u.subscription_plan||'Bronze'}</span></td><td><span class="badge ${bg}">${lv}</span></td><td style="font-family:'JetBrains Mono'">${d}</td><td style="font-family:'JetBrains Mono'">${moSub(u)}</td><td style="font-size:13px;color:var(--text-dim)">${riskWhy(u)}</td><td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email||u.id)}')">View</button></td></tr>`;
+  tb.innerHTML = at.map(u => {
+    const lv = riskLvl(u), bg = lv==='high'?'b-red':lv==='medium'?'b-yellow':'b-blue';
+    return `<tr><td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td><td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td><td><span class="badge ${bg}">${lv}</span></td><td style="font-family:'JetBrains Mono'">${u.days_since_last_activity??'—'}</td><td style="font-family:'JetBrains Mono'">${moSub(u)}</td><td style="font-size:13px;color:var(--text-dim)">${riskWhy(u)}</td><td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">View</button></td></tr>`;
   }).join('');
 }
 
 // ═══════════════════════════════════════════════
-// PLATFORM ACTIVITY (30d) - real counts, not a nonexistent /admin/stats call
+// USER EVENTS — Amplitude-style: time range + custom dates,
+// filter by name/company/tag(feature), volume chart + raw stream.
 // ═══════════════════════════════════════════════
-async function loadPlatformActivity() {
-  const since = new Date(Date.now() - 30*864e5).toISOString();
+async function loadEvents() {
+  document.getElementById('tblEvents').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)"><span class="mini-spin"></span>Loading...</td></tr>';
   try {
-    const [contacts, calls, emails, meetings, victories, campaigns, files, social] = await Promise.all([
-      sb.from('contacts').select('id', { count: 'exact', head: true }).gte('created', since),
-      sb.from('calls').select('id', { count: 'exact', head: true }).gte('created_at', since),
-      sb.from('email').select('id', { count: 'exact', head: true }).gte('sent_at', since),
-      sb.from('meetings').select('id', { count: 'exact', head: true }).gte('created_at', since),
-      sb.from('victories').select('id', { count: 'exact', head: true }).gte('created_at', since),
-      sb.from('campaigns').select('id', { count: 'exact', head: true }).gte('created_at', since),
-      sb.from('campaigns_files').select('id', { count: 'exact', head: true }).gte('created_at', since),
-      sb.from('social').select('id', { count: 'exact', head: true }).gte('created_at', since)
-    ]);
-    renderOverviewBars({
-      contacts: contacts.count||0, calls: calls.count||0, emails: emails.count||0,
-      meetings: meetings.count||0, victories: victories.count||0, campaigns: campaigns.count||0,
-      campaign_files: files.count||0, social: social.count||0
-    });
-  } catch (e) { console.error(e); document.getElementById('overviewBars').innerHTML = '<p style="color:var(--text-dim)">Could not load activity.</p>'; }
+    const { data, error } = await sb.from('user_events_v').select('*').order('ts', { ascending: false }).limit(5000);
+    if (error) throw error;
+    allEvents = data || [];
+    populateTagFilter();
+    renderEvents();
+  } catch (e) { console.error(e); showToast('Failed to load events: ' + e.message, 'err'); }
 }
+function populateTagFilter() {
+  const tags = [...new Set(allEvents.map(e => e.feature).filter(Boolean))].sort();
+  const sel = document.getElementById('evTag');
+  sel.innerHTML = '<option value="">All</option>' + tags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+}
+function setEvWin(d, btn) { evWin = d; evCustomFrom = null; evCustomTo = null; document.getElementById('evFrom').value=''; document.getElementById('evTo').value=''; document.querySelectorAll('#evWinButtons .tb').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); renderEvents(); }
+function setEvCustom() { evCustomFrom = document.getElementById('evFrom').value || null; evCustomTo = document.getElementById('evTo').value || null; if (evCustomFrom || evCustomTo) { document.querySelectorAll('#evWinButtons .tb').forEach(b=>b.classList.remove('active')); } renderEvents(); }
+function renderEvents() {
+  const nameF = (document.getElementById('evName').value||'').toLowerCase().trim();
+  const compF = (document.getElementById('evCompany').value||'').toLowerCase().trim();
+  const tagF = document.getElementById('evTag').value;
+  let cutoffFrom = null, cutoffTo = null;
+  if (evCustomFrom || evCustomTo) { cutoffFrom = evCustomFrom ? new Date(evCustomFrom) : null; cutoffTo = evCustomTo ? new Date(evCustomTo + 'T23:59:59') : null; }
+  else { cutoffFrom = new Date(Date.now() - evWin*864e5); }
 
-// ═══════════════════════════════════════════════
-// ONBOARDING - all-customer activation table
-// ═══════════════════════════════════════════════
-function renderOnboardingTable() {
-  const tb = document.getElementById('tblOnboarding');
-  if (!tb) return;
-  const rows = allUsers.filter(u => u.subscription_status !== 'cancelled')
-    .sort((a,b) => ({red:0,yellow:1,green:2}[a.risk_color]||3) - ({red:0,yellow:1,green:2}[b.risk_color]||3));
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No active customers.</td></tr>'; return; }
-  tb.innerHTML = rows.map(u => {
-    const riskBadge = u.risk_color === 'red' ? 'b-red' : u.risk_color === 'yellow' ? 'b-yellow' : 'b-green';
-    const lastAct = u.days_since_last_activity == null ? 'Never' : u.days_since_last_activity === 0 ? 'Today' : u.days_since_last_activity + 'd ago';
-    return `<tr>
-      <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'\u2014')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td>
-      <td><span class="plan-badge plan-${(u.tier||'none').toLowerCase()}">${esc(u.tier)}</span></td>
-      <td style="font-family:'JetBrains Mono'">${u.pct_complete != null ? u.pct_complete + '%' : '\u2014'}</td>
-      <td style="font-size:13px;">${esc((u.next_step||'').replace(/_/g,' '))}</td>
-      <td style="font-size:12px;color:var(--text-dim)">${lastAct}</td>
-      <td style="font-family:'JetBrains Mono';text-align:center">${u.victories_count || 0}${u.has_victory ? ' \ud83c\udfc6' : ''}</td>
-      <td><span class="badge ${riskBadge}">${u.risk_color}</span></td>
-    </tr>`;
-  }).join('');
+  const filtered = allEvents.filter(e => {
+    if (!e.ts) return false;
+    const t = new Date(e.ts);
+    if (cutoffFrom && t < cutoffFrom) return false;
+    if (cutoffTo && t > cutoffTo) return false;
+    if (nameF && !(e.user_email||'').toLowerCase().includes(nameF)) return false;
+    if (compF && !(e.company_name||'').toLowerCase().includes(compF)) return false;
+    if (tagF && e.feature !== tagF) return false;
+    return true;
+  });
+
+  document.getElementById('evCount').textContent = '(' + filtered.length + ' events)';
+  const byFeature = {};
+  filtered.forEach(e => { byFeature[e.feature] = (byFeature[e.feature]||0) + 1; });
+  document.getElementById('evMetrics').innerHTML = Object.entries(byFeature).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([f,c]) => `<div class="mcard"><div class="ml">${esc(f)}</div><div class="mv">${c}</div></div>`).join('');
+
+  if (charts.events) charts.events.destroy();
+  const days = [...new Set(filtered.map(e => e.ts.slice(0,10)))].sort();
+  const features = Object.keys(byFeature);
+  const palette = ['#3b82f6','#22c55e','#fd7e14','#8b5cf6','#06b6d4','#eab308','#bb133e','#60a5fa','#f472b6'];
+  charts.events = new Chart(document.getElementById('cEvents'), {
+    type: 'bar',
+    data: { labels: days, datasets: features.map((f,i) => ({
+      label: f,
+      data: days.map(d => filtered.filter(e => e.feature===f && e.ts.slice(0,10)===d).length),
+      backgroundColor: palette[i%palette.length]
+    })) },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, ticks:{color:'#8899b0',font:{size:9},maxTicksLimit:12}, grid:{display:false}}, y:{stacked:true, ticks:{color:'#8899b0'}, grid:{color:'rgba(255,255,255,.04)'}} }, plugins:{legend:{position:'bottom',labels:{color:'#8899b0',font:{size:10}}}} }
+  });
+
+  const tb = document.getElementById('tblEvents');
+  if (!filtered.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No events in this range.</td></tr>'; return; }
+  tb.innerHTML = filtered.slice(0,300).map(e => `<tr class="event-row">
+    <td>${new Date(e.ts).toLocaleString()}</td>
+    <td>${esc(e.user_email)}</td>
+    <td>${esc(e.company_name||'—')}</td>
+    <td>${esc(e.tier||'—')}</td>
+    <td>${esc(e.feature)}</td>
+    <td>${esc(e.action)}</td>
+    <td>${esc(e.status||'—')}</td>
+  </tr>`).join('') + (filtered.length > 300 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-dim);font-size:12px;">Showing first 300 of ${filtered.length} — narrow filters to see more.</td></tr>` : '');
 }
 
 // ═══════════════════════════════════════════════
 // EDIT USER
 // ═══════════════════════════════════════════════
-function pickUser(uid) {
-  selId = uid||null;
-  document.getElementById('userDD').value = uid||'';
-  if (uid) {
-    const u = allUsers.find(x=>(x.email||x.id)===uid);
-    if (u) { loadEditForm(u); renderOB(uid); renderAssume(u); }
-  } else { clearUser(); }
-  if (document.getElementById('p-engagement').classList.contains('active')) refreshEng();
-}
-function pickAndEdit(uid) { selId=uid; document.getElementById('userDD').value=uid; const u=allUsers.find(x=>(x.email||x.id)===uid); if(u){loadEditForm(u);renderOB(uid);renderAssume(u);nav('edit',document.querySelector('[data-p="edit"]'));} }
-function clearUser() {
-  selId=null; document.getElementById('userDD').value='';
-  document.getElementById('editPlaceholder').style.display='block';
-  document.getElementById('editForm').style.display='none';
-  document.getElementById('assumePlaceholder').style.display='block';
-  document.getElementById('assumePanel').style.display='none';
-  renderOB(null);
-}
+function pickUser(uid) { selId = uid || null; document.getElementById('userDD').value = uid||''; if (uid) { const u = allUsers.find(x=>x.email===uid); if (u) { loadEditForm(u); renderOB(uid); } } else { clearUser(); } }
+function pickAndEdit(uid) { selId=uid; document.getElementById('userDD').value=uid; const u=allUsers.find(x=>x.email===uid); if(u){loadEditForm(u);renderOB(uid);nav('edit',document.querySelector('[data-p="edit"]'));} }
+function clearUser() { selId=null; document.getElementById('userDD').value=''; document.getElementById('editPlaceholder').style.display='block'; document.getElementById('editForm').style.display='none'; }
 function loadEditForm(u) {
-  document.getElementById('editPlaceholder').style.display='none';
-  document.getElementById('editForm').style.display='block';
-  document.getElementById('editEmail').textContent = u.email||u.id;
-  document.getElementById('ePlan').value = u.subscription_plan||'Bronze';
-  document.getElementById('eStatus').value = u.subscription_status||'trial';
-  document.getElementById('eCamp').value = u.campaign_credits||0;
-  document.getElementById('eVid').value = u.video_credits||0;
-  document.getElementById('eImg').value = u.image_credits||0;
-  document.getElementById('eCon').value = u.contact_credits||0;
-  document.getElementById('eSoc').value = u.social_credits||0;
-  document.getElementById('eEml').value = u.email_credits||0;
+  document.getElementById('editPlaceholder').style.display = 'none';
+  document.getElementById('editForm').style.display = 'block';
+  document.getElementById('editEmail').textContent = u.email;
+  document.getElementById('ePlan').value = u.subscription_plan;
+  document.getElementById('eStatus').value = 'active';
+  document.getElementById('eCredits').value = u.credits || 0;
 }
 async function saveEdits() {
   if (!selId) return;
   try {
-    await POST(EP.updateUser, {
-      customer_id: selId,
+    const { error } = await sb.from('users').update({
       subscription_plan: document.getElementById('ePlan').value,
-      subscription_status: document.getElementById('eStatus').value,
-      campaign_credits: +document.getElementById('eCamp').value||0,
-      video_credits: +document.getElementById('eVid').value||0,
-      image_credits: +document.getElementById('eImg').value||0,
-      contact_credits: +document.getElementById('eCon').value||0,
-      social_credits: +document.getElementById('eSoc').value||0,
-      email_credits: +document.getElementById('eEml').value||0
-    });
-    showToast('Saved!','ok');
-    cache = {};
+      credits: parseInt(document.getElementById('eCredits').value) || 0
+    }).eq('email', selId);
+    if (error) throw error;
+    showToast('Saved.');
     await loadUsers();
-    pickUser(selId);
-  } catch(e) { showToast('Save failed: '+e.message,'err'); }
+  } catch (e) { showToast('Save failed: ' + e.message, 'err'); }
 }
-
-// ═══════════════════════════════════════════════
-// ASSUME ROLE
-// ═══════════════════════════════════════════════
-function renderAssume(u) {
-  document.getElementById('assumePlaceholder').style.display = 'none';
-  document.getElementById('assumePanel').style.display = 'block';
-  document.getElementById('assumeUser').textContent = u.company_name || u.email || u.id;
-  document.getElementById('assumePhone').textContent = u.number || u.phone || u.phone_number || '—';
-  document.getElementById('assumeEmail2').textContent = u.email || '—';
-  // clear previous results
-  document.querySelectorAll('.action-result').forEach(el => { el.className = 'action-result'; el.textContent = ''; });
-}
-
-async function assumeAction(type) {
-  if (!selId) { showToast('Select a user first','err'); return; }
-  const u = allUsers.find(x => (x.email||x.id) === selId);
-  if (!u) return;
-
-  const userEmail = u.email;
-  const userNumber = u.number || u.phone || u.phone_number;
-  const btnId = 'btn' + type.charAt(0).toUpperCase() + type.slice(1);
-  const resId = 'res' + type.charAt(0).toUpperCase() + type.slice(1);
-  // map type names
-  const idMap = { email:'Email', sms:'Sms', call:'Call', contact:'Contact', opens:'Opens' };
-  const btn = document.getElementById('btn' + idMap[type]);
-  const res = document.getElementById('res' + idMap[type]);
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="mini-spin"></span>Working...';
-  res.className = 'action-result'; res.textContent = '';
-
-  try {
-    let response;
-    switch(type) {
-      case 'email':
-        response = await POST(EP.sendEmail, {
-          customer_id: userEmail,
-          to_email: userEmail,
-          subject: '[Admin Test] Email delivery check',
-          body: 'This is an admin test email sent via Assume Role to verify email sending works for this account.',
-          admin_test: true
-        });
-        break;
-      case 'sms':
-        if (!userNumber) throw new Error('No phone number on this user');
-        response = await POST(EP.sendSms, {
-          customer_id: userEmail,
-          to: userNumber,
-          message: '[Admin Test] SMS delivery check for Victory Vision.',
-          admin_test: true
-        });
-        break;
-      case 'call':
-        if (!userNumber) throw new Error('No phone number on this user');
-        response = await POST(EP.makeCall, {
-          customer_id: userEmail,
-          to: userNumber,
-          admin_test: true
-        });
-        break;
-      case 'contact':
-        response = await POST(EP.createContact, {
-          customer_id: userEmail,
-          name: 'Admin Test Contact',
-          email: CUSTOMER_ID,
-          phone_number: '',
-          company: 'Victory Vision Admin',
-          admin_test: true
-        });
-        break;
-      case 'opens':
-        response = await POST(EP.emailOpenGet, {
-          customer_id: userEmail
-        });
-        break;
-    }
-
-    // Show result
-    const text = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
-    res.className = 'action-result show ok';
-    res.textContent = text;
-    btn.innerHTML = '✓ Done';
-    setTimeout(() => { btn.disabled = false; btn.innerHTML = btn.getAttribute('data-orig') || btn.textContent; }, 3000);
-  } catch(e) {
-    res.className = 'action-result show err';
-    res.textContent = 'Error: ' + e.message;
-    btn.disabled = false;
-  }
-
-  // restore button text after delay
-  setTimeout(() => {
-    btn.disabled = false;
-    const labels = { email:'Send Test Email', sms:'Send Test SMS', call:'Make Test Call', contact:'Create Contact', opens:'Check Opens' };
-    btn.textContent = labels[type] || 'Retry';
-  }, 4000);
-}
-
-// ═══════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════
-function lastAct(u) {
-  const ds = [u.last_active,u.updated_at,u.last_login,u.last_emailed_date,u.last_campaign_date].filter(Boolean).map(d=>new Date(d));
-  return ds.length ? new Date(Math.max(...ds)) : null;
-}
-function daysAgo(d) { return Math.floor((Date.now()-(d instanceof Date?d:new Date(d)).getTime())/864e5); }
-function ago(d) { const n=daysAgo(d); return n===0?'Today':n===1?'Yesterday':n<7?n+'d ago':n<30?Math.floor(n/7)+'w ago':Math.floor(n/30)+'mo ago'; }
-function moSub(u) { const c=u.subscription_start||u.created_at||u.signup_date; return c?Math.max(1,Math.floor(daysAgo(new Date(c))/30)):'—'; }
-function esc(s) { return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
-function showToast(m,t) { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' vis'; setTimeout(()=>el.classList.remove('vis'),3500); }
 
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('authLoading').style.display = 'flex';
-  if (!await checkAuth()) return;
+(async function init() {
+  const ok = await checkAuth();
+  if (!ok) return;
   document.getElementById('authLoading').style.display = 'none';
   await loadUsers();
-});
-setInterval(async()=>{try{const{data:{session}}=await sb.auth.getSession();if(!session)location.href='login.html';}catch(e){}},300000);
+})();
 </script>
 </body>
 </html>
