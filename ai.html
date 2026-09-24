@@ -2325,6 +2325,7 @@ const AISDR_SIMPLE_CHANNELS = [
 ];
 let aisdrChannelsLoaded = false;
 let currentAisdrChannels = null;
+let currentSendMode = 'draft';
 
 function toggleAisdrChannelsPanel() {
   const body = document.getElementById('aisdrChannelsBody');
@@ -2364,6 +2365,13 @@ function renderAisdrChannelsList() {
       <label>Max daily spend $<input type="number" id="aisdrAdsMax" value="${ads.max_daily_spend||0}" min="0" style="width:70px;margin-left:4px;padding:4px;border:1px solid #cbd5e1;border-radius:6px;"></label>
     </div>
   </div>`;
+  html += `<div style="${rowStyle}border-color:#f59e0b;">
+    <span>AI emails/SMS go live <span style="font-size:11px;color:#94a3b8;">(off = draft only, review before sending)</span></span>
+    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+      <input type="checkbox" id="aisdrSendMode" ${currentSendMode === 'live' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+      <span class="aisdr-slider" style="position:absolute;cursor:pointer;inset:0;background:${currentSendMode === 'live' ? '#16a34a' : '#cbd5e1'};border-radius:24px;transition:0.2s;"></span>
+    </label>
+  </div>`;
   listEl.innerHTML = html;
   document.querySelectorAll('.aisdr-toggle').forEach(input => {
     input.addEventListener('change', function() {
@@ -2374,13 +2382,18 @@ function renderAisdrChannelsList() {
   if (adsToggle) adsToggle.addEventListener('change', function() {
     this.nextElementSibling.style.background = this.checked ? '#16a34a' : '#cbd5e1';
   });
+  const sendModeToggle = document.getElementById('aisdrSendMode');
+  if (sendModeToggle) sendModeToggle.addEventListener('change', function() {
+    this.nextElementSibling.style.background = this.checked ? '#16a34a' : '#cbd5e1';
+  });
 }
 
 async function loadAisdrChannels() {
   try {
-    const { data, error } = await sb.from('users').select('aisdr_channels').eq('email', CUSTOMER_ID).single();
+    const { data, error } = await sb.from('users').select('aisdr_channels, aiemail_send_mode').eq('email', CUSTOMER_ID).single();
     if (error) throw error;
     currentAisdrChannels = (data && data.aisdr_channels) || {};
+    currentSendMode = (data && data.aiemail_send_mode) || 'draft';
     renderAisdrChannelsList();
   } catch (e) {
     console.error('[loadAisdrChannels]', e);
@@ -2399,10 +2412,13 @@ async function saveAisdrChannels() {
     min_daily_spend: Number(document.getElementById('aisdrAdsMin').value) || 0,
     max_daily_spend: Number(document.getElementById('aisdrAdsMax').value) || 0
   };
+  const sendModeInput = document.getElementById('aisdrSendMode');
+  const newSendMode = sendModeInput && sendModeInput.checked ? 'live' : 'draft';
   try {
-    const { error } = await sb.from('users').update({ aisdr_channels: updated }).eq('email', CUSTOMER_ID);
+    const { error } = await sb.from('users').update({ aisdr_channels: updated, aiemail_send_mode: newSendMode }).eq('email', CUSTOMER_ID);
     if (error) throw error;
     currentAisdrChannels = updated;
+    currentSendMode = newSendMode;
     toast('Channel settings saved', 'success');
   } catch (e) {
     console.error('[saveAisdrChannels]', e);
