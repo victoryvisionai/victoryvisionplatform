@@ -1192,7 +1192,7 @@
     editingCampaignId=campaign.id; sizeModal();
     document.getElementById('modalTitle').textContent=(sanitizeInput(campaign.name)||'Campaign')+' — Edit';
     const esc=v=>sanitizeInput(v==null?'':String(v));
-    const F=[['name','Name',0],['tagline','Tagline',0],['type','Type',0],['status','Status',0],['goal_description','Goal Description',1],['main_prompt','Main Prompt',1],['icp','ICP',1],['keywords','Keywords',0],['campaign_URL','Campaign URL',0],['image_URL','Image URL',0],['video_URL','Video URL',0],['campaign_target','Campaign Target',0],['image_prompt','Image Prompt',1],['video_prompt','Video Prompt',1],['page_prompt','Page Prompt',1],['Linkedin_prompt','LinkedIn Prompt',1]];
+    const F=[['name','Name',0],['tagline','Tagline',0],['type','Type',0],['status','Status',0],['goal_description','Goal Description',1],['main_prompt','Main Prompt',1],['icp','ICP',1],['keywords','Keywords',1],['campaign_URL','Campaign URL',0],['image_URL','Image URL',0],['video_URL','Video URL',0],['campaign_target','Campaign Target',0],['image_prompt','Image Prompt',1],['video_prompt','Video Prompt',1],['page_prompt','Page Prompt',1],['Linkedin_prompt','LinkedIn Prompt',1]];
     const wide=new Set(['goal_description','main_prompt','icp','keywords','image_prompt','video_prompt','page_prompt','Linkedin_prompt']);
     const inStyle='padding:10px 12px;border:1.5px solid #dfe3ea;border-radius:8px;font-size:14px;color:#0f172a;font-weight:500;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;line-height:1.4;';
     const flds=F.map(([k,l,area])=>{
