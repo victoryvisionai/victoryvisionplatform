@@ -581,15 +581,15 @@
         <label for="campaignTopic">Campaign Topic or Description</label>
         <textarea 
           id="campaignTopic" 
-          placeholder="Describe your campaign topic in a sentence or up to 10000 words..."
+          placeholder="Describe your campaign topic in a sentence or as much detail as you like..."
           rows="6"
-          maxlength="10000"
+          
           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; resize: vertical; font-family: inherit;"
           data-intro="Or describe a specific campaign topic here. Our AI will research and create content around your idea." 
           data-step="2"
         ></textarea>
         <small style="display: block; margin-top: 5px; color: #666;">
-          <span id="charCount">0</span>/10000 characters
+          <span id="charCount">0</span> characters
         </small>
       </div>
       
@@ -1471,15 +1471,6 @@ function closeModal() {
     campaignTopicTextarea.addEventListener('input', function() {
       const currentLength = this.value.length;
       charCountSpan.textContent = currentLength;
-      
-      // Visual feedback for character limit
-      if (currentLength > 750) {
-        charCountSpan.style.color = '#dc3545';
-      } else if (currentLength > 600) {
-        charCountSpan.style.color = '#fd7e14';
-      } else {
-        charCountSpan.style.color = '#666';
-      }
     });
   }
 
@@ -1495,11 +1486,6 @@ function closeModal() {
       
       if (!campaignTopic) {
         showStatus('Please enter a campaign topic or description.', true);
-        return;
-      }
-      
-      if (campaignTopic.length > 10000) {
-        showStatus('Campaign topic must be 10000 characters or less.', true);
         return;
       }
       
