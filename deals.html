@@ -7,7 +7,7 @@
   <meta name="author" content="Victory Vision"/>
   <title>Victory Vision AI - Deals</title>
   <script>
-  window.VV_BUILD = { page: 'deals.html', version: '2', published: '2026-09-20' };
+  window.VV_BUILD = { page: 'deals.html', version: '3', published: '2026-09-30' };
   console.log('%ctargets.html build 1', 'background:#0A3161;color:#fff;padding:2px 6px;border-radius:3px');
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -81,6 +81,19 @@
     .targets-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e0e0e0; color: #666; font-size: 0.75rem; text-transform: uppercase; }
     .targets-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
     .targets-table tr:hover { background: #f8f9fb; }
+    .targets-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    .targets-table th.sortable:hover { color: #0A3161; }
+    .targets-table th .sort-ind { font-size: 0.7rem; margin-left: 3px; color: #0A3161; }
+    .hold-reason { font-size: 0.78rem; color: #856404; background: #fff8e1; border-left: 3px solid #f0ad4e; padding: 6px 8px; margin: 6px 0; border-radius: 3px; }
+    .hold-reason.delisted { color: #721c24; background: #fdecea; border-left-color: #dc3545; }
+    .target-name.clickable, .name-link { cursor: pointer; }
+    .target-name.clickable:hover, .name-link:hover { text-decoration: underline; }
+    .details-box { width: 780px; }
+    .details-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 12px 0; }
+    .details-grid .stat-label { font-size: 0.68rem; color: #888; text-transform: uppercase; }
+    .details-grid .stat-value { font-size: 0.95rem; font-weight: bold; color: #0A3161; }
+    .details-desc { white-space: pre-wrap; font-size: 0.88rem; color: #333; line-height: 1.45; background: #fafbfc; border: 1px solid #eee; border-radius: 6px; padding: 12px; max-height: 45vh; overflow-y: auto; }
+    .details-flags { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; color: #155724; margin: 6px 0; }
   </style>
 </head>
 <body>
@@ -93,7 +106,7 @@
   <nav>
     <ul>
       <li><a href="ai">AI</a></li><li><a href="meetings-analysis">Meetings</a></li><li><a href="calls">Calls</a></li>
-      <li><a href="deals">Deals</a></li><li><a href="deals" class="active">Deals</a></li><li><a href="pipeline">Pipeline</a></li>
+      <li><a href="deals" class="active">Deals</a></li><li><a href="pipeline">Pipeline</a></li>
       <li><a href="messages">Messages</a></li><li><a href="contacts">Contacts</a></li><li><a href="social">Social</a></li>
       <li><a href="ads">Ads</a></li><li><a href="campaigns">Campaigns</a></li><li><a href="media">Media</a></li>
       <li><a href="pages">Pages</a></li><li><a href="companyprofile">Profile</a></li><li><a href="settings">Settings</a></li>
@@ -184,6 +197,9 @@
           <option value="manual">Manual</option>
           <option value="bizbuysell">BizBuySell</option>
           <option value="axial">Axial</option>
+          <option value="empire_flippers">Empire Flippers</option>
+          <option value="flippa">Flippa</option>
+          <option value="crexi">Crexi</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -197,11 +213,34 @@
       <label>Visible To (comma-separated member emails, or "all")</label>
       <input type="text" id="fVisibleTo" placeholder="jgonzalez2066@mac.com, all"/>
     </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="fStatus">
+        <option value="new">New</option>
+        <option value="reviewing">Reviewing (held for curator review)</option>
+        <option value="shown">Shown (curator-approved)</option>
+        <option value="interested">Interested</option>
+        <option value="graduated">Graduated</option>
+        <option value="passed">Passed (hidden)</option>
+      </select>
+      <div style="font-size:0.75rem; color:#666; margin-top:4px;">To publish a held listing choose <strong>Shown</strong>; to hide one choose <strong>Passed</strong>. Daily syncs never override Shown or Passed.</div>
+    </div>
     <div class="form-group"><label>Notes (internal, not shown to members)</label><textarea id="fNotes" rows="2"></textarea></div>
     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
       <button class="btn btn-outline" onclick="closeTargetModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveTarget()">Save Target</button>
     </div>
+  </div>
+</div>
+
+<!-- Target Details Modal (member + curator) -->
+<div class="modal-overlay" id="detailsModal" onclick="if (event.target === this) closeDetails()">
+  <div class="modal-box details-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+      <h3 id="detailsTitle" style="margin:0;">Details</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeDetails()">Close</button>
+    </div>
+    <div id="detailsBody"></div>
   </div>
 </div>
 
@@ -239,24 +278,142 @@ function setTargetView(v) {
   document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   renderTargets();
 }
+// ---- v3: sortable table, hold reasons, details view, paged loading ----
+let tableSort = { key: null, dir: 1 };
+const TABLE_COLS = [
+  { key: 'name', label: 'Name', type: 'text' },
+  { key: 'industry', label: 'Industry', type: 'text' },
+  { key: 'location', label: 'Location', type: 'text' },
+  { key: 'asking_price_usd', label: 'Asking', type: 'num' },
+  { key: 'revenue_usd', label: 'Revenue', type: 'num' },
+  { key: 'cash_flow_usd', label: 'Cash Flow', type: 'num' },
+  { key: 'fit', label: 'Fit', type: 'num' },
+  { key: 'status', label: 'Status', type: 'text' },
+  { key: 'source', label: 'Source', type: 'text' },
+  { key: 'last_verified', label: 'Last Verified', type: 'date' },
+  { key: 'reason', label: 'Hold Reason', type: 'text', curatorOnly: true }
+];
+function holdReason(t) {
+  if (!t || typeof t.notes !== 'string' || t.notes.indexOf('[auto]') !== 0) return '';
+  return t.notes.slice(6).trim();
+}
+function curatorReasonHtml(t) {
+  if (!IS_CURATOR) return '';
+  const r = holdReason(t);
+  if (!r) return '';
+  const bad = r.indexOf('Delisted') === 0 || r.indexOf('Aged out') === 0;
+  return `<div class="hold-reason${bad ? ' delisted' : ''}">${esc(r)}</div>`;
+}
+function verifiedDate(t) { return t.last_verified || t.updated_at || t.created_at || null; }
+function fmtDate(d) {
+  if (!d) return '—';
+  const x = new Date(d);
+  return isNaN(x) ? '—' : x.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function tableColValue(row, key) {
+  if (key === 'fit') return row.fit;
+  if (key === 'reason') return holdReason(row.t);
+  if (key === 'last_verified') return verifiedDate(row.t);
+  return row.t[key];
+}
+function setTableSort(key) {
+  if (tableSort.key === key) tableSort.dir = -tableSort.dir;
+  else {
+    const c = TABLE_COLS.find(x => x.key === key);
+    tableSort.key = key;
+    tableSort.dir = (c && (c.type === 'num' || c.type === 'date')) ? -1 : 1;
+  }
+  renderTargets();
+}
+function compareForTable(a, b) {
+  const col = TABLE_COLS.find(c => c.key === tableSort.key);
+  if (!col) return 0;
+  const va = tableColValue(a, col.key), vb = tableColValue(b, col.key);
+  const ea = va == null || va === '', eb = vb == null || vb === '';
+  if (ea && eb) return 0;
+  if (ea) return 1;  // blanks always sort last
+  if (eb) return -1;
+  if (col.type === 'num') return (Number(va) - Number(vb)) * tableSort.dir;
+  if (col.type === 'date') return (new Date(va) - new Date(vb)) * tableSort.dir;
+  return String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true }) * tableSort.dir;
+}
 function renderTargetsTable(list) {
-  return '<div style="overflow-x:auto;"><table class="targets-table"><thead><tr>' +
-    '<th>Name</th><th>Industry</th><th>Location</th><th>Asking</th><th>Cash Flow</th><th>Fit</th><th>Status</th><th></th>' +
-    '</tr></thead><tbody>' + list.map(({ t, fit }) => `
-      <tr>
-        <td><strong>${esc(t.name)}</strong>${t.listing_url ? ` <a href="${esc(t.listing_url)}" target="_blank" rel="noopener" style="font-size:0.75rem;">\u2197</a>` : ''}</td>
-        <td>${esc(t.industry || '\u2014')}</td>
-        <td>${esc(t.location || '\u2014')}</td>
-        <td>${t.asking_price_usd ? fmtMoney(t.asking_price_usd) : '\u2014'}</td>
-        <td>${t.cash_flow_usd ? fmtMoney(t.cash_flow_usd) : '\u2014'}</td>
-        <td>${fit != null ? fit + '%' : '\u2014'}</td>
-        <td><span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span></td>
-        <td style="white-space:nowrap;">
-          ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">Interested</button>` : ''}
-          ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
-        </td>
-      </tr>
-    `).join('') + '</tbody></table></div>';
+  const cols = TABLE_COLS.filter(c => !c.curatorOnly || IS_CURATOR);
+  const head = cols.map(c => `<th class="sortable" onclick="setTableSort('${c.key}')" title="Sort by ${c.label}">${c.label}${
+    tableSort.key === c.key ? `<span class="sort-ind">${tableSort.dir === 1 ? '▲' : '▼'}</span>` : ''}</th>`).join('') + '<th></th>';
+  const body = list.map(({ t, fit }) => {
+    const cells = cols.map(c => {
+      switch (c.key) {
+        case 'name': return `<td><span class="name-link" onclick="openDetails('${t.id}')"><strong>${esc(t.name)}</strong></span>${t.listing_url ? ` <a href="${esc(t.listing_url)}" target="_blank" rel="noopener" style="font-size:0.75rem;">↗</a>` : ''}</td>`;
+        case 'asking_price_usd': case 'revenue_usd': case 'cash_flow_usd': return `<td>${t[c.key] ? fmtMoney(t[c.key]) : '—'}</td>`;
+        case 'fit': return `<td>${fit != null ? fit + '%' : '—'}</td>`;
+        case 'status': return `<td><span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span></td>`;
+        case 'last_verified': return `<td style="white-space:nowrap;">${fmtDate(verifiedDate(t))}</td>`;
+        case 'reason': return `<td style="font-size:0.75rem; color:#856404; max-width:280px;">${esc(holdReason(t))}</td>`;
+        default: return `<td>${esc(t[c.key] || '—')}</td>`;
+      }
+    }).join('');
+    return `<tr>${cells}<td style="white-space:nowrap;">
+      <button class="btn btn-outline btn-sm" onclick="openDetails('${t.id}')">Details</button>
+      ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">Interested</button>` : ''}
+      ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
+    </td></tr>`;
+  }).join('');
+  return '<div style="overflow-x:auto;"><table class="targets-table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
+function openDetails(id) {
+  const t = allTargets.find(x => x.id === id);
+  if (!t) return;
+  const fit = computeFitScore(t);
+  const money = v => v ? fmtMoney(v) : '—';
+  const multiple = (t.asking_price_usd && t.cash_flow_usd) ? (Number(t.asking_price_usd) / Number(t.cash_flow_usd)).toFixed(1) + 'x' : '—';
+  const stat = (label, val) => `<div><div class="stat-label">${label}</div><div class="stat-value">${val}</div></div>`;
+  const ai = t.ai_scores && t.ai_scores[CUSTOMER_ID];
+  let h = `<div class="target-meta" style="margin-top:6px;">${esc(t.industry || '—')} · ${esc(t.location || '—')} · via ${esc(t.source || '—')}</div>`;
+  h += curatorReasonHtml(t);
+  h += '<div class="details-grid">' +
+    stat('Asking Price', money(t.asking_price_usd)) + stat('Revenue', money(t.revenue_usd)) +
+    stat('Cash Flow / SDE / NOI', money(t.cash_flow_usd)) + stat('Price ÷ Cash Flow', multiple) +
+    stat('AI Fit', fit != null ? fit + '%' : '—') + stat('Last Verified', fmtDate(verifiedDate(t))) +
+    (IS_CURATOR ? stat('Status', esc(t.status || '—')) + stat('Visible To', esc(t.visible_to || 'hidden')) : '') + '</div>';
+  const flags = [];
+  if (t.seller_financing) flags.push('✓ Seller financing');
+  if (t.management_staying) flags.push('✓ Management / team staying');
+  if (t.real_estate_included) flags.push('✓ Real estate included');
+  if (flags.length) h += `<div class="details-flags">${flags.map(f => `<span>${f}</span>`).join('')}</div>`;
+  if (ai) h += `<div style="font-size:0.85rem; color:#0A3161; margin:8px 0;"><strong>Likelihood to close: ${ai.likelihood_to_close}%</strong> — ${esc(ai.why_it_fits || '')}</div>`;
+  if (t.financing_notes) h += `<div style="font-size:0.85rem; margin:6px 0;"><strong>Financing:</strong> ${esc(t.financing_notes)}</div>`;
+  if (t.broker_name || t.broker_contact) h += `<div style="font-size:0.85rem; margin:6px 0;"><strong>Broker:</strong> ${esc(t.broker_name || '')}${t.broker_contact ? ' · ' + esc(t.broker_contact) : ''}</div>`;
+  h += `<div class="details-desc">${esc(t.description || 'No description provided.')}</div>`;
+  if (IS_CURATOR && t.notes && !holdReason(t)) h += `<div style="font-size:0.82rem; color:#666; margin-top:8px;"><strong>Internal notes:</strong> ${esc(t.notes)}</div>`;
+  h += '<div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">' +
+    (t.listing_url ? `<a class="btn btn-outline btn-sm" href="${esc(t.listing_url)}" target="_blank" rel="noopener" style="text-decoration:none;">View original listing ↗</a>` : '') +
+    (!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="closeDetails(); expressInterest('${t.id}')">I'm Interested</button>` : '') +
+    (IS_CURATOR ? `<button class="btn btn-primary btn-sm" onclick="closeDetails(); openEditTargetModal('${t.id}')">Edit</button>` : '') + '</div>';
+  document.getElementById('detailsTitle').textContent = t.name || 'Details';
+  document.getElementById('detailsBody').innerHTML = h;
+  document.getElementById('detailsModal').classList.add('active');
+}
+function closeDetails() { document.getElementById('detailsModal').classList.remove('active'); }
+
+// Supabase returns at most 1,000 rows per request, so page through up to
+// MAX_TARGETS. Members only pull rows that are visible to someone.
+const MAX_TARGETS = 10000;
+async function fetchAllTargets() {
+  const rows = [];
+  for (let from = 0; from < MAX_TARGETS; from += 1000) {
+    let q = supabaseClient.from('targets').select('*')
+      .order('created_at', { ascending: false }).order('id', { ascending: true })
+      .range(from, from + 999);
+    if (!IS_CURATOR) q = q.not('visible_to', 'is', null);
+    const { data, error } = await q;
+    if (error) return { data: rows.length ? rows : null, error: rows.length ? null : error };
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  if (rows.length >= MAX_TARGETS) console.warn('deals.html: reached MAX_TARGETS (' + MAX_TARGETS + ') - raise it if the catalog has grown past this.');
+  return { data: rows, error: null };
 }
 
 async function checkAuthentication() {
@@ -335,8 +492,7 @@ async function loadAcquisitionProfile() {
 
 async function loadTargets() {
   if (!IS_CURATOR) await loadAcquisitionProfile();
-  let query = supabaseClient.from('targets').select('*').order('created_at', { ascending: false });
-  const { data, error } = await query;
+  const { data, error } = await fetchAllTargets();
   if (error) { console.error('loadTargets error:', error); document.getElementById('targetsContainer').innerHTML = '<div class="empty-state">Could not load targets.</div>'; return; }
 
   allTargets = (data || []).filter(t => {
@@ -395,6 +551,7 @@ function renderTargets() {
   if (sortBy === 'newest') list.sort((a, b) => new Date(b.t.created_at) - new Date(a.t.created_at));
   else if (sortBy === 'affordable') list.sort((a, b) => (Number(b.t.asking_price_usd) || 0) - (Number(a.t.asking_price_usd) || 0));
   else list.sort((a, b) => (b.fit == null ? -1 : b.fit) - (a.fit == null ? -1 : a.fit));
+  if (currentTargetView === 'table' && tableSort.key) list.sort(compareForTable);
 
   document.getElementById('targetCount').textContent = list.length;
   const container = document.getElementById('targetsContainer');
@@ -405,14 +562,14 @@ function renderTargets() {
   container.innerHTML = '<div class="targets-grid">' + list.map(({ t, fit }) => `
     <div class="target-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div class="target-name">${esc(t.name)}</div>
+        <div class="target-name clickable" onclick="openDetails('${t.id}')" title="View full details">${esc(t.name)}</div>
         <div style="display:flex; gap:6px; align-items:center;">
           ${fit != null ? `<span class="status-pill" style="background:${fit >= 70 ? '#d4edda' : fit >= 40 ? '#fff3cd' : '#f8d7da'}; color:${fit >= 70 ? '#155724' : fit >= 40 ? '#856404' : '#721c24'};">AI Fit: ${fit}%</span>` : ''}
           <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
           ${!IS_CURATOR ? `<button onclick="toggleBookmark('${t.id}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem; color:${savedTargets.includes(t.id) ? '#FFA500' : '#ccc'};" title="Save for later">\u2605</button>` : ''}
         </div>
       </div>
-      <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>
+      <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>${curatorReasonHtml(t)}
       ${t.ai_scores && t.ai_scores[CUSTOMER_ID] ? `
         <div style="font-size:0.8rem; color:#0A3161; margin:6px 0;">
           <strong>Likelihood to close: ${t.ai_scores[CUSTOMER_ID].likelihood_to_close}%</strong> \u2014 ${esc(t.ai_scores[CUSTOMER_ID].why_it_fits || '')}
@@ -429,6 +586,7 @@ function renderTargets() {
       ${t.broker_name ? `<div style="font-size:0.8rem; color:#666;">Broker: ${esc(t.broker_name)}${t.broker_contact ? ' \u00b7 ' + esc(t.broker_contact) : ''}</div>` : ''}
       ${t.listing_url ? `<div style="font-size:0.8rem; margin-top:4px;"><a href="${esc(t.listing_url)}" target="_blank" rel="noopener">View listing \u2197</a></div>` : ''}
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="openDetails('${t.id}')">Details</button>
         ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">I'm Interested</button>` : ''}
         ${t.status === 'graduated' && t.graduated_deal_id && (IS_CURATOR || t.graduated_by === CUSTOMER_ID) ? `
           <button class="btn btn-outline btn-sm" onclick="openDealRoom('${t.graduated_deal_id}', '${esc(t.name).replace(/'/g,"\\'")}')">Deal Room</button>
@@ -447,6 +605,7 @@ function openAddTargetModal() {
   ['fName','fIndustry','fLocation','fDescription','fAskingPrice','fRevenue','fCashFlow','fListingUrl','fBrokerName','fBrokerContact','fVisibleTo','fNotes']
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('fSource').value = 'manual';
+  document.getElementById('fStatus').value = 'new';
   document.getElementById('targetModal').classList.add('active');
 }
 function openEditTargetModal(id) {
@@ -467,6 +626,7 @@ function openEditTargetModal(id) {
   document.getElementById('fBrokerContact').value = t.broker_contact || '';
   document.getElementById('fVisibleTo').value = t.visible_to || '';
   document.getElementById('fNotes').value = t.notes || '';
+  document.getElementById('fStatus').value = t.status || 'new';
   document.getElementById('targetModal').classList.add('active');
 }
 function closeTargetModal() { document.getElementById('targetModal').classList.remove('active'); }
@@ -489,8 +649,22 @@ async function saveTarget() {
     broker_contact: document.getElementById('fBrokerContact').value.trim() || null,
     visible_to: document.getElementById('fVisibleTo').value.trim() || null,
     notes: document.getElementById('fNotes').value.trim() || null,
+    status: document.getElementById('fStatus').value || 'new',
     updated_at: new Date().toISOString()
   };
+  // v3: keep curator decisions sticky against the daily syncs. Syncs only
+  // re-evaluate rows still in the exact state they set themselves (new+all or
+  // reviewing+hidden), so on synced rows a promotion is stored as 'shown' and a
+  // demotion as 'passed'. Source is never blanked (it is the sync dedup key).
+  const orig = id ? allTargets.find(x => x.id === id) : null;
+  if (orig && !payload.source) payload.source = orig.source;
+  if (orig && (orig.created_by || '').indexOf('system:') === 0 && payload.status !== orig.status) {
+    if (payload.status === 'new') payload.status = 'shown';
+    if (payload.status === 'reviewing') payload.status = 'passed';
+  }
+  if (orig && payload.status !== orig.status && payload.notes === orig.notes && holdReason(orig)) payload.notes = null;
+  if (['new', 'shown'].includes(payload.status) && !payload.visible_to &&
+      confirm('No members can see this target yet. Make it visible to all members?')) payload.visible_to = 'all';
   let error;
   if (id) {
     ({ error } = await supabaseClient.from('targets').update(payload).eq('id', id));
