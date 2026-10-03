@@ -7,7 +7,7 @@
   <meta name="author" content="Victory Vision"/>
   <title>Victory Vision AI - Deals</title>
   <script>
-  window.VV_BUILD = { page: 'deals.html', version: '3', published: '2026-09-30' };
+  window.VV_BUILD = { page: 'deals.html', version: '4', published: '2026-10-03' };
   console.log('%ctargets.html build 1', 'background:#0A3161;color:#fff;padding:2px 6px;border-radius:3px');
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -163,6 +163,9 @@
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSavedOnly" onchange="renderTargets()"/> \u2605 Saved only</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;" title="On by default - Amazon FBA and eCommerce are most of this feed and can crowd out everything else">
         <input type="checkbox" id="filterHideFbaEcom" checked onchange="renderTargets()"/> Hide Amazon FBA & eCommerce
+      </label>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;" title="Hide undeveloped land parcels (Crexi property type: Land)">
+        <input type="checkbox" id="filterHideLand" onchange="renderTargets()"/> Hide raw land
       </label>
       <select id="sortBy" onchange="renderTargets()">
         <option value="fit">Recommended for Me</option>
@@ -544,7 +547,8 @@ function renderTargets() {
     (!sellerFinF || t.seller_financing) &&
     (!mgmtStayF || t.management_staying) &&
     (!document.getElementById('filterSavedOnly').checked || savedTargets.includes(t.id)) &&
-    (!document.getElementById('filterHideFbaEcom').checked || !['amazon fba','amazon fbm','ecommerce'].includes((t.industry || '').toLowerCase()))
+    (!document.getElementById('filterHideFbaEcom').checked || !['amazon fba','amazon fbm','ecommerce'].includes((t.industry || '').toLowerCase())) &&
+    (!document.getElementById('filterHideLand').checked || !/real estate - land$/i.test(t.industry || ''))
   );
 
   list = list.map(t => ({ t, fit: computeFitScore(t) }));
