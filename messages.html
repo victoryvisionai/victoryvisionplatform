@@ -1026,7 +1026,7 @@ async function loadEmails() {
   try {
     const r = await fetch(EP.loadEmails, {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
-      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(8000)
+      body: JSON.stringify({customer_id: CUSTOMER_ID}), signal: AbortSignal.timeout(30000)
     });
     if (!r.ok) { allEmails = []; renderList(); return; }
     const text = await r.text();
