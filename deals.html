@@ -43,6 +43,14 @@
     .target-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
                    box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
     .target-name { font-weight: bold; font-size: 1.05rem; color: #0A3161; margin-bottom: 4px; }
+    .target-card.gold-early { border: 2px solid #FFC400; box-shadow: 0 0 0 3px rgba(255,196,0,0.18), 0 2px 6px rgba(0,0,0,0.08); }
+    .gold-badge { display: inline-block; background: linear-gradient(135deg,#FFE27A,#FFC400); color: #5a4500; font-weight: 700;
+                  font-size: 0.72rem; padding: 3px 8px; border-radius: 10px; margin-bottom: 6px; white-space: nowrap; }
+    tr.gold-early td { background: #fffbea; }
+    .gold-banner { border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.9rem; }
+    .gold-banner.locked { background: #f4f6fb; border: 1px solid #d6dcea; color: #33415c; }
+    .gold-banner.open { background: #fffbea; border: 1px solid #FFC400; color: #5a4500; }
+    .gold-banner a { color: #0A3161; font-weight: 700; }
     .target-meta { font-size: 0.82rem; color: #666; margin-bottom: 10px; }
     .target-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0;
                     padding: 10px 0; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; }
@@ -128,8 +136,8 @@
       <h2>Available Targets (<span id="targetCount">0</span>)</h2>
       <div style="display:flex; gap:10px; align-items:center;">
         <div class="view-toggle" id="viewToggle">
-          <button class="active" data-view="cards" onclick="setTargetView('cards')">\u25a6 Cards</button>
-          <button data-view="table" onclick="setTargetView('table')">\u2261 Table</button>
+          <button class="active" data-view="cards" onclick="setTargetView('cards')">&#9638; Cards</button>
+          <button data-view="table" onclick="setTargetView('table')">&#8801; Table</button>
         </div>
         <div id="curatorControls" style="display:none;">
           <button class="icon-btn" id="addTargetBtn" onclick="openAddTargetModal()">+ Add Target</button>
@@ -160,7 +168,7 @@
       <input type="number" id="filterMinCashFlow" placeholder="Min EBITDA/SDE $" oninput="renderTargets()" style="width:140px;"/>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSellerFinancing" onchange="renderTargets()"/> Seller financing</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterMgmtStaying" onchange="renderTargets()"/> Management staying</label>
-      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSavedOnly" onchange="renderTargets()"/> \u2605 Saved only</label>
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;"><input type="checkbox" id="filterSavedOnly" onchange="renderTargets()"/> &#9733; Saved only</label>
       <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;" title="On by default - Amazon FBA and eCommerce are most of this feed and can crowd out everything else">
         <input type="checkbox" id="filterHideFbaEcom" checked onchange="renderTargets()"/> Hide Amazon FBA & eCommerce
       </label>
@@ -174,6 +182,7 @@
       </select>
     </div>
 
+    <div id="goldBanner" class="gold-banner" style="display:none;"></div>
     <div id="targetsContainer"><div class="empty-state">Loading...</div></div>
   </div>
 </div>
@@ -274,6 +283,60 @@ const CURATOR_EMAILS = ['glaze@vvdoh.com', 'glaze@equitablecap.com'];
 let CUSTOMER_ID = null;
 let IS_CURATOR = false;
 let allTargets = [];
+
+// -- Dev #14: Gold early access --
+// Starter sees 90% of new deals right away. The top 10% of NEW listings (by
+// listing quality) go to Gold first for GOLD_WINDOW_HOURS, highlighted, then
+// open to everyone. Tier comes from users.subscription_plan ('Gold' /
+// 'starter' / 'starter-annual'; curators see everything).
+const GOLD_WINDOW_HOURS = 72;
+let USER_PLAN = '';
+let IS_GOLD = false;
+let GOLD_P90 = null;
+let hiddenGoldCount = 0;
+// Listing quality 0-100 from the listing's own numbers: cash flow size (0-30),
+// margin (0-20), asking / cash-flow multiple (0-30), seller financing (10),
+// management staying (7), real estate included (3).
+function qualityScore(t) {
+  const ask = Number(t.asking_price_usd) || 0, rev = Number(t.revenue_usd) || 0, cf = Number(t.cash_flow_usd) || 0;
+  let s = 0;
+  if (cf > 0) s += Math.max(0, Math.min(30, 10 + 20 * Math.log(cf / 50000) / Math.log(40)));
+  if (cf > 0 && rev > 0 && cf <= rev) s += Math.min(20, 100 * cf / rev);
+  if (cf > 0 && ask > 0) {
+    const m = ask / cf;
+    s += m < 1 ? 10 : m <= 3 ? 30 : m <= 5 ? 30 - (m - 3) * 5 : m <= 8 ? 20 - (m - 5) * 5 : 0;
+  }
+  if (t.seller_financing) s += 10;
+  if (t.management_staying) s += 7;
+  if (t.real_estate_included) s += 3;
+  return Math.max(0, Math.min(100, Math.round(s)));
+}
+function isMarketplaceListing(t) {
+  return (t.visible_to || '').toLowerCase().split(',').map(x => x.trim()).includes('all');
+}
+// 90th percentile (linear interpolation) of quality across marketplace
+// listings from the trailing 30 days.
+function computeGoldCutoff(rows) {
+  const since = Date.now() - 30 * 86400000;
+  const xs = rows.filter(t => isMarketplaceListing(t) && t.status !== 'passed' && new Date(t.created_at).getTime() > since)
+    .map(qualityScore).sort((a, b) => a - b);
+  if (xs.length < 10) return null;
+  const pos = 0.9 * (xs.length - 1), lo = Math.floor(pos), hi = Math.ceil(pos);
+  return xs[lo] + (xs[hi] - xs[lo]) * (pos - lo);
+}
+function goldHoursLeft(t) {
+  return GOLD_WINDOW_HOURS - (Date.now() - new Date(t.created_at).getTime()) / 3600000;
+}
+function isGoldEarly(t) {
+  if (GOLD_P90 == null || !isMarketplaceListing(t)) return false;
+  const left = goldHoursLeft(t);
+  if (!(left > 0 && left <= GOLD_WINDOW_HOURS)) return false;
+  const s = qualityScore(t);
+  return s > 0 && s >= GOLD_P90;
+}
+function goldBadge(t) {
+  return `<span class="gold-badge" title="Top 10% of new listings by quality. Gold members see these first.">\u2b50 Top 10% \u00b7 Gold early access \u00b7 ${Math.max(1, Math.ceil(goldHoursLeft(t)))}h left</span>`;
+}
 let currentDealRoomDealId = null;
 let currentTargetView = 'cards';
 function setTargetView(v) {
@@ -356,7 +419,7 @@ function renderTargetsTable(list) {
         default: return `<td>${esc(t[c.key] || '—')}</td>`;
       }
     }).join('');
-    return `<tr>${cells}<td style="white-space:nowrap;">
+    return `<tr${isGoldEarly(t) ? ' class="gold-early" title="Top 10% new listing \u00b7 Gold early access"' : ''}>${cells}<td style="white-space:nowrap;">
       <button class="btn btn-outline btn-sm" onclick="openDetails('${t.id}')">Details</button>
       ${!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${t.id}')">Interested</button>` : ''}
       ${IS_CURATOR ? `<button class="btn btn-outline btn-sm" onclick="openEditTargetModal('${t.id}')">Edit</button>` : ''}
@@ -488,8 +551,10 @@ function computeFitScore(t) {
 }
 
 async function loadAcquisitionProfile() {
-  const { data } = await supabaseClient.from('users').select('acquisition_profile, saved_targets').eq('email', CUSTOMER_ID).limit(1);
+  const { data } = await supabaseClient.from('users').select('acquisition_profile, saved_targets, subscription_plan').eq('email', CUSTOMER_ID).limit(1);
   acquisitionProfile = (data && data[0] && data[0].acquisition_profile) || null;
+  USER_PLAN = ((data && data[0] && data[0].subscription_plan) || '').toLowerCase();
+  IS_GOLD = USER_PLAN === 'gold' || USER_PLAN === 'enterprise';
   savedTargets = ((data && data[0] && data[0].saved_targets) || '').split(',').map(s => s.trim()).filter(Boolean);
 }
 
@@ -504,6 +569,29 @@ async function loadTargets() {
     if (!vis) return false;
     return vis.split(',').map(x => x.trim()).some(x => x === 'all' || x === CUSTOMER_ID.toLowerCase());
   });
+
+  // Dev #14: Gold early access
+  GOLD_P90 = computeGoldCutoff(data || []);
+  const goldEarly = allTargets.filter(isGoldEarly);
+  hiddenGoldCount = 0;
+  if (!IS_CURATOR && !IS_GOLD) {
+    hiddenGoldCount = goldEarly.length;
+    allTargets = allTargets.filter(t => !isGoldEarly(t));
+  }
+  const gb = document.getElementById('goldBanner');
+  if (gb) {
+    if (hiddenGoldCount > 0) {
+      gb.className = 'gold-banner locked';
+      gb.innerHTML = `\ud83d\udd12 <strong>${hiddenGoldCount} new top-10% deal${hiddenGoldCount === 1 ? ' is' : 's are'} in Gold early access right now.</strong> They open to Starter members within ${GOLD_WINDOW_HOURS} hours of listing. <a href="settings.html#billing-section">Upgrade to Gold</a> to see the best new deals first and get alerts.`;
+      gb.style.display = 'block';
+    } else if ((IS_GOLD || IS_CURATOR) && goldEarly.length > 0) {
+      gb.className = 'gold-banner open';
+      gb.innerHTML = `\u2b50 <strong>${goldEarly.length} new top-10% deal${goldEarly.length === 1 ? '' : 's'} in your Gold early-access window.</strong> Highlighted and listed first below. Starter members see them after ${GOLD_WINDOW_HOURS} hours.`;
+      gb.style.display = 'block';
+    } else {
+      gb.style.display = 'none';
+    }
+  }
 
   const industries = [...new Set(allTargets.map(t => t.industry).filter(Boolean))].sort();
   const indSel = document.getElementById('filterIndustry');
@@ -557,6 +645,10 @@ function renderTargets() {
   else if (sortBy === 'affordable') list.sort((a, b) => (Number(b.t.asking_price_usd) || 0) - (Number(a.t.asking_price_usd) || 0));
   else list.sort((a, b) => (b.fit == null ? -1 : b.fit) - (a.fit == null ? -1 : a.fit));
   if (currentTargetView === 'table' && tableSort.key) list.sort(compareForTable);
+  else if (IS_GOLD || IS_CURATOR) {
+    const early = list.filter(x => isGoldEarly(x.t)), rest = list.filter(x => !isGoldEarly(x.t));
+    list = early.concat(rest);
+  }
 
   document.getElementById('targetCount').textContent = list.length;
   const container = document.getElementById('targetsContainer');
@@ -565,7 +657,7 @@ function renderTargets() {
   if (currentTargetView === 'table') { container.innerHTML = renderTargetsTable(list); return; }
 
   container.innerHTML = '<div class="targets-grid">' + list.map(({ t, fit }) => `
-    <div class="target-card">
+    <div class="target-card${isGoldEarly(t) ? ' gold-early' : ''}">${isGoldEarly(t) ? goldBadge(t) : ''}
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div class="target-name clickable" onclick="openDetails('${t.id}')" title="View full details">${esc(t.name)}</div>
         <div style="display:flex; gap:6px; align-items:center;">
