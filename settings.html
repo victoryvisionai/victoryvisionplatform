@@ -1415,7 +1415,8 @@
     saveAdTracking: 'https://victoryvision.app.n8n.cloud/webhook/user/ad-tracking',
     deleteAccount: 'https://victoryvision.app.n8n.cloud/webhook/user/delete',
     searchDomains: 'https://victoryvision.app.n8n.cloud/webhook/domains/search',
-    purchaseDomain: 'https://victoryvision.app.n8n.cloud/webhook/domains/purchase'
+    purchaseDomain: 'https://victoryvision.app.n8n.cloud/webhook/domains/purchase',
+    domainOnboard: 'https://victoryvision.app.n8n.cloud/webhook/domain/onboard'
   };
   
   let CUSTOMER_ID = null;
@@ -2000,9 +2001,29 @@ function connectCalendly() {
       console.log('Purchase response:', response);
       
       if (response.success !== false) {
-        showStatus('Domain purchased successfully! DNS is being configured automatically.', false);
-        updateDomainStatus(true, selectedDomain.name);
+        const purchasedDomain = selectedDomain.name;
+        showStatus('Domain purchased! DNS is being configured and your home page is being created...', false);
+        updateDomainStatus(true, purchasedDomain);
         closeDomainModal();
+
+        // Selecting a domain creates the site and a branded home page from the
+        // company profile. Domain - Onboard never overwrites an existing home page.
+        apiCall(N8N_ENDPOINTS.domainOnboard, { vv_domain: purchasedDomain })
+          .then(r => {
+            if (r && r.ok) {
+              const msg = r.home_page === 'created'
+                ? `Your home page is live at https://${purchasedDomain} once DNS finishes (usually within an hour).`
+                : `Your site at https://${purchasedDomain} is set up. Your existing home page was kept.`;
+              showStatus(msg, false);
+            } else {
+              console.warn('Domain onboard did not complete:', r);
+              showStatus('Domain purchased. Home page setup needs a hand. Reply to your welcome email and we will finish it.', true);
+            }
+          })
+          .catch(err => {
+            console.warn('Domain onboard error:', err);
+            showStatus('Domain purchased. Home page setup needs a hand. Reply to your welcome email and we will finish it.', true);
+          });
         
         // Reload user data to get updated domain info
         setTimeout(() => {
