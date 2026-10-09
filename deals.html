@@ -132,7 +132,7 @@
           <button data-view="table" onclick="setTargetView('table')">\u2261 Table</button>
         </div>
         <div id="curatorControls" style="display:none;">
-          <button class="icon-btn" onclick="openAddTargetModal()">+ Add Target</button>
+          <button class="icon-btn" id="addTargetBtn" onclick="openAddTargetModal()">+ Add Target</button>
         </div>
       </div>
     </div>
@@ -212,11 +212,11 @@
       <div class="form-group"><label>Broker Name</label><input type="text" id="fBrokerName"/></div>
       <div class="form-group"><label>Broker Contact</label><input type="text" id="fBrokerContact"/></div>
     </div>
-    <div class="form-group">
+    <div class="form-group" id="fgVisibleTo">
       <label>Visible To (comma-separated member emails, or "all")</label>
       <input type="text" id="fVisibleTo" placeholder="jgonzalez2066@mac.com, all"/>
     </div>
-    <div class="form-group">
+    <div class="form-group" id="fgStatus">
       <label>Status</label>
       <select id="fStatus">
         <option value="new">New</option>
@@ -228,7 +228,7 @@
       </select>
       <div style="font-size:0.75rem; color:#666; margin-top:4px;">To publish a held listing choose <strong>Shown</strong>; to hide one choose <strong>Passed</strong>. Daily syncs never override Shown or Passed.</div>
     </div>
-    <div class="form-group"><label>Notes (internal, not shown to members)</label><textarea id="fNotes" rows="2"></textarea></div>
+    <div class="form-group" id="fgNotes"><label>Notes (internal, not shown to members)</label><textarea id="fNotes" rows="2"></textarea></div>
     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
       <button class="btn btn-outline" onclick="closeTargetModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveTarget()">Save Target</button>
@@ -513,7 +513,8 @@ async function loadTargets() {
   const srcSel = document.getElementById('filterSource');
   srcSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
-  document.getElementById('curatorControls').style.display = IS_CURATOR ? 'flex' : 'none';
+  document.getElementById('curatorControls').style.display = 'flex';
+  document.getElementById('addTargetBtn').textContent = IS_CURATOR ? '+ Add Target' : '+ Add a Deal';
   document.getElementById('pageSubtitle').textContent = IS_CURATOR
     ? 'Full catalog - manage visibility and status for every member'
     : 'Companies worth pursuing, matched to you';
@@ -610,12 +611,15 @@ function openAddTargetModal() {
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('fSource').value = 'manual';
   document.getElementById('fStatus').value = 'new';
+  ['fgVisibleTo','fgStatus','fgNotes'].forEach(id => document.getElementById(id).style.display = IS_CURATOR ? '' : 'none');
+  document.getElementById('targetModalTitle').textContent = IS_CURATOR ? 'Add Target' : 'Add a Deal';
   document.getElementById('targetModal').classList.add('active');
 }
 function openEditTargetModal(id) {
   const t = allTargets.find(x => x.id === id);
   if (!t) return;
   document.getElementById('targetModalTitle').textContent = 'Edit Target';
+  ['fgVisibleTo','fgStatus','fgNotes'].forEach(id => document.getElementById(id).style.display = '');
   document.getElementById('editTargetId').value = t.id;
   document.getElementById('fName').value = t.name || '';
   document.getElementById('fIndustry').value = t.industry || '';
@@ -667,6 +671,8 @@ async function saveTarget() {
     if (payload.status === 'reviewing') payload.status = 'passed';
   }
   if (orig && payload.status !== orig.status && payload.notes === orig.notes && holdReason(orig)) payload.notes = null;
+  // Members can add a deal for themselves; it is visible only to them (and curators) until a curator shares it.
+  if (!IS_CURATOR) { payload.visible_to = CUSTOMER_ID; payload.status = 'new'; payload.notes = null; }
   if (['new', 'shown'].includes(payload.status) && !payload.visible_to &&
       confirm('No members can see this target yet. Make it visible to all members?')) payload.visible_to = 'all';
   let error;
