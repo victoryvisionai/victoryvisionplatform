@@ -43,6 +43,43 @@
     .target-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
                    box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
     .target-name { font-weight: bold; font-size: 1.05rem; color: #0A3161; margin-bottom: 4px; }
+    /* -- Dev #15: Find People chat -- */
+    .ls-fab { position: fixed; right: 20px; bottom: 20px; z-index: 900; background: #0A3161; color: #fff; border: none;
+              border-radius: 24px; padding: 12px 18px; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+              box-shadow: 0 6px 20px rgba(10,49,97,0.35); }
+    .ls-fab:hover { background: #12447f; }
+    .ls-panel { position: fixed; right: 20px; bottom: 76px; width: 420px; max-width: calc(100vw - 32px); height: 600px;
+                max-height: calc(100vh - 110px); background: #fff; border: 1px solid #d6dcea; border-radius: 12px;
+                box-shadow: 0 12px 40px rgba(0,0,0,0.18); display: none; flex-direction: column; z-index: 901; overflow: hidden; }
+    .ls-panel.open { display: flex; }
+    .ls-head { background: #0A3161; color: #fff; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .ls-head strong { font-size: 1rem; }
+    .ls-head button { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+    .ls-ctx { background: #fffbea; border-bottom: 1px solid #f0e2a8; padding: 7px 12px; font-size: 0.8rem; color: #5a4500; display: none; justify-content: space-between; gap: 8px; }
+    .ls-ctx button { background: none; border: none; color: #5a4500; cursor: pointer; font-weight: 700; }
+    .ls-log { flex: 1; overflow-y: auto; padding: 12px; background: #f7f8fb; }
+    .ls-msg { margin-bottom: 10px; font-size: 0.88rem; line-height: 1.4; }
+    .ls-msg.user { text-align: right; }
+    .ls-msg.user span { display: inline-block; background: #0A3161; color: #fff; padding: 8px 11px; border-radius: 12px 12px 2px 12px; max-width: 85%; text-align: left; }
+    .ls-msg.bot > .ls-bubble { background: #fff; border: 1px solid #e3e7ef; padding: 9px 11px; border-radius: 12px 12px 12px 2px; }
+    .ls-person { background: #fff; border: 1px solid #e3e7ef; border-radius: 8px; padding: 9px 10px; margin-top: 8px; }
+    .ls-person .nm { font-weight: 700; color: #0A3161; }
+    .ls-person .nm a { color: #0A3161; }
+    .ls-person .role { font-size: 0.8rem; color: #444; }
+    .ls-person .why { font-size: 0.8rem; color: #555; margin: 4px 0; }
+    .ls-person .meta { font-size: 0.74rem; color: #777; }
+    .ls-person .meta a { color: #1a6fc4; }
+    .ls-tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 9px; margin: 3px 4px 0 0; }
+    .ls-tag.known { background: #e6f4ea; color: #1e6b34; }
+    .ls-tag.warm { background: #eef5ff; color: #1a4f8f; }
+    .ls-tag.low { background: #f8e9e9; color: #8a2b2b; }
+    .ls-add { margin-top: 6px; font-size: 0.78rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #0A3161; background: #fff; color: #0A3161; cursor: pointer; }
+    .ls-add[disabled] { border-color: #9bb; color: #6a8a8a; cursor: default; }
+    .ls-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e3e7ef; background: #fff; }
+    .ls-input textarea { flex: 1; resize: none; height: 54px; border: 1px solid #ccd3e0; border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 0.88rem; }
+    .ls-input button { background: #0A3161; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: 700; cursor: pointer; }
+    .ls-input button[disabled] { opacity: 0.6; cursor: default; }
+    .ls-hint { font-size: 0.75rem; color: #777; padding: 0 12px 8px; background: #fff; }
     .target-card.gold-early { border: 2px solid #FFC400; box-shadow: 0 0 0 3px rgba(255,196,0,0.18), 0 2px 6px rgba(0,0,0,0.08); }
     .gold-badge { display: inline-block; background: linear-gradient(135deg,#FFE27A,#FFC400); color: #5a4500; font-weight: 700;
                   font-size: 0.72rem; padding: 3px 8px; border-radius: 10px; margin-bottom: 6px; white-space: nowrap; }
@@ -487,6 +524,7 @@ function openDetails(id) {
   if (IS_CURATOR && t.notes && !holdReason(t)) h += `<div style="font-size:0.82rem; color:#666; margin-top:8px;"><strong>Internal notes:</strong> ${esc(t.notes)}</div>`;
   h += '<div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">' +
     (t.listing_url ? `<a class="btn btn-outline btn-sm" href="${esc(t.listing_url)}" target="_blank" rel="noopener" style="text-decoration:none;">View original listing ↗</a>` : '') +
+    `<button class="btn btn-outline btn-sm" onclick="closeDetails(); openLeadSearch('${t.id}')">&#128269; Find the owner / broker</button>` +
     (!IS_CURATOR && t.status !== 'graduated' ? `<button class="btn btn-success btn-sm" onclick="closeDetails(); expressInterest('${t.id}')">I'm Interested</button>` : '') +
     (IS_CURATOR ? `<button class="btn btn-primary btn-sm" onclick="closeDetails(); openEditTargetModal('${t.id}')">Edit</button>` : '') + '</div>';
   document.getElementById('detailsTitle').textContent = t.name || 'Details';
@@ -944,6 +982,102 @@ function syncFiltersToUrl() {
   history.replaceState(null, '', qs ? ('?' + qs) : window.location.pathname);
 }
 
+// -- Dev #15: Find People chat --
+const LEAD_SEARCH_URL = 'https://victoryvision.app.n8n.cloud/webhook/deals/lead-search';
+let lsHistory = [];
+let lsDeal = null;
+let lsPeople = [];
+function openLeadSearch(dealId) {
+  const panel = document.getElementById('lsPanel');
+  panel.classList.add('open');
+  if (dealId) {
+    const t = allTargets.find(x => x.id === dealId);
+    if (t) {
+      lsDeal = { name: t.name, industry: t.industry, location: t.location, description: (t.description || '').slice(0, 600),
+        broker_name: t.broker_name, broker_contact: t.broker_contact, listing_url: t.listing_url, source: t.source,
+        asking_price_usd: t.asking_price_usd, revenue_usd: t.revenue_usd, cash_flow_usd: t.cash_flow_usd };
+      const inp = document.getElementById('lsInput');
+      if (!inp.value) inp.value = 'Who owns or runs this business, and who is the listing broker?';
+    }
+  }
+  renderLeadContext();
+  document.getElementById('lsInput').focus();
+}
+function closeLeadSearch() { document.getElementById('lsPanel').classList.remove('open'); }
+function clearLeadContext() { lsDeal = null; renderLeadContext(); }
+function renderLeadContext() {
+  const box = document.getElementById('lsCtx');
+  if (lsDeal) { document.getElementById('lsCtxText').textContent = 'Using deal: ' + lsDeal.name; box.style.display = 'flex'; }
+  else box.style.display = 'none';
+}
+function lsAppend(html, cls) {
+  const log = document.getElementById('lsLog');
+  const div = document.createElement('div');
+  div.className = 'ls-msg ' + cls;
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+function lsDomain(u) { try { return new URL(u).hostname.replace(/^www[.]/, ''); } catch (e) { return 'source'; } }
+async function sendLeadSearch() {
+  const inp = document.getElementById('lsInput');
+  const btn = document.getElementById('lsSend');
+  const msg = (inp.value || '').trim();
+  if (!msg || btn.disabled) return;
+  inp.value = '';
+  btn.disabled = true;
+  lsAppend('<span>' + esc(msg) + '</span>', 'user');
+  const wait = lsAppend('<div class="ls-bubble">Searching the web and your contacts&hellip; this usually takes 20&ndash;40 seconds.</div>', 'bot');
+  try {
+    const res = await fetch(LEAD_SEARCH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, message: msg, history: lsHistory.slice(-6), deal_context: lsDeal }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    wait.remove();
+    renderLeadResults(data);
+    lsHistory.push({ role: 'user', content: msg });
+    lsHistory.push({ role: 'assistant', content: (data.reply || '') + ' People: ' + (data.people || []).map(p => p.name + ' (' + (p.title || '') + ', ' + (p.company || '') + ')').join('; ') });
+  } catch (e) {
+    wait.innerHTML = '<div class="ls-bubble">Sorry, the search failed (' + esc(e.message) + '). Please try again.</div>';
+  } finally {
+    btn.disabled = false;
+    inp.focus();
+  }
+}
+function renderLeadResults(data) {
+  let h = '<div class="ls-bubble">' + esc(data.reply || 'Here is what I found.') + '</div>';
+  (data.people || []).forEach(p => {
+    const i = lsPeople.push(p) - 1;
+    const nm = p.linkedin_url ? '<a href="' + esc(p.linkedin_url) + '" target="_blank" rel="noopener">' + esc(p.name) + ' &#8599;</a>' : esc(p.name);
+    let tags = '';
+    if (p.in_contacts) tags += '<span class="ls-tag known">Already in your contacts</span>';
+    (p.warm_paths || []).forEach(w => { tags += '<span class="ls-tag warm">You know ' + esc(w.name) + (w.title ? ' (' + esc(w.title) + ')' : '') + ' there</span>'; });
+    if (p.confidence === 'low') tags += '<span class="ls-tag low">Low confidence</span>';
+    const srcs = (p.sources || []).map(u => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(lsDomain(u)) + '</a>').join(' &middot; ');
+    h += '<div class="ls-person"><div class="nm">' + nm + '</div>' +
+      '<div class="role">' + esc([p.title, p.company].filter(Boolean).join(' at ')) + (p.location ? ' &middot; ' + esc(p.location) : '') + '</div>' +
+      (p.why_match ? '<div class="why">' + esc(p.why_match) + '</div>' : '') +
+      (tags ? '<div>' + tags + '</div>' : '') +
+      (srcs ? '<div class="meta">Sources: ' + srcs + '</div>' : '') +
+      (p.in_contacts ? '' : '<button class="ls-add" onclick="addLeadToContacts(' + i + ', this)">+ Add to contacts</button>') +
+      '</div>';
+  });
+  if (data.next_search) h += '<div class="ls-bubble" style="margin-top:8px; font-size:0.8rem; color:#555;">Try next: ' + esc(data.next_search) + '</div>';
+  lsAppend(h, 'bot');
+}
+async function addLeadToContacts(i, btn) {
+  const p = lsPeople[i];
+  if (!p || !CUSTOMER_ID) return;
+  btn.disabled = true; btn.textContent = 'Adding...';
+  const row = { cus_id: CUSTOMER_ID, name: p.name, first_name: (p.name || '').split(' ')[0], title: p.title || null, company: p.company || null,
+    location: p.location || null, linkedin: p.linkedin_url || null, source: 'lead-search',
+    tags: 'source:lead-search' + (lsDeal ? ',deal:' + String(lsDeal.name || '').slice(0, 60) : '') };
+  const { error } = await supabaseClient.from('contacts').insert(row);
+  if (error) { btn.disabled = false; btn.textContent = 'Retry add'; alert('Could not add contact: ' + error.message); return; }
+  btn.textContent = 'Added to contacts';
+}
+
 (async function init() {
   const ok = await checkAuthentication();
   if (!ok) { redirectToLogin(); return; }
@@ -959,5 +1093,24 @@ function syncFiltersToUrl() {
   }
 })();
 </script>
+<!-- Dev #15: Find People chat -->
+<button class="ls-fab" id="lsFab" onclick="openLeadSearch()" title="Describe a person or the people you want to find">&#128269; Find people</button>
+<div class="ls-panel" id="lsPanel" role="dialog" aria-label="Find people">
+  <div class="ls-head"><strong>&#128269; Find people</strong><button onclick="closeLeadSearch()">Close</button></div>
+  <div class="ls-ctx" id="lsCtx"><span id="lsCtxText"></span><button onclick="clearLeadContext()" title="Stop using this deal as context">&#10005;</button></div>
+  <div class="ls-log" id="lsLog">
+    <div class="ls-msg bot"><div class="ls-bubble">Describe who you're looking for, as loosely or precisely as you like. Examples:<br>
+      &bull; "The owner of this business and the listing broker"<br>
+      &bull; "Managing partners at boutique executive search firms in Chicago who went to West Point"<br>
+      &bull; "Family offices in Texas that buy HVAC companies"<br>
+      I search the web, then check each person against your contacts, including people you already know at the same company.</div></div>
+  </div>
+  <div class="ls-input">
+    <textarea id="lsInput" placeholder="Who are you looking for?" onkeydown="if (event.key === 'Enter' &amp;&amp; !event.shiftKey) { event.preventDefault(); sendLeadSearch(); }"></textarea>
+    <button id="lsSend" onclick="sendLeadSearch()">Search</button>
+  </div>
+  <div class="ls-hint">Public professional info only. Results can be wrong, so check before reaching out.</div>
+</div>
+
 </body>
 </html>
