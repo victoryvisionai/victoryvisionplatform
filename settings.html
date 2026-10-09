@@ -69,6 +69,27 @@
     .subscription-medallion.gold {
       background: linear-gradient(45deg, #FFD700, #FFA500);
     }
+    .subscription-medallion.starter {
+      background: linear-gradient(45deg, #3b82f6, #0A3161);
+    }
+    .subscription-medallion.trial {
+      background: linear-gradient(45deg, #9aa5b1, #6b7785);
+    }
+    /* Onboarding meter */
+    .ob-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-bottom:14px; }
+    .ob-label { display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:#0A3161; margin-bottom:6px; }
+    .ob-bar { height:10px; background:#e9ecef; border-radius:6px; overflow:hidden; }
+    .ob-bar > div { height:100%; width:0; border-radius:6px; transition:width .6s ease; background:linear-gradient(90deg,#0A3161,#1a6fc4); }
+    .ob-next { background:#f0f6ff; border-left:4px solid #1a6fc4; padding:10px 12px; border-radius:6px; font-size:13px; margin-bottom:12px; }
+    .ob-next a { color:#0A3161; font-weight:700; }
+    .ob-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .ob-group h5 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
+    .ob-steps { list-style:none; padding:0; margin:0; font-size:13px; }
+    .ob-steps li { display:flex; gap:8px; align-items:flex-start; padding:5px 0; border-bottom:1px solid #f1f1f1; }
+    .ob-steps li .ob-ic { width:18px; flex:0 0 18px; text-align:center; }
+    .ob-steps li.done { color:#6b7785; }
+    .ob-steps li a { color:#0A3161; font-weight:600; text-decoration:none; }
+    .ob-steps li .ob-hint { display:block; font-size:11px; color:#888; font-weight:400; }
     .subscription-medallion:hover {
       opacity: 0.9;
       transform: translateY(-1px);
@@ -735,8 +756,8 @@
     <button onclick="signOut()" class="sign-out-btn" id="signOutButton">
       Sign Out
     </button>
-    <div id="subscriptionMedallion" class="subscription-medallion bronze" data-intro="Your current subscription tier is shown here. Click to manage your billing and view credit usage across all Victory Vision features." data-step="1">
-      <span class="plan-name" id="planName">Bronze</span>
+    <div id="subscriptionMedallion" class="subscription-medallion trial" data-intro="Your current subscription tier is shown here. Click to manage your billing and view credit usage across all Victory Vision features." data-step="1">
+      <span class="plan-name" id="planName">…</span>
     </div>
   </div>
 </header>
@@ -754,6 +775,22 @@
     <a href="#billing" class="upgrade-cta" id="tierNoticeCta" onclick="document.getElementById('billing-section').scrollIntoView({behavior: 'smooth'})">
       View Subscription Plans →
     </a>
+  </div>
+
+  <!-- Onboarding meter — filled by loadOnboardingMeter() -->
+  <div class="card" id="onboardingMeter" style="display:none;">
+    <div class="section-header">
+      <h3>🚀 Your Setup Progress</h3>
+    </div>
+    <div class="ob-row">
+      <div><div class="ob-label"><span>Account setup</span><span id="obSetupPct">0%</span></div><div class="ob-bar"><div id="obSetupBar"></div></div></div>
+      <div><div class="ob-label"><span>Email deliverability</span><span id="obEmailPct">0%</span></div><div class="ob-bar"><div id="obEmailBar"></div></div></div>
+    </div>
+    <div id="obNext" class="ob-next" style="display:none;"></div>
+    <div class="ob-groups">
+      <div class="ob-group"><h5>Account setup</h5><ul id="obSetupSteps" class="ob-steps"></ul></div>
+      <div class="ob-group"><h5>Email deliverability</h5><ul id="obEmailSteps" class="ob-steps"></ul></div>
+    </div>
   </div>
 
   <!-- Domain Management Section -->
@@ -962,7 +999,7 @@
       </div>
 
       <div class="integration-card tier-locked" id="int-teams">
-        <div class="tier-badge badge-silver">Silver+</div>
+        <div class="tier-badge badge-gold">Gold</div>
         <div class="int-header">
           <div class="int-icon">👥</div>
           <div><div class="int-name">Teams Invite</div><div style="font-size:10px;color:#666;">Add team members</div></div>
@@ -1083,61 +1120,34 @@
 
     <h4>Available Plans</h4>
     <p style="font-size:12px;color:#888;margin-bottom:16px;">1 credit = $0.10 value. Credits refresh monthly. Unused credits do not roll over.</p>
-    <div class="billing-section" data-intro="Choose your tier. Bronze gets you started, Silver unlocks campaigns and lead enrichment, Gold unlocks video and ads management with 10,000 credits/month." data-step="8">
+    <div class="billing-section" data-intro="Two plans. Starter comes with Operator's Edge membership ($999/year) and covers outreach, campaigns, deals and weekly office hours. Gold adds AI video, ads, calling and SMS, a dedicated sending domain and 10,000 credits/month." data-step="8">
 
-      <!-- Bronze Plan -->
-      <div class="plan-card" id="bronzePlan">
-        <h4>🥉 Bronze</h4>
-        <div style="font-size:11px;color:#888;margin-bottom:8px;">Solo operators &amp; first 90 days</div>
+      <!-- Starter Plan (included with Operator's Edge membership) -->
+      <div class="plan-card" id="starterPlan">
+        <h4>⭐ Starter</h4>
+        <div style="font-size:11px;color:#888;margin-bottom:8px;">Included with Operator&rsquo;s Edge membership</div>
         <div class="plan-price">
-          <span id="bronzePrice">$99</span>
-          <span style="font-size: 1rem; color: #666;" id="bronzePeriod">/month</span>
-          <div class="annual-savings" id="bronzeSavings" style="display: none;">Save $120/year</div>
+          <span>$999</span>
+          <span style="font-size: 1rem; color: #666;">/year</span>
+          <div style="font-size:12px;color:#666;margin-top:4px;">About $83/month &middot; billed annually through Skool</div>
         </div>
         <div style="background:#e8f4f8;border-radius:6px;padding:8px;margin:10px 0;font-size:13px;">
-          <strong>500 credits/month</strong><br>
-          <span style="font-size:11px;color:#666;">~500 emails or 100 social posts or 60 AI plans</span>
+          <strong>1,000 credits included</strong><br>
+          <span style="font-size:11px;color:#666;">~1,000 emails or 200 social posts or 66 AI plans</span>
         </div>
         <ul class="plan-features" style="text-align:left;font-size:13px;">
-          <li>✓ Email &amp; SMS outreach (1-2 cr each)</li>
-          <li>✓ Social posting (3 cr)</li>
-          <li>✓ AI plan generation (15 cr)</li>
-          <li>✓ Contact management (1 cr)</li>
-          <li>✓ Landing page builder (12 cr)</li>
-          <li>✓ Meetings &amp; calendar (2 cr)</li>
-          <li class="plan-feature-locked">✗ Email campaigns (Silver+)</li>
-          <li class="plan-feature-locked">✗ Lead enrichment (Silver+)</li>
-          <li class="plan-feature-locked">✗ Video creation (Gold only)</li>
-          <li class="plan-feature-locked">✗ Ads management (Gold only)</li>
+          <li>✓ <span class="plan-highlight">Weekly live office hours with Andrew</span></li>
+          <li>✓ Operator&rsquo;s Edge community on Skool</li>
+          <li>✓ Business-for-sale deal search</li>
+          <li>✓ Contacts, goals &amp; AI plans</li>
+          <li>✓ Campaigns &amp; AI-drafted outreach you review and send from your Gmail</li>
+          <li>✓ Social posts, landing pages &amp; presentations</li>
+          <li class="plan-feature-locked">✗ AI video creation (Gold)</li>
+          <li class="plan-feature-locked">✗ Ads launch &amp; management (Gold)</li>
+          <li class="plan-feature-locked">✗ AI calling &amp; SMS (Gold)</li>
+          <li class="plan-feature-locked">✗ Dedicated sending domain &amp; mailbox (Gold)</li>
         </ul>
-        <button onclick="upgradeToPlan('bronze')" id="bronzeButton">Select Bronze</button>
-      </div>
-
-      <!-- Silver Plan -->
-      <div class="plan-card" id="silverPlan">
-        <h4>🥈 Silver</h4>
-        <div style="font-size:11px;color:#888;margin-bottom:8px;">Growing teams doing active prospecting</div>
-        <div class="plan-price">
-          <span id="silverPrice">$450</span>
-          <span style="font-size: 1rem; color: #666;" id="silverPeriod">/month</span>
-          <div class="annual-savings" id="silverSavings" style="display: none;">Save $900/year</div>
-        </div>
-        <div style="background:#e8f4f8;border-radius:6px;padding:8px;margin:10px 0;font-size:13px;">
-          <strong>2,500 credits/month</strong><br>
-          <span style="font-size:11px;color:#666;">~500 lead enrichments or 166 AI plans or 250 social posts</span>
-        </div>
-        <ul class="plan-features" style="text-align:left;font-size:13px;">
-          <li>✓ Everything in Bronze</li>
-          <li>✓ <span class="plan-highlight">Email campaigns (15 cr + 5/50 sent)</span></li>
-          <li>✓ <span class="plan-highlight">Lead enrichment via Clay (5 cr each)</span></li>
-          <li>✓ Priority email support</li>
-          <li>✓ Advanced AI analytics</li>
-          <li>✓ Ads performance view (read-only)</li>
-          <li class="plan-feature-locked">✗ Video creation (Gold only)</li>
-          <li class="plan-feature-locked">✗ Launch &amp; manage ads (Gold only)</li>
-          <li class="plan-feature-locked">✗ White-label options (Gold only)</li>
-        </ul>
-        <button onclick="upgradeToPlan('silver')" id="silverButton">Select Silver</button>
+        <button onclick="window.open('https://www.skool.com/victoryvision/about','_blank')" id="starterButton">Join Operator&rsquo;s Edge</button>
       </div>
 
       <!-- Gold Plan -->
@@ -1154,9 +1164,12 @@
           <span style="font-size:11px;color:#666;">~2,000 lead enrichments or 83 videos (10 sec) or 666 AI plans</span>
         </div>
         <ul class="plan-features" style="text-align:left;font-size:13px;">
-          <li>✓ Everything in Silver</li>
+          <li>✓ Everything in Starter, plus:</li>
+          <li>✓ <span class="plan-highlight">10&times; the credits, refreshed monthly</span></li>
           <li>✓ <span class="plan-highlight">AI video creation (120 cr / 10 sec)</span></li>
           <li>✓ <span class="plan-highlight">Google, MSFT &amp; LinkedIn Ads mgmt (20 cr)</span></li>
+          <li>✓ <span class="plan-highlight">AI calling &amp; SMS</span></li>
+          <li>✓ Dedicated sending domain &amp; mailbox, set up for you</li>
           <li>✓ <span class="plan-highlight">Unlimited lead enrichment</span></li>
           <li>✓ White-label &amp; custom domain</li>
           <li>✓ 24/7 dedicated support</li>
@@ -1211,7 +1224,7 @@
           AI Plan Generate: 15 cr
         </div>
         <div style="background:#f8f9fa;padding:10px;border-radius:6px;">
-          <strong>Campaigns (Silver+)</strong><br>
+          <strong>Campaigns (Starter &amp; Gold)</strong><br>
           Campaign Create: 15 cr<br>
           Campaign Send per 50: 5 cr<br>
           Lead Enrich (Clay): 5 cr/contact
@@ -1610,8 +1623,6 @@ function connectCalendly() {
     
     // Update pricing with 10% discount
     const plans = {
-      bronze: { monthly: 99,   annual: 89,   annualSave: 'Save $120/yr' },
-      silver: { monthly: 450,  annual: 375,  annualSave: 'Save $900/yr' },
       gold:   { monthly: 1250, annual: 1035, annualSave: 'Save $2,580/yr' }
     };
     
@@ -1671,23 +1682,24 @@ function connectCalendly() {
           if (noticeTitleEl) noticeTitleEl.textContent = '🥇 You\'re on ' + plan + ' — Full Access';
           if (noticeTextEl)  noticeTextEl.textContent  = 'All features unlocked including video creation, ads management, and 10,000 credits/month. Credits reset on your billing date.';
           if (noticeCtaEl)   noticeCtaEl.style.display = 'none';
-        } else if (planLower === 'silver') {
-          noticeEl.style.background = 'linear-gradient(135deg,#f5f5f5,#e0e0e0)';
-          noticeEl.style.borderColor = '#C0C0C0';
-          if (noticeTitleEl) noticeTitleEl.textContent = '🥈 Silver Plan — 2,500 credits/month';
-          if (noticeTextEl)  noticeTextEl.textContent  = 'Campaigns and lead enrichment unlocked. Upgrade to Gold to unlock video creation, ads management, and 10,000 credits/month.';
-          if (noticeCtaEl) { noticeCtaEl.textContent = 'Upgrade to Gold →'; noticeCtaEl.style.display = 'inline-block'; }
+        } else if (planLower === 'starter' || planLower === 'starter-annual') {
+          noticeEl.style.background = 'linear-gradient(135deg,#eef5ff,#dbe9ff)';
+          noticeEl.style.borderColor = '#3b82f6';
+          if (noticeTitleEl) noticeTitleEl.textContent = '⭐ Starter — included with your Operator\'s Edge membership';
+          if (noticeTextEl)  noticeTextEl.textContent  = 'Contacts, goals, AI plans, campaigns, AI-drafted outreach, social posts, landing pages and deal search are unlocked, plus weekly office hours. Gold adds AI video, ads, AI calling and SMS, a dedicated sending domain and 10,000 credits a month.';
+          if (noticeCtaEl) { noticeCtaEl.textContent = 'Compare Starter and Gold →'; noticeCtaEl.style.display = 'inline-block'; }
         } else {
-          // Bronze or trial
+          // Trial (legacy Bronze/Silver rows land here too)
           noticeEl.style.background = '';
-          if (noticeTitleEl) noticeTitleEl.textContent = '🥉 Bronze Plan — 500 credits/month';
-          if (noticeTextEl)  noticeTextEl.textContent  = 'Upgrade to Silver to unlock campaigns and lead enrichment. Upgrade to Gold for video creation and ads management.';
-          if (noticeCtaEl) { noticeCtaEl.textContent = 'View Subscription Plans →'; noticeCtaEl.style.display = 'inline-block'; }
+          if (noticeTitleEl) noticeTitleEl.textContent = '🌟 Free trial';
+          if (noticeTextEl)  noticeTextEl.textContent  = 'Pick a plan to keep going. Starter comes with Operator\'s Edge membership ($999/year, including weekly office hours with Andrew). Gold is the full platform: AI video, ads, calling and SMS, and 10,000 credits a month.';
+          if (noticeCtaEl) { noticeCtaEl.textContent = 'Compare plans →'; noticeCtaEl.style.display = 'inline-block'; }
         }
       }
 
       // Credit maxes per tier
-      const TIER_CREDITS = { bronze: 500, silver: 2500, gold: 10000, enterprise: 99999 };
+      const TIER_CREDITS = { bronze: 500, silver: 2500, starter: 1000, 'starter-annual': 1000, gold: 10000, enterprise: 99999 };
+      const isStarterPlan = ['starter','starter-annual'].includes(plan.toLowerCase());
       const tierMax = TIER_CREDITS[plan.toLowerCase()] || 500;
 
       // Update credits display
@@ -1699,7 +1711,7 @@ function connectCalendly() {
         creditsEl.textContent = credits.toLocaleString();
         const pct = Math.min(100, Math.round((credits / tierMax) * 100));
         if (creditsBarEl) creditsBarEl.style.width = pct + '%';
-        if (creditsTotalEl) creditsTotalEl.textContent = `/ ${tierMax.toLocaleString()} monthly`;
+        if (creditsTotalEl) creditsTotalEl.textContent = isStarterPlan ? `/ ${tierMax.toLocaleString()} included` : `/ ${tierMax.toLocaleString()} monthly`;
         if (creditsTotalLabelEl) creditsTotalLabelEl.textContent = tierMax.toLocaleString();
         // Colour the bar based on remaining %
         if (creditsBarEl) {
@@ -1721,7 +1733,7 @@ function connectCalendly() {
       });
       const teamsCard = document.getElementById('int-teams');
       if (teamsCard) {
-        if (isSilverPlus) teamsCard.classList.remove('tier-locked');
+        if (isGold) teamsCard.classList.remove('tier-locked');
       }
 
       // Update currentUser object
@@ -1738,17 +1750,17 @@ function connectCalendly() {
       // Update subscription medallion - use exact plan value from API
       const medallion = document.getElementById('subscriptionMedallion');
       if (medallion) {
-        medallion.className = `subscription-medallion ${plan.toLowerCase()}`;
+        medallion.className = `subscription-medallion ${planCssClass(plan)}`;
         const planNameEl = medallion.querySelector('.plan-name');
         if (planNameEl) {
-          planNameEl.textContent = plan;
+          planNameEl.textContent = planLabel(plan);
         }
       }
       
       // Update plan info
       const currentPlanNameEl = document.getElementById('currentPlanName');
       if (currentPlanNameEl) {
-        currentPlanNameEl.textContent = `${plan} Plan`;
+        currentPlanNameEl.textContent = planLabel(plan) === 'Trial' ? 'Free Trial' : `${planLabel(plan)} Plan${plan.toLowerCase() === 'starter-annual' ? ' (annual)' : ''}`;
       }
       
       // Update status
@@ -1785,6 +1797,9 @@ function connectCalendly() {
       
       // Update plan cards based on current plan
       updatePlanCards(plan.toLowerCase());
+
+      // Onboarding meter (non-blocking)
+      loadOnboardingMeter(plan);
 
       // Load saved ad tracking IDs (non-blocking)
       loadAdTrackingSettings();
@@ -2007,6 +2022,106 @@ function connectCalendly() {
     showStatus('DNS configuration is handled automatically. Your domain is ready for email and hosting!', false);
   }
 
+  // ── Plan naming: only Starter and Gold are sold. Bronze rows are trials. ──
+  function planLabel(plan) {
+    const p = String(plan || '').toLowerCase();
+    if (p === 'starter' || p === 'starter-annual') return 'Starter';
+    if (p === 'gold') return 'Gold';
+    if (p === 'enterprise') return 'Enterprise';
+    if (p === 'silver') return 'Silver (legacy)';
+    return 'Trial';
+  }
+  function planCssClass(plan) {
+    const p = String(plan || '').toLowerCase();
+    if (p === 'starter' || p === 'starter-annual') return 'starter';
+    if (p === 'gold' || p === 'enterprise') return 'gold';
+    if (p === 'silver') return 'silver';
+    return 'trial';
+  }
+
+  // ── Onboarding meter: reads live state from user_onboarding_progress_v ──
+  async function loadOnboardingMeter(plan) {
+    const card = document.getElementById('onboardingMeter');
+    if (!card || !CUSTOMER_ID) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_onboarding_progress_v')
+        .select('*')
+        .eq('email', CUSTOMER_ID)
+        .maybeSingle();
+      if (error || !data) return;
+      const isGold = ['gold', 'enterprise'].includes(String(plan || data.tier || '').toLowerCase());
+      const ASK = 'Andrew sets this up with you. Bring it to office hours or reply to your welcome email.';
+
+      const setup = [
+        { k: 'step_profile',      t: 'Complete your company profile',   href: 'companyprofile.html' },
+        { k: 'step_icp_offer',    t: 'Define your ideal client and offer', href: 'companyprofile.html#icp' },
+        { k: 'step_goal',         t: 'Set your first goal',              href: 'companyprofile.html' },
+        { k: 'step_brand',        t: 'Add your logo and brand colors',   href: 'companyprofile.html#logoUpload' },
+        { k: 'step_contacts_25',  t: 'Import 25+ contacts' + (data.contacts_count ? ' (' + data.contacts_count + ' so far)' : ''), href: 'contacts.html' },
+        { k: 'did_campaign',      t: 'Create your first campaign',       href: 'campaigns.html' },
+        { k: 'step_linkedin',     t: 'Connect LinkedIn',                 href: '#int-linkedin' },
+        { k: 'step_calendly',     t: 'Connect Calendly',                 href: '#int-calendly' }
+      ];
+      if (isGold) setup.push(
+        { k: 'step_phone',         t: 'Set up your calling number',     href: '#int-sms' },
+        { k: 'step_website_pixel', t: 'Add your website tracking pixel', href: '#int-google-ads' },
+        { k: 'step_ads',           t: 'Connect an ads account',          href: '#int-google-ads' }
+      );
+
+      const email = [
+        { k: 'step_domain',       t: 'Sending domain connected',         href: '#search-domains', hint: isGold ? '' : 'Optional on Starter. Free addresses (gmail.com etc.) get filtered more often.' },
+        { k: 'step_gmail',        t: 'Gmail mailbox connected',          href: null, hint: ASK },
+        { k: 'step_signature',    t: 'Email signature added',            href: 'messages.html' },
+        { k: 'did_email',         t: 'First email sent',                 href: 'messages.html' },
+        { k: 'did_confirm_open',  t: 'Open tracking confirmed',          href: 'messages.html', hint: 'Send a test to yourself and open it.' },
+        { k: 'did_confirm_click', t: 'Click tracking confirmed',         href: 'messages.html', hint: 'Click a link in your test email.' }
+      ];
+
+      const render = (listId, items) => {
+        const ul = document.getElementById(listId);
+        ul.innerHTML = '';
+        let done = 0;
+        items.forEach(s => {
+          const ok = !!data[s.k];
+          if (ok) done++;
+          const li = document.createElement('li');
+          li.className = ok ? 'done' : '';
+          const ic = document.createElement('span'); ic.className = 'ob-ic'; ic.textContent = ok ? '✅' : '⬜';
+          const body = document.createElement('span');
+          if (!ok && s.href) { const a = document.createElement('a'); a.href = s.href; a.textContent = s.t; body.appendChild(a); }
+          else body.appendChild(document.createTextNode(s.t));
+          if (!ok && s.hint) { const hn = document.createElement('span'); hn.className = 'ob-hint'; hn.textContent = s.hint; body.appendChild(hn); }
+          li.appendChild(ic); li.appendChild(body); ul.appendChild(li);
+        });
+        return { done, total: items.length };
+      };
+      const sr = render('obSetupSteps', setup);
+      const er = render('obEmailSteps', email);
+      const sp = Math.round(100 * sr.done / sr.total), ep = Math.round(100 * er.done / er.total);
+      document.getElementById('obSetupPct').textContent = sp + '%';
+      document.getElementById('obEmailPct').textContent = ep + '%';
+      document.getElementById('obSetupBar').style.width = sp + '%';
+      document.getElementById('obEmailBar').style.width = ep + '%';
+      document.getElementById('obEmailBar').style.background = ep >= 80 ? 'linear-gradient(90deg,#1e8e5a,#28a745)' : ep >= 40 ? 'linear-gradient(90deg,#FFA500,#e67e00)' : 'linear-gradient(90deg,#dc3545,#a01135)';
+
+      const nextItem = setup.concat(email).find(s => !data[s.k] && s.href);
+      const nx = document.getElementById('obNext');
+      if (nextItem) {
+        nx.innerHTML = '';
+        nx.appendChild(document.createTextNode('Next best step: '));
+        const a = document.createElement('a'); a.href = nextItem.href; a.textContent = nextItem.t + ' →'; nx.appendChild(a);
+        nx.style.display = 'block';
+      } else {
+        nx.textContent = '🎉 Setup complete. Nice work.';
+        nx.style.display = 'block';
+      }
+      card.style.display = 'block';
+    } catch (e) {
+      console.warn('Onboarding meter unavailable:', e);
+    }
+  }
+
   // Update plan cards based on current plan
   function updatePlanCards(currentPlan) {
     // Remove all current badges and reset buttons
@@ -2016,16 +2131,17 @@ function connectCalendly() {
     });
     
     // Reset all buttons
-    const plans = ['bronze', 'silver', 'gold'];
+    const plans = ['starter', 'gold'];
     plans.forEach(plan => {
       const button = document.getElementById(`${plan}Button`);
       if (button) {
         button.disabled = false;
         button.className = '';
-        button.textContent = `Select ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
+        button.textContent = plan === 'starter' ? 'Join Operator\'s Edge' : `Select ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
       }
     });
     
+    if (currentPlan === 'starter-annual') currentPlan = 'starter';
     // Add current badge to active plan
     const currentCard = document.getElementById(`${currentPlan}Plan`);
     if (currentCard) {
@@ -2450,7 +2566,7 @@ function connectCalendly() {
     setTimeout(previewTeamAlias, 50);
     const plan = (currentUser && currentUser.subscription_plan || 'bronze').toLowerCase();
     if (!['silver','gold','enterprise'].includes(plan)) {
-      showStatus('Team invites require Silver or Gold plan.', true);
+      showStatus('Team invites are included with Gold.', true);
       return;
     }
     document.getElementById('teamsInviteModal').style.display = 'block';
