@@ -937,7 +937,7 @@
     
     <div class="form-row">
       <div class="form-group ai-enhanced-field">
-        <label for="newsletterTitle">Newsletter Title *</label>
+        <label for="newsletterTitle">Newsletter Title (Optional)</label>
         <input type="text" id="newsletterTitle" name="newsletter_title" 
                placeholder="Enter your newsletter title..." 
                data-intro="Create a compelling newsletter title for your campaigns." 
@@ -1235,9 +1235,8 @@ let userData = null;
     const userTitle = document.getElementById('userTitle').value;    
     const companyDescription = document.getElementById('companyDescription').value;
     const productDescription = document.getElementById('productDescription').value;
-    const newsletterTitle = document.getElementById('newsletterTitle').value;
     
-    return companyName.trim() && userTitle.trim() && companyDescription.trim() && productDescription.trim() && newsletterTitle.trim();
+    return companyName.trim() && userTitle.trim() && companyDescription.trim() && productDescription.trim();
   }
 
   // Show or hide tour button based on profile completeness
@@ -1733,7 +1732,7 @@ async function saveAllData() {
     const goalFormData = new FormData(goalForm);
     
     // Validate required fields
-    if (!formData.get('company_name') || !formData.get('title') || !formData.get('company_description') || !formData.get('product_description') || !document.getElementById('newsletterTitle').value.trim()) {
+    if (!formData.get('company_name') || !formData.get('title') || !formData.get('company_description') || !formData.get('product_description')) {
       throw new Error('Please fill in all required fields');
     }
     
