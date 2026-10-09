@@ -161,6 +161,9 @@
       <select id="filterSource" onchange="renderTargets()">
         <option value="">All sources</option>
       </select>
+      <select id="filterState" onchange="renderTargets()" title="US state, read from each listing's location">
+        <option value="">All states</option>
+      </select>
       <input type="number" id="filterMinPrice" placeholder="Min price $" oninput="renderTargets()" style="width:110px;"/>
       <input type="number" id="filterMinRevenue" placeholder="Min revenue $" oninput="renderTargets()" style="width:120px;"/>
       <input type="text" id="filterLocation" placeholder="Location" oninput="renderTargets()" style="width:110px;"/>
@@ -283,6 +286,35 @@ const CURATOR_EMAILS = ['glaze@vvdoh.com', 'glaze@equitablecap.com'];
 let CUSTOMER_ID = null;
 let IS_CURATOR = false;
 let allTargets = [];
+
+// -- State search --
+// Listing locations arrive in many shapes: "Osceola County, Florida, US", "Pensacola, FL",
+// "IL", "Mid-Atlantic United States", "France". Read the rightmost US state (code or name).
+// Empire Flippers, Acquire and Investors Club give COUNTRY codes ("DE" = Germany), so they
+// never map to a state.
+const US_STATES = { AL:'Alabama', AK:'Alaska', AZ:'Arizona', AR:'Arkansas', CA:'California', CO:'Colorado', CT:'Connecticut',
+  DE:'Delaware', DC:'District of Columbia', FL:'Florida', GA:'Georgia', HI:'Hawaii', ID:'Idaho', IL:'Illinois', IN:'Indiana',
+  IA:'Iowa', KS:'Kansas', KY:'Kentucky', LA:'Louisiana', ME:'Maine', MD:'Maryland', MA:'Massachusetts', MI:'Michigan',
+  MN:'Minnesota', MS:'Mississippi', MO:'Missouri', MT:'Montana', NE:'Nebraska', NV:'Nevada', NH:'New Hampshire',
+  NJ:'New Jersey', NM:'New Mexico', NY:'New York', NC:'North Carolina', ND:'North Dakota', OH:'Ohio', OK:'Oklahoma',
+  OR:'Oregon', PA:'Pennsylvania', RI:'Rhode Island', SC:'South Carolina', SD:'South Dakota', TN:'Tennessee', TX:'Texas',
+  UT:'Utah', VT:'Vermont', VA:'Virginia', WA:'Washington', WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming', PR:'Puerto Rico' };
+const STATE_BY_NAME = Object.fromEntries(Object.entries(US_STATES).map(([c, n]) => [n.toLowerCase(), c]));
+const COUNTRY_CODE_SOURCES = new Set(['empire_flippers', 'acquire', 'investorsclub']);
+function stateOf(t) {
+  if (!t || !t.location || COUNTRY_CODE_SOURCES.has(String(t.source || '').toLowerCase())) return '';
+  const parts = String(t.location).split(/[,;]/).map(s => s.trim()
+    .replace(/ +- +(north|south|east|west|central)$/i, '')
+    .replace(/ +(usa|us|u[.]s[.]?|united states)$/i, '')
+    .trim()).filter(Boolean);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    if (p.length === 2 && US_STATES[p.toUpperCase()]) return p.toUpperCase();
+    const byName = STATE_BY_NAME[p.toLowerCase()];
+    if (byName) return byName;
+  }
+  return '';
+}
 
 // -- Dev #14: Gold early access --
 // Starter sees 90% of new deals right away. The top 10% of NEW listings (by
@@ -593,13 +625,31 @@ async function loadTargets() {
     }
   }
 
+  // Keep the current choice (or the one from a shared link) when the options are rebuilt,
+  // including the silent refresh after AI fit scoring.
+  const urlParams = new URLSearchParams(window.location.search);
+  const keep = (id) => document.getElementById(id).value || urlParams.get(id) || '';
+
   const industries = [...new Set(allTargets.map(t => t.industry).filter(Boolean))].sort();
   const indSel = document.getElementById('filterIndustry');
+  const indKeep = keep('filterIndustry');
   indSel.innerHTML = '<option value="">All industries</option>' + industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+  indSel.value = indKeep;
 
   const sources = [...new Set(allTargets.map(t => t.source).filter(Boolean))].sort();
   const srcSel = document.getElementById('filterSource');
+  const srcKeep = keep('filterSource');
   srcSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  srcSel.value = srcKeep;
+
+  const stateCounts = {};
+  allTargets.forEach(t => { const s = stateOf(t); if (s) stateCounts[s] = (stateCounts[s] || 0) + 1; });
+  const stSel = document.getElementById('filterState');
+  const stKeep = keep('filterState');
+  stSel.innerHTML = '<option value="">All states</option>' + Object.keys(stateCounts)
+    .sort((a, b) => US_STATES[a].localeCompare(US_STATES[b]))
+    .map(c => `<option value="${c}">${esc(US_STATES[c])} (${stateCounts[c]})</option>`).join('');
+  stSel.value = stKeep;
 
   document.getElementById('curatorControls').style.display = 'flex';
   document.getElementById('addTargetBtn').textContent = IS_CURATOR ? '+ Add Target' : '+ Add a Deal';
@@ -618,6 +668,7 @@ function renderTargets() {
   const minPriceF = parseFloat(document.getElementById('filterMinPrice').value) || null;
   const minRevenueF = parseFloat(document.getElementById('filterMinRevenue').value) || null;
   const locF = (document.getElementById('filterLocation').value || '').toLowerCase().trim();
+  const stateF = document.getElementById('filterState').value;
   const maxPriceF = parseFloat(document.getElementById('filterMaxPrice').value) || null;
   const minCashFlowF = parseFloat(document.getElementById('filterMinCashFlow').value) || null;
   const sellerFinF = document.getElementById('filterSellerFinancing').checked;
@@ -631,6 +682,7 @@ function renderTargets() {
     (!minPriceF || (t.asking_price_usd && Number(t.asking_price_usd) >= minPriceF)) &&
     (!minRevenueF || (t.revenue_usd && Number(t.revenue_usd) >= minRevenueF)) &&
     (!locF || (t.location || '').toLowerCase().includes(locF)) &&
+    (!stateF || stateOf(t) === stateF) &&
     (!maxPriceF || !t.asking_price_usd || Number(t.asking_price_usd) <= maxPriceF) &&
     (!minCashFlowF || (t.cash_flow_usd && Number(t.cash_flow_usd) >= minCashFlowF)) &&
     (!sellerFinF || t.seller_financing) &&
@@ -869,7 +921,7 @@ async function uploadDealRoomFile() {
 
 // Filter state lives in the URL, so any filtered/sorted view is a real,
 // shareable, bookmarkable browser URL - not just individual saved targets.
-const FILTER_FIELDS = ['filterStatus','filterIndustry','filterSource','filterMinPrice','filterMinRevenue','filterLocation','filterMaxPrice','filterMinCashFlow','sortBy'];
+const FILTER_FIELDS = ['filterStatus','filterIndustry','filterSource','filterState','filterMinPrice','filterMinRevenue','filterLocation','filterMaxPrice','filterMinCashFlow','sortBy'];
 const FILTER_CHECKBOXES = ['filterSellerFinancing','filterMgmtStaying','filterSavedOnly'];
 // Default-on checkboxes persist the opposite way: present in the URL only
 // when explicitly turned OFF, so a fresh visit (no query string) keeps the
