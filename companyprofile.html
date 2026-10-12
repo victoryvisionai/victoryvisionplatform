@@ -1073,6 +1073,26 @@
       </div>
     </div>
 
+    <div id="dealCriteria" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-top:22px;text-align:left;color:#1f2a37;">
+      <h2 style="margin:0 0 4px;font-size:20px;color:#0B3162;">🎯 Deal Criteria</h2>
+      <p style="margin:0 0 14px;font-size:13px;color:#6b7280;">Buying a business or property? Describe what you want. Victory Vision uses it to filter and rank deals, and to email you new matches.</p>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">I'm using Victory Vision to</div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;font-size:14px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="vvPath" value="bd_growth"> Grow my revenue</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="vvPath" value="acquisition"> Buy a business or property</label>
+      </div>
+      <label for="dcDescription" style="font-size:13px;font-weight:600;">Describe the deal you want</label>
+      <textarea id="dcDescription" rows="5" style="width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;" placeholder="Example: A recession-resistant home services business within two hours of Chicago, $500K to $1M in SDE, up to $6M purchase price, owner willing to stay six months for transition."></textarea>
+      <div id="dcFilters" style="margin:10px 0 12px;font-size:12px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="dcReviewBtn" onclick="dcReview()" style="background:#0B3162;color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;">✨ Review with AI (25 credits)</button>
+        <button type="button" id="dcSaveBtn" onclick="dcSave()" style="background:#fff;color:#0B3162;border:1px solid #0B3162;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;">Save deal criteria</button>
+        <a href="/deals" style="font-size:13px;font-weight:600;color:#0B3162;text-decoration:none;margin-left:4px;">Open deals →</a>
+        <span id="dcStatus" style="font-size:12px;color:#6b7280;"></span>
+      </div>
+      <div id="dcResult" style="display:none;margin-top:16px;border-top:1px solid #e5e7eb;padding-top:14px;font-size:13px;line-height:1.5;"></div>
+    </div>
+
     <div style="text-align: center; margin-top: 20px;">
       <button type="button" class="save-all-button" onclick="saveAllData()" 
               data-intro="Save your profile and goal. Once saved, you can start creating AI-powered campaigns!" 
@@ -2370,6 +2390,87 @@ if (profileData.goal) {
     document.getElementById('autoReadWebsiteBtn').disabled = false;
   }
 }
+</script>
+<script>
+(function () {
+  var DC = { email: null, profile: {}, onboarding: {}, pendingFilters: null };
+  function e2(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function money(n) { n = Number(n || 0); if (!n) return ''; return n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : '$' + Math.round(n / 1000) + 'K'; }
+  function chip(t) { return '<span style="display:inline-block;background:#eef2f9;color:#0B3162;border-radius:999px;padding:3px 9px;margin:0 6px 6px 0;font-weight:600;">' + e2(t) + '</span>'; }
+  function renderFilters(f) {
+    var el = document.getElementById('dcFilters'); if (!el) return;
+    f = f || {}; var c = [];
+    if (f.kinds && f.kinds.length) c.push(f.kinds.join(' / '));
+    if (f.states && f.states.length) c.push(f.states.join(', '));
+    if (f.places && f.places.length) c.push(f.places.join(', '));
+    if (f.price_min || f.price_max) c.push('Price ' + (money(f.price_min) || '$0') + ' to ' + (money(f.price_max) || 'any'));
+    if (f.cash_flow_min) c.push('Cash flow ' + money(f.cash_flow_min) + '+');
+    if (f.revenue_min) c.push('Revenue ' + money(f.revenue_min) + '+');
+    if (f.noi_min) c.push('NOI ' + money(f.noi_min) + '+');
+    if (f.industries_include && f.industries_include.length) c.push('Include: ' + f.industries_include.join(', '));
+    if (f.industries_exclude && f.industries_exclude.length) c.push('Exclude: ' + f.industries_exclude.join(', '));
+    el.innerHTML = c.length ? '<div style="color:#6b7280;margin-bottom:4px;">Filters Victory Vision applies:</div>' + c.map(chip).join('') : '<span style="color:#6b7280;">No structured filters yet. Review with AI to turn your description into filters, or set them on the deals page.</span>';
+  }
+  async function dcLoad() {
+    try {
+      var u = await supabaseClient.auth.getUser();
+      DC.email = u && u.data && u.data.user ? String(u.data.user.email).toLowerCase() : null;
+      if (!DC.email) return;
+      var r = await supabaseClient.from('users').select('acquisition_profile,onboarding').eq('email', DC.email).maybeSingle();
+      var row = (r && r.data) || {};
+      DC.profile = row.acquisition_profile || {}; DC.onboarding = row.onboarding || {};
+      document.getElementById('dcDescription').value = DC.profile.deal_description || '';
+      var path = DC.onboarding.path || (DC.profile.filters || DC.profile.deal_description ? 'acquisition' : 'bd_growth');
+      var radio = document.querySelector('input[name="vvPath"][value="' + path + '"]'); if (radio) radio.checked = true;
+      renderFilters(DC.profile.filters);
+    } catch (e) { console.warn('deal criteria load', e); }
+  }
+  window.dcReview = async function () {
+    var draft = document.getElementById('dcDescription').value.trim();
+    var st = document.getElementById('dcStatus'), btn = document.getElementById('dcReviewBtn'), out = document.getElementById('dcResult');
+    if (!DC.email) { st.textContent = 'Please sign in again.'; return; }
+    if (draft.length < 20) { st.textContent = 'Write a sentence or two first.'; return; }
+    btn.disabled = true; st.textContent = 'Reviewing (about 20 seconds)...';
+    try {
+      var res = await fetch('https://victoryvision.app.n8n.cloud/webhook/deals/criteria-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_id: DC.email, draft: draft }) });
+      var r = await res.json(); if (Array.isArray(r)) r = r[0] || {};
+      if (!res.ok || r.ok === false || r.error) throw new Error(r.error || r.message || ('HTTP ' + res.status));
+      var improved = r.improved_description || r.description || '';
+      DC.pendingFilters = r.filters || null;
+      var risks = r.risk_considerations || r.considerations || r.risks || [];
+      var qs = r.clarifying_questions || r.questions || [];
+      var fin = r.financing_note || r.financing || '';
+      var list = function (a) { return '<ul style="margin:4px 0 12px 18px;padding:0;">' + a.map(function (x) { return '<li>' + e2(typeof x === 'string' ? x : (x.text || x.title || x.risk || x.question || JSON.stringify(x))) + '</li>'; }).join('') + '</ul>'; };
+      out.innerHTML = (improved ? '<div style="font-weight:700;color:#0B3162;">Suggested description</div><div style="background:#f7f9fc;border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin:6px 0 8px;">' + e2(improved) + '</div><button type="button" onclick="dcUseImproved()" style="background:#0B3162;color:#fff;border:0;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer;margin-bottom:14px;">Use this version and its filters</button>' : '') +
+        (risks.length ? '<div style="font-weight:700;">Things to watch</div>' + list(risks) : '') +
+        (qs.length ? '<div style="font-weight:700;">Questions to settle</div>' + list(qs) : '') +
+        (fin ? '<div style="font-weight:700;">Financing at today\'s rates</div><div style="margin:4px 0 8px;">' + e2(fin) + '</div>' : '') +
+        (r.credits_remaining != null ? '<div style="color:#6b7280;font-size:12px;">' + e2(r.credits_remaining) + ' credits remaining</div>' : '');
+      out.style.display = 'block'; out.dataset.improved = improved; st.textContent = '';
+    } catch (e) { st.textContent = 'Review failed: ' + (e.message || e) + '. No credits were charged if it did not complete.'; }
+    btn.disabled = false;
+  };
+  window.dcUseImproved = function () {
+    var out = document.getElementById('dcResult');
+    if (out.dataset.improved) document.getElementById('dcDescription').value = out.dataset.improved;
+    if (DC.pendingFilters) renderFilters(DC.pendingFilters);
+    document.getElementById('dcStatus').textContent = 'Applied. Click Save deal criteria to keep it.';
+  };
+  window.dcSave = async function () {
+    var st = document.getElementById('dcStatus');
+    if (!DC.email) { st.textContent = 'Please sign in again.'; return; }
+    var radio = document.querySelector('input[name="vvPath"]:checked');
+    var prof = Object.assign({}, DC.profile, { deal_description: document.getElementById('dcDescription').value.trim(), updated_at: new Date().toISOString() });
+    if (DC.pendingFilters) prof.filters = Object.assign({}, DC.profile.filters || {}, DC.pendingFilters);
+    var onb = Object.assign({}, DC.onboarding, radio ? { path: radio.value } : {});
+    st.textContent = 'Saving...';
+    var r = await supabaseClient.from('users').update({ acquisition_profile: prof, onboarding: onb }).eq('email', DC.email);
+    if (r.error) { st.textContent = 'Could not save: ' + r.error.message; return; }
+    DC.profile = prof; DC.onboarding = onb; DC.pendingFilters = null; renderFilters(prof.filters);
+    st.textContent = 'Saved. Deals, alerts and your onboarding steps now use these criteria.';
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(dcLoad, 300); }); else setTimeout(dcLoad, 300);
+})();
 </script>
 </body>
 </html>
