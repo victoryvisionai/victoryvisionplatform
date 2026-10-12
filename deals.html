@@ -255,7 +255,7 @@
       <select id="sortBy" onchange="renderTargets()">
         <option value="fit">Recommended for Me</option>
         <option value="newest">Newest</option>
-        <option value="affordable">Largest I Can Afford</option><option value="dscr">Strongest debt coverage</option><option value="buybox">My buy-box score (Gold)</option>
+        <option value="affordable">Largest I Can Afford</option><option value="dscr">Strongest debt coverage</option><option value="cash">Most cash after debt service</option><option value="coc">Best cash-on-cash return</option><option value="buybox">My buy-box score (Gold)</option>
       </select>
     </div>
 
@@ -263,6 +263,8 @@
       <select id="advKind" onchange="renderTargets()"><option value="">All deal types</option><option value="business">Operating businesses</option><option value="cre">Commercial real estate</option><option value="online">Online businesses</option></select>
       <select id="advPropType" onchange="renderTargets()"><option value="">All property types</option></select>
       <input type="number" id="advMinDscr" step="0.05" placeholder="Min debt coverage (1.25)" title="Income divided by annual debt service at today's rates" oninput="renderTargets()" style="width:170px;"/>
+      <input type="number" id="advMinCashAfter" step="10000" placeholder="Min cash after debt $/yr" title="Cash left each year after loan payments, as listed, at today's rates" oninput="renderTargets()" style="width:190px;"/>
+      <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;" title="Still covers the loan with income 10-15% lower and the rate 1 point higher. Uses only income the listing states."><input type="checkbox" id="advCoversConservative" onchange="renderTargets()"/> Covers debt even in a downside case</label>
       <input type="number" id="advMaxMultiple" step="0.1" placeholder="Max price / cash flow" oninput="renderTargets()" style="width:150px;"/>
       <input type="number" id="advMinCap" step="0.1" placeholder="Min cap rate %" oninput="renderTargets()" style="width:120px;"/>
       <input type="number" id="advMinNoi" placeholder="Min NOI $" oninput="renderTargets()" style="width:110px;"/>
@@ -790,6 +792,7 @@ function renderTargets() {
   if (sortBy === 'newest') list.sort((a, b) => new Date(b.t.created_at) - new Date(a.t.created_at));
   else if (sortBy === 'affordable') list.sort((a, b) => (Number(b.t.asking_price_usd) || 0) - (Number(a.t.asking_price_usd) || 0));
   else if (sortBy === 'dscr') list.sort((a, b) => ((b.t._ins && b.t._ins.dscr) || -1) - ((a.t._ins && a.t._ins.dscr) || -1));
+  else if (sortBy === 'cash' || sortBy === 'coc') list.sort((a, b) => cashSortKey(b.t, sortBy) - cashSortKey(a.t, sortBy));
   else if (sortBy === 'buybox') list.sort((a, b) => buyboxScore(b.t) - buyboxScore(a.t));
   else list.sort((a, b) => (b.fit == null ? -1 : b.fit) - (a.fit == null ? -1 : a.fit));
   if (currentTargetView === 'table' && tableSort.key) list.sort(compareForTable);
@@ -1174,13 +1177,17 @@ async function addLeadToContacts(i, btn) {
 const N8N_BASE = 'https://victoryvision.app.n8n.cloud/webhook';
 let FIN = null, CREDIT_PRICES = {}, LAST_CHAT = null, BUYBOX_CUTOFF = null;
 const FLAG_LABEL = { strong_cash_flow: ['Covers debt 1.5x+', 'ins-good'], covers_debt: ['Covers debt 1.25x+', 'ins-good'], thin_coverage: ['Thin debt coverage', 'ins-warn'], under_earning_vs_peers: ['Under-earning vs peers', 'ins-up'], priced_below_peers: ['Priced below peers', 'ins-up'], priced_above_peers: ['Priced above peers', 'ins-warn'], below_peer_price_psf: ['Below peer $/sq ft', 'ins-up'], high_cap_vs_peers: ['High cap vs peers', 'ins-up'], vacancy_upside: ['Vacancy upside', 'ins-up'], flood_zone_high_risk: ['Flood zone risk', 'ins-warn'], income_not_disclosed: ['Income not disclosed', 'ins-neutral'], value_add_candidate: ['Value-add', 'ins-up'], verify_financials: ['Verify financials', 'ins-warn'] };
+var INS_VIEW = 'targets_cash_after_debt_v';
+var INS_COLS = 'id,kind,state,city,county,zip,peer_cat,sub_type,noi,noi_basis,cap_rate_pct,sq_ft,occupancy_pct,year_established,margin,multiple,price_psf,peer_margin,peer_multiple,peer_price_psf,peer_cap_rate,peer_basis,loan_rate_pct,annual_debt_service,income_for_debt,dscr,flags,flood_zone';
+var INS_CASH_COLS = ',income_basis,income_estimated,cre_bucket,est_cap_low_pct,est_cap_high_pct,income_low,income_base,income_high,loan_rate_base_pct,loan_rate_stress_pct,down_pct,term_yrs,equity_required,debt_service_base,debt_service_stress,cash_after_debt_low,cash_after_debt_base,cash_after_debt_high,dscr_low,dscr_base,dscr_high,cash_on_cash_pct,breakeven_income,breakeven_cap_pct,covers_debt_conservative,sba_capped,needs_verification';
 async function mergeInsights() {
   try {
     const map = {};
     for (let from = 0; from < 20000; from += 1000) {
-      const { data, error } = await supabaseClient.from('targets_insights_v')
-        .select('id,kind,state,city,county,zip,peer_cat,sub_type,noi,noi_basis,cap_rate_pct,sq_ft,occupancy_pct,year_established,margin,multiple,price_psf,peer_margin,peer_multiple,peer_price_psf,peer_cap_rate,peer_basis,loan_rate_pct,annual_debt_service,income_for_debt,dscr,flags,flood_zone')
+      const { data, error } = await supabaseClient.from(INS_VIEW)
+        .select(INS_VIEW === 'targets_cash_after_debt_v' ? INS_COLS + INS_CASH_COLS : INS_COLS)
         .range(from, from + 999);
+      if (error && from === 0 && INS_VIEW !== 'targets_insights_v') { console.warn('cash view unavailable, using insights only', error); INS_VIEW = 'targets_insights_v'; from = -1000; continue; }
       if (error || !data) break;
       data.forEach(r => { map[r.id] = r; });
       if (data.length < 1000) break;
@@ -1213,6 +1220,9 @@ function passesAdvanced(t) {
   const pt = (document.getElementById('advPropType') || {}).value;
   if (pt && i.peer_cat !== pt) return false;
   const d = numVal('advMinDscr'); if (d !== null && !ok(i.dscr, v => v >= d)) return false;
+  const statedCash = i.income_basis && !i.income_estimated && !i.needs_verification;
+  const mca = numVal('advMinCashAfter'); if (mca !== null && !ok(statedCash ? i.cash_after_debt_base : null, v => v >= mca)) return false;
+  const cdc = document.getElementById('advCoversConservative'); if (cdc && cdc.checked && !(statedCash && i.covers_debt_conservative)) return false;
   const mm = numVal('advMaxMultiple'); if (mm !== null && !ok(i.multiple, v => v <= mm)) return false;
   const cap = numVal('advMinCap'); if (cap !== null && !ok(i.cap_rate_pct, v => v >= cap)) return false;
   const noi = numVal('advMinNoi'); if (noi !== null && !ok(i.noi, v => v >= noi)) return false;
@@ -1237,6 +1247,7 @@ function insightBadges(t) {
   f = order.filter(k => f.includes(k) && !(k === 'under_earning_vs_peers' && f.includes('value_add_candidate')));
   const parts = f.slice(0, 4).map(k => `<span class="ins-b ${FLAG_LABEL[k][1]}">${FLAG_LABEL[k][0]}</span>`);
   if (i.dscr != null && !verify) parts.push(`<span class="ins-b ins-neutral" title="Income divided by annual debt service at ${i.loan_rate_pct}%">${Number(i.dscr).toFixed(2)}x coverage</span>`);
+  const cb = cashBadge(i); if (cb) parts.push(cb);
   return parts.length ? `<div class="ins-badges">${parts.join('')}</div>` : '';
 }
 function insightDetailsHtml(t) {
@@ -1254,7 +1265,7 @@ function insightDetailsHtml(t) {
   } else {
     h += row('Margin', pct(i.margin)) + row('Peer margin', pct(i.peer_margin)) + row('Price / cash flow', i.multiple != null ? i.multiple + 'x' : '\u2014') + row('Peer multiple', i.peer_multiple != null ? Number(i.peer_multiple).toFixed(2) + 'x' : '\u2014');
   }
-  h += '</div><div class="adv-note">Peers: ' + esc(i.peer_basis || '') + '. ' + (i.kind === 'cre' ? 'Assumes ' + (FIN ? FIN.cre_down_pct : 25) + '% down, ' + (FIN ? FIN.cre_amort_yrs : 25) + '-yr amortization.' : 'Assumes SBA ' + (FIN ? FIN.sba_down_pct : 10) + '% down, ' + (FIN ? FIN.sba_term_yrs : 10) + '-yr term; Main Street SDE reduced by a replacement owner salary.') + ' Rates as of ' + (FIN && FIN.rates_as_of ? FIN.rates_as_of : 'latest') + '.</div>' + insightBadges(t) + '</div>';
+  h += '</div><div class="adv-note">Peers: ' + esc(i.peer_basis || '') + '. ' + (i.kind === 'cre' ? 'Assumes ' + (FIN ? FIN.cre_down_pct : 25) + '% down, ' + (FIN ? FIN.cre_amort_yrs : 25) + '-yr amortization.' : 'Assumes SBA ' + (FIN ? FIN.sba_down_pct : 10) + '% down, ' + (FIN ? FIN.sba_term_yrs : 10) + '-yr term; Main Street SDE reduced by a replacement owner salary.') + ' Rates as of ' + (FIN && FIN.rates_as_of ? FIN.rates_as_of : 'latest') + '.</div>' + insightBadges(t) + '</div>' + cashAfterDebtHtml(t);
   const list = (title, arr) => arr && arr.length ? `<div style="margin-top:6px;"><strong>${title}</strong><ul>${arr.map(x => '<li>' + esc(x) + '</li>').join('')}</ul></div>` : '';
   const notes = [e.working_capital_note, e.customer_concentration_note, e.deferred_maintenance_note].filter(Boolean);
   if ((e.key_risks || []).length || (e.diligence_items || []).length || e.value_add_thesis || notes.length) {
@@ -1348,6 +1359,46 @@ async function rankMyBuyBox() {
     await loadTargets();
   } catch (e) { alert('Could not reach the ranking service.'); }
   finally { btn.disabled = false; btn.innerHTML = '&#11088; Rank top 10% for my buy box'; }
+}
+</script>
+<script>
+function cashMoney(v) { v = Number(v); if (!isFinite(v)) return '—'; const a = Math.abs(v); const s = a >= 1e6 ? '$' + (a / 1e6).toFixed(1) + 'M' : '$' + Math.round(a / 1000) + 'K'; return (v < 0 ? '-' : '') + s; }
+function cashTier(i) { if (!i || !i.income_basis || i.cash_after_debt_base == null) return 0; if (i.needs_verification) return 1; if (i.income_estimated) return 2; return 3; }
+function cashSortKey(t, mode) { const i = t._ins; const tier = cashTier(i); if (!tier) return -9e15; const v = mode === 'coc' ? Number(i.cash_on_cash_pct || 0) : Number(i.cash_after_debt_base || 0); return tier * 1e12 + Math.max(-4e11, Math.min(4e11, v)); }
+function cashBadge(i) {
+  if (!i || !i.income_basis || i.cash_after_debt_base == null) return '';
+  if (i.needs_verification) return '<span class="ins-b ins-warn" title="The listing numbers look inconsistent, for example a price at or below one year of income. Confirm with the broker before relying on any math.">Verify numbers</span>';
+  const lo = Number(i.cash_after_debt_low), hi = Number(i.cash_after_debt_high), base = Number(i.cash_after_debt_base);
+  const range = (lo === hi ? cashMoney(base) : cashMoney(Math.min(lo, hi)) + ' to ' + cashMoney(Math.max(lo, hi))) + '/yr after debt';
+  const cls = i.income_estimated ? 'ins-neutral' : (lo >= 0 ? 'ins-good' : (base >= 0 ? 'ins-up' : 'ins-warn'));
+  const tip = 'Cash left each year after loan payments, from a downside case to as listed, at today\'s rates.' + (i.income_estimated ? ' The listing gives no NOI, so income is estimated from typical cap rates for this property type.' : '');
+  return '<span class="ins-b ' + cls + '" title="' + tip.replace(/"/g, '&quot;') + '">' + (i.income_estimated ? 'Est. ' : '') + range + '</span>';
+}
+function cashAfterDebtHtml(t) {
+  const i = t._ins; if (!i || !i.income_basis || i.debt_service_base == null) return '';
+  const bucket = String(i.cre_bucket || 'this property type').toLowerCase().replace(/_/g, ' ');
+  const BASIS = { stated_noi: 'NOI stated in the listing', pro_forma_noi: 'pro forma NOI from the listing (projected, not in place)', listed_cap_rate: 'NOI implied by the listed cap rate', market_cap_estimate: 'estimated NOI. The listing gives none, so this uses typical 2026 cap rates for ' + bucket + ' (' + i.est_cap_low_pct + '% to ' + i.est_cap_high_pct + '%)', sde_less_manager: 'seller\'s discretionary earnings less a replacement manager salary', cash_flow: 'cash flow stated in the listing' };
+  const est = !!i.income_estimated && i.income_basis === 'market_cap_estimate';
+  const col = (title, inc, rate, ds, cash, dscr) => '<td style="padding:6px 10px;vertical-align:top;border:1px solid #e6e9ef;"><div class="stat-label">' + title + '</div><div>Income <strong>' + cashMoney(inc) + '</strong></div><div>Loan rate ' + Number(rate).toFixed(2) + '%</div><div>Debt service ' + cashMoney(ds) + '</div><div style="margin-top:4px;font-size:1.05rem;font-weight:700;color:' + (Number(cash) >= 0 ? '#1e6b34' : '#8a2b2b') + ';">' + cashMoney(cash) + '/yr</div><div class="adv-note">' + (dscr != null ? Number(dscr).toFixed(2) + 'x coverage' : '') + '</div></td>';
+  const hasHigh = Number(i.income_high) !== Number(i.income_base);
+  const cell = (l, v) => '<div><div class="stat-label">' + l + '</div><div class="stat-value">' + v + '</div></div>';
+  let h = '<div class="ins-section"><h4>Cash left after debt service</h4>';
+  if (i.needs_verification) h += '<div class="adv-note" style="color:#8a2b2b;font-weight:700;margin-bottom:6px;">These listing numbers look inconsistent. Confirm price and income with the broker before relying on this math.</div>';
+  h += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><tr>'
+    + col(est ? 'Low estimate' : 'Downside', i.income_low, i.loan_rate_stress_pct, i.debt_service_stress, i.cash_after_debt_low, i.dscr_low)
+    + col(est ? 'Mid estimate' : 'As listed', i.income_base, i.loan_rate_base_pct, i.debt_service_base, i.cash_after_debt_base, i.dscr_base)
+    + (hasHigh ? col(est ? 'High estimate' : 'Upside at 93% occupancy', i.income_high, i.loan_rate_base_pct, i.debt_service_base, i.cash_after_debt_high, i.dscr_high) : '')
+    + '</tr></table></div>';
+  h += '<div class="details-grid" style="margin-top:8px;">'
+    + cell('Cash needed at close', cashMoney(i.equity_required) + (i.sba_capped ? ' (SBA loan capped at $5M)' : ''))
+    + cell('Cash-on-cash, as listed', i.cash_on_cash_pct != null ? i.cash_on_cash_pct + '%' : '—')
+    + cell('Income needed for 1.25x coverage', cashMoney(i.breakeven_income))
+    + (i.kind === 'cre' && i.breakeven_cap_pct != null ? cell('Cap rate needed for 1.25x', i.breakeven_cap_pct + '%') : '')
+    + '</div>';
+  const downside = est ? 'Low estimate uses the bottom of that cap rate range and a loan rate 1 point higher.' : 'Downside: income ' + (i.kind === 'cre' ? (i.income_basis === 'pro_forma_noi' ? '20' : '10') : '15') + '% lower and the loan rate 1 point higher.';
+  const terms = i.kind === 'cre' ? 'Assumes ' + i.down_pct + '% down and a ' + i.term_yrs + '-year amortization.' : 'Assumes an SBA 7(a) loan, ' + i.down_pct + '% down, ' + i.term_yrs + '-year term' + (i.sba_capped ? ', loan capped at $5M with the rest paid in equity' : '') + '.';
+  h += '<div class="adv-note" style="margin-top:6px;">Income basis: ' + esc(BASIS[i.income_basis] || i.income_basis) + '. ' + downside + ' ' + terms + ' Excludes taxes, capital expenditure and closing costs. These are estimates, not advice: confirm with the broker and your lender.</div></div>';
+  return h;
 }
 </script>
 </body>
