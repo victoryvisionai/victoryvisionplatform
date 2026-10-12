@@ -61,8 +61,7 @@
       font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
       border: none; transition: all .2s;
     }
-    .medallion.bronze { background: linear-gradient(135deg,#CD7F32,#A0522D); color: white; }
-    .medallion.silver { background: linear-gradient(135deg,#C0C0C0,#808080); color: white; }
+    .medallion.starter { background: linear-gradient(135deg,#0B3162, #1D4F91); color: white; }
     .medallion.gold   { background: linear-gradient(135deg,#FFD700,#FFA500); color: #333; }
     .btn-nav { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
 
@@ -428,9 +427,9 @@
     <span id="userEmail" style="font-size:12px;color:rgba(255,255,255,.7);"></span>
     <button class="btn-nav" style="background:#28a745;" onclick="startTour()">📖 Tour</button>
     <button class="btn-nav" style="background:var(--red);" onclick="logout()">Sign Out</button>
-    <button id="subscriptionMedallion" class="medallion bronze"
-      data-intro="Your plan tier. Higher tiers unlock more ad credits and LinkedIn spend." data-step="1">
-      <span id="planName">Bronze</span>
+    <button id="subscriptionMedallion" class="medallion starter"
+      data-intro="Your plan tier. Gold unlocks more ad credits and LinkedIn spend." data-step="1">
+      <span id="planName">Starter</span>
     </button>
   </div>
 </header>
@@ -3046,7 +3045,7 @@ async function loadUserData() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const res = await r.json();
     userData = Array.isArray(res) ? res[0] : (res.value?.[0] || res);
-    const plan = (userData?.subscription_plan || 'bronze').toLowerCase();
+    const plan = (userData?.subscription_plan || 'starter').toLowerCase();
     const med  = document.getElementById('subscriptionMedallion');
     med.className = `medallion ${plan}`;
     document.getElementById('planName').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
