@@ -1303,7 +1303,32 @@ jane@business.com,Jane Doe,+1-555-0124,https://linkedin.com/in/janedoe,Business 
               </span>
             </label>
             <div id="customer_journey_timeline" style="border:1px solid #ddd;border-radius:6px;padding:8px 12px;background:#fafafa;max-height:320px;overflow-y:auto;font-size:13px;"></div>
-            <input type="hidden" id="customer_journey" name="customer_journey">
+            <input type="hidden" id="customer_journey">
+            <div style="margin-top:8px;"><button type="button" class="btn btn-secondary" id="logActBtn" onclick="toggleLogActivity()" style="padding:6px 12px;font-size:13px;">+ Log a call, meeting, email, reply or stage</button></div>
+            <div id="logActPanel" style="display:none;border:1px solid #d6dcea;border-radius:8px;padding:12px;margin-top:8px;background:#f8fafc;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <label style="font-size:12px;">What happened
+                  <select id="la_kind" onchange="laKindChanged()" style="width:100%;">
+                    <option value="call">Call</option><option value="meeting">Meeting</option><option value="email">Email</option><option value="sms">Text message</option><option value="linkedin">LinkedIn message</option><option value="note">Note</option><option value="stage">Move deal stage</option><option value="won">Became a paying client</option>
+                  </select></label>
+                <label style="font-size:12px;" id="la_dir_wrap">Direction <select id="la_dir" onchange="laPrefill()" style="width:100%;"></select></label>
+                <label style="font-size:12px;">Date and time <input type="datetime-local" id="la_when" style="width:100%;"></label>
+                <label style="font-size:12px;" id="la_outcome_wrap">Outcome <input type="text" id="la_outcome" maxlength="100" placeholder="connected, voicemail, agreed to next step" style="width:100%;"></label>
+                <label style="font-size:12px;" id="la_from_wrap">From <input type="text" id="la_from" maxlength="300" style="width:100%;"></label>
+                <label style="font-size:12px;" id="la_to_wrap">To <input type="text" id="la_to" maxlength="300" style="width:100%;"></label>
+                <label style="font-size:12px;grid-column:1 / -1;" id="la_subject_wrap">Subject <input type="text" id="la_subject" maxlength="300" style="width:100%;"></label>
+                <label style="font-size:12px;" id="la_deal_wrap">Deal <select id="la_deal" style="width:100%;"></select></label>
+                <label style="font-size:12px;" id="la_stage_wrap">New stage <select id="la_stage" style="width:100%;"><option value="candidate">Candidate</option><option value="soft-touch">Soft touch</option><option value="live">Live</option><option value="pitched">Pitched</option><option value="soft-circle">Soft circle</option><option value="committed">Committed</option><option value="signed">Signed / won</option><option value="declined">Declined</option><option value="no-fit">No fit</option></select></label>
+                <label style="font-size:12px;grid-column:1 / -1;" id="la_draft_wrap">Was this a platform draft you sent yourself? <select id="la_draft" style="width:100%;"><option value="">No</option></select></label>
+                <label style="font-size:12px;grid-column:1 / -1;">Message or notes <textarea id="la_body" rows="4" maxlength="20000" placeholder="Paste the email or text, or summarize the call or meeting" style="width:100%;"></textarea></label>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary" id="la_save" onclick="submitLogActivity()" style="padding:6px 14px;font-size:13px;">Add to journey</button>
+                <button type="button" class="btn btn-secondary" onclick="toggleLogActivity(false)" style="padding:6px 14px;font-size:13px;">Cancel</button>
+                <span id="la_msg" style="font-size:12px;color:#555;"></span>
+              </div>
+              <div style="font-size:11px;color:#777;margin-top:6px;">Entries are added to the journey. They can't overwrite or delete earlier ones.</div>
+            </div>
           </div>
           <div class="form-group">
             <label for="personal_summary">
@@ -6153,6 +6178,79 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }, 400);
 });
+</script>
+<script>
+function laEsc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+function laContactId() { const f = document.getElementById('addContactForm'); return f ? f.getAttribute('data-contact-id') : null; }
+function laShow(id, on) { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; }
+function laKindChanged() {
+  const k = document.getElementById('la_kind').value;
+  const opts = k === 'meeting' ? [['held', 'Held'], ['scheduled', 'Scheduled']] : (['call', 'email', 'sms', 'linkedin'].includes(k) ? [['outbound', 'I reached out'], ['inbound', 'They reached out or replied']] : []);
+  document.getElementById('la_dir').innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
+  laShow('la_dir_wrap', opts.length > 0);
+  laShow('la_outcome_wrap', ['call', 'meeting'].includes(k));
+  laShow('la_from_wrap', ['email', 'sms', 'linkedin', 'call'].includes(k));
+  laShow('la_to_wrap', ['email', 'sms', 'linkedin', 'call'].includes(k));
+  laShow('la_subject_wrap', k === 'email');
+  laShow('la_deal_wrap', k === 'stage'); laShow('la_stage_wrap', k === 'stage');
+  laShow('la_draft_wrap', k === 'email');
+  laPrefill();
+}
+function laPrefill() {
+  const k = document.getElementById('la_kind').value, d = document.getElementById('la_dir').value;
+  const ce = ((document.getElementById('email') || {}).value || '').trim();
+  const me = (typeof CUSTOMER_ID !== 'undefined' && CUSTOMER_ID) ? CUSTOMER_ID : '';
+  if (['email', 'sms', 'linkedin', 'call'].includes(k)) {
+    document.getElementById('la_from').value = d === 'inbound' ? ce : me;
+    document.getElementById('la_to').value = d === 'inbound' ? me : ce;
+  }
+}
+async function toggleLogActivity(force) {
+  const p = document.getElementById('logActPanel');
+  const open = force === undefined ? p.style.display === 'none' : force;
+  p.style.display = open ? '' : 'none';
+  if (!open) return;
+  if (!laContactId()) { document.getElementById('la_msg').textContent = 'Save this contact first, then log activity.'; }
+  else document.getElementById('la_msg').textContent = '';
+  const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('la_when').value = now.toISOString().slice(0, 16);
+  laKindChanged();
+  try {
+    const { data: deals } = await supabaseClient.from('campaigns').select('slug,name').eq('type', 'deal').eq('customer_id', CUSTOMER_ID).not('slug', 'is', null).order('name').limit(200);
+    document.getElementById('la_deal').innerHTML = (deals || []).map(d => `<option value="${laEsc(d.slug)}">${laEsc(d.name || d.slug)}</option>`).join('') || '<option value="">No deals yet</option>';
+  } catch (e) {}
+  try {
+    const ce = ((document.getElementById('email') || {}).value || '').trim().toLowerCase();
+    let opts = '<option value="">No</option>';
+    if (ce) {
+      const { data: drafts } = await supabaseClient.from('email').select('id,subject,created_at').eq('outcome', 'draft').eq('customer_id', CUSTOMER_ID).ilike('to', '%' + ce + '%').order('created_at', { ascending: false }).limit(20);
+      opts += (drafts || []).map(d => `<option value="${d.id}">Yes: ${laEsc((d.subject || '(no subject)').slice(0, 80))} (${String(d.created_at).slice(0, 10)})</option>`).join('');
+    }
+    document.getElementById('la_draft').innerHTML = opts;
+  } catch (e) {}
+}
+async function submitLogActivity() {
+  const cid = laContactId(), msg = document.getElementById('la_msg');
+  if (!cid) { msg.textContent = 'Save this contact first, then log activity.'; return; }
+  const k = document.getElementById('la_kind').value;
+  const whenV = document.getElementById('la_when').value;
+  const val = id => { const el = document.getElementById(id); return el && el.offsetParent !== null ? ((el.value || '').trim() || null) : null; };
+  const draft = k === 'email' ? val('la_draft') : null;
+  const params = { p_contact_id: cid, p_kind: k, p_direction: val('la_dir'), p_occurred_at: whenV ? new Date(whenV).toISOString() : new Date().toISOString(),
+    p_from: val('la_from'), p_to: val('la_to'), p_subject: val('la_subject'), p_body: (document.getElementById('la_body').value || '').trim() || null,
+    p_outcome: val('la_outcome'), p_deal_slug: k === 'stage' ? val('la_deal') : null, p_new_stage: k === 'stage' ? val('la_stage') : null, p_email_id: draft ? Number(draft) : null };
+  const btn = document.getElementById('la_save'); btn.disabled = true; msg.textContent = 'Saving...';
+  try {
+    const { data, error } = await supabaseClient.rpc('log_contact_activity', params);
+    if (error) throw error;
+    if (!data || !data.ok) { msg.textContent = 'Not saved: ' + String((data && data.reason) || 'unknown').replace(/_/g, ' ') + '.'; return; }
+    msg.textContent = data.draft_marked_sent ? 'Added. The draft is now marked as sent.' : (k === 'won' ? 'Marked as a paying client.' : 'Added to the journey.');
+    ['la_body', 'la_subject', 'la_outcome'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const { data: rows } = await supabaseClient.from('contacts').select('customer_journey').eq('id', cid).limit(1);
+    if (rows && rows[0]) renderJourneyTimeline({ customer_journey: rows[0].customer_journey });
+  } catch (e) { msg.textContent = 'Error: ' + (e.message || e); }
+  finally { btn.disabled = false; }
+}
 </script>
 </body>
 </html>
