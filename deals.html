@@ -139,6 +139,30 @@
     .details-grid .stat-value { font-size: 0.95rem; font-weight: bold; color: #0A3161; }
     .details-desc { white-space: pre-wrap; font-size: 0.88rem; color: #333; line-height: 1.45; background: #fafbfc; border: 1px solid #eee; border-radius: 6px; padding: 12px; max-height: 45vh; overflow-y: auto; }
     .details-flags { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; color: #155724; margin: 6px 0; }
+
+    .dc-card { background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); padding:16px 20px; margin:0 16px 20px; }
+    .dc-row { display:flex; gap:10px; align-items:stretch; }
+    .dc-row textarea { flex:1; min-height:56px; resize:vertical; border:1px solid #ccd3e0; border-radius:8px; padding:9px 11px; font:inherit; font-size:0.92rem; }
+    .dc-row button { min-width:120px; }
+    .dc-meta { font-size:0.78rem; color:#666; margin-top:6px; display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; }
+    .dc-intent { background:#f4f6fb; border:1px solid #d6dcea; border-radius:8px; padding:10px 12px; font-size:0.86rem; color:#33415c; margin:12px 0; }
+    .dc-results { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
+    .dc-item { border:1px solid #e0e0e0; border-radius:8px; padding:12px 14px; background:#fff; }
+    .dc-item .nm { font-weight:700; color:#0A3161; cursor:pointer; }
+    .dc-item .why { font-size:0.84rem; color:#1e3a1e; margin:6px 0 4px; }
+    .dc-item .cn { font-size:0.8rem; color:#7a4a00; }
+    .dc-score { float:right; font-weight:700; border-radius:10px; padding:2px 8px; font-size:0.78rem; }
+    .ins-badges { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+    .ins-b { font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:9px; white-space:nowrap; }
+    .ins-good { background:#e6f4ea; color:#1e6b34; } .ins-up { background:#eef5ff; color:#1a4f8f; } .ins-warn { background:#fdecea; color:#8a2b2b; } .ins-neutral { background:#f1f3f5; color:#555; }
+    .adv-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:-4px 0 14px; padding-top:10px; border-top:1px dashed #e0e4ec; }
+    .adv-bar select, .adv-bar input { padding:6px 10px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem; }
+    .adv-note { font-size:0.75rem; color:#666; }
+    .target-card.buybox-top { border:2px solid #198754; box-shadow:0 0 0 3px rgba(25,135,84,0.15); }
+    .buybox-badge { display:inline-block; background:#198754; color:#fff; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:10px; margin:0 6px 6px 0; }
+    .ins-section { margin:12px 0; padding:12px; background:#f8fafc; border:1px solid #e3e7ef; border-radius:8px; font-size:0.85rem; }
+    .ins-section h4 { margin:0 0 8px; color:#0A3161; font-size:0.92rem; }
+    .ins-section ul { margin:4px 0 0 18px; padding:0; }
   </style>
 </head>
 <body>
@@ -166,6 +190,19 @@
   <div class="page-header">
     <h1 class="page-title">Deals</h1>
     <p class="page-subtitle" id="pageSubtitle">Acquisition candidates worth pursuing</p>
+  </div>
+
+  <div class="dc-card" id="dealChatCard">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+      <strong style="color:#0A3161; font-size:1.05rem;">Describe the deal you want</strong>
+      <span class="adv-note" id="dcRates">Loading live financing rates...</span>
+    </div>
+    <div class="dc-row">
+      <textarea id="dcInput" placeholder="e.g. Car washes or self storage in the Phoenix metro under $6M where NOI covers the debt. Or: profitable HVAC or plumbing companies in North Texas, $1-3M, open to a fixer-upper." onkeydown="if (event.key === 'Enter' &amp;&amp; !event.shiftKey) { event.preventDefault(); sendDealChat(); }"></textarea>
+      <button class="btn btn-primary" id="dcSend" onclick="sendDealChat()">Find deals</button>
+    </div>
+    <div class="dc-meta"><span id="dcCost">Each search uses credits. Searches with no matches are free.</span><span><a href="#" onclick="useSavedCriteria(); return false;">Search with my saved criteria</a> &middot; <a href="companyprofile#dealCriteria">Edit my deal criteria</a></span></div>
+    <div id="dcOut"></div>
   </div>
 
   <div class="card">
@@ -218,10 +255,26 @@
       <select id="sortBy" onchange="renderTargets()">
         <option value="fit">Recommended for Me</option>
         <option value="newest">Newest</option>
-        <option value="affordable">Largest I Can Afford</option>
+        <option value="affordable">Largest I Can Afford</option><option value="dscr">Strongest debt coverage</option><option value="buybox">My buy-box score (Gold)</option>
       </select>
     </div>
 
+    <div class="adv-bar" id="advBar">
+      <select id="advKind" onchange="renderTargets()"><option value="">All deal types</option><option value="business">Operating businesses</option><option value="cre">Commercial real estate</option><option value="online">Online businesses</option></select>
+      <select id="advPropType" onchange="renderTargets()"><option value="">All property types</option></select>
+      <input type="number" id="advMinDscr" step="0.05" placeholder="Min debt coverage (1.25)" title="Income divided by annual debt service at today's rates" oninput="renderTargets()" style="width:170px;"/>
+      <input type="number" id="advMaxMultiple" step="0.1" placeholder="Max price / cash flow" oninput="renderTargets()" style="width:150px;"/>
+      <input type="number" id="advMinCap" step="0.1" placeholder="Min cap rate %" oninput="renderTargets()" style="width:120px;"/>
+      <input type="number" id="advMinNoi" placeholder="Min NOI $" oninput="renderTargets()" style="width:110px;"/>
+      <input type="number" id="advMinSqft" placeholder="Min sq ft" oninput="renderTargets()" style="width:100px;"/>
+      <input type="number" id="advMaxSqft" placeholder="Max sq ft" oninput="renderTargets()" style="width:100px;"/>
+      <input type="number" id="advEstBefore" placeholder="Est. before (year)" oninput="renderTargets()" style="width:130px;"/>
+      <select id="advHighlight" onchange="renderTargets()"><option value="">Any profile</option><option value="strong_cash_flow">Strong cash flow (covers debt 1.5x+)</option><option value="covers">Covers debt (1.25x+)</option><option value="value_add_candidate">Value-add / fixer-upper</option><option value="priced_below_peers">Priced below peers</option><option value="turnkey">Turnkey (no value-add flags)</option></select>
+      <label class="adv-note" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="advHideFlood" onchange="renderTargets()"/> Hide high-risk flood zones</label>
+      <label class="adv-note" style="display:flex;align-items:center;gap:4px;" title="When off, listings that do not disclose a number you filtered on are hidden"><input type="checkbox" id="advInclUndisclosed" checked onchange="renderTargets()"/> Include undisclosed</label>
+      <button class="btn btn-outline btn-sm" onclick="saveCriteriaFromFilters()">Save as my criteria</button>
+      <button class="btn btn-outline btn-sm" id="rankBtn" onclick="rankMyBuyBox()" style="display:none;">&#11088; Rank top 10% for my buy box</button>
+    </div>
     <div id="goldBanner" class="gold-banner" style="display:none;"></div>
     <div id="targetsContainer"><div class="empty-state">Loading...</div></div>
   </div>
@@ -520,6 +573,7 @@ function openDetails(id) {
   if (ai) h += `<div style="font-size:0.85rem; color:#0A3161; margin:8px 0;"><strong>Likelihood to close: ${ai.likelihood_to_close}%</strong> — ${esc(ai.why_it_fits || '')}</div>`;
   if (t.financing_notes) h += `<div style="font-size:0.85rem; margin:6px 0;"><strong>Financing:</strong> ${esc(t.financing_notes)}</div>`;
   if (t.broker_name || t.broker_contact) h += `<div style="font-size:0.85rem; margin:6px 0;"><strong>Broker:</strong> ${esc(t.broker_name || '')}${t.broker_contact ? ' · ' + esc(t.broker_contact) : ''}</div>`;
+  h += insightDetailsHtml(t);
   h += `<div class="details-desc">${esc(t.description || 'No description provided.')}</div>`;
   if (IS_CURATOR && t.notes && !holdReason(t)) h += `<div style="font-size:0.82rem; color:#666; margin-top:8px;"><strong>Internal notes:</strong> ${esc(t.notes)}</div>`;
   h += '<div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">' +
@@ -640,6 +694,7 @@ async function loadTargets() {
     return vis.split(',').map(x => x.trim()).some(x => x === 'all' || x === CUSTOMER_ID.toLowerCase());
   });
 
+  await mergeInsights();
   // Dev #14: Gold early access
   GOLD_P90 = computeGoldCutoff(data || []);
   const goldEarly = allTargets.filter(isGoldEarly);
@@ -727,12 +782,15 @@ function renderTargets() {
     (!mgmtStayF || t.management_staying) &&
     (!document.getElementById('filterSavedOnly').checked || savedTargets.includes(t.id)) &&
     (!document.getElementById('filterHideFbaEcom').checked || !['amazon fba','amazon fbm','ecommerce'].includes((t.industry || '').toLowerCase())) &&
-    (!document.getElementById('filterHideLand').checked || !/real estate - land$/i.test(t.industry || ''))
+    (!document.getElementById('filterHideLand').checked || !/real estate - land$/i.test(t.industry || '')) &&
+    passesAdvanced(t)
   );
 
   list = list.map(t => ({ t, fit: computeFitScore(t) }));
   if (sortBy === 'newest') list.sort((a, b) => new Date(b.t.created_at) - new Date(a.t.created_at));
   else if (sortBy === 'affordable') list.sort((a, b) => (Number(b.t.asking_price_usd) || 0) - (Number(a.t.asking_price_usd) || 0));
+  else if (sortBy === 'dscr') list.sort((a, b) => ((b.t._ins && b.t._ins.dscr) || -1) - ((a.t._ins && a.t._ins.dscr) || -1));
+  else if (sortBy === 'buybox') list.sort((a, b) => buyboxScore(b.t) - buyboxScore(a.t));
   else list.sort((a, b) => (b.fit == null ? -1 : b.fit) - (a.fit == null ? -1 : a.fit));
   if (currentTargetView === 'table' && tableSort.key) list.sort(compareForTable);
   else if (IS_GOLD || IS_CURATOR) {
@@ -747,7 +805,7 @@ function renderTargets() {
   if (currentTargetView === 'table') { container.innerHTML = renderTargetsTable(list); return; }
 
   container.innerHTML = '<div class="targets-grid">' + list.map(({ t, fit }) => `
-    <div class="target-card${isGoldEarly(t) ? ' gold-early' : ''}">${isGoldEarly(t) ? goldBadge(t) : ''}
+    <div class="target-card${isGoldEarly(t) ? ' gold-early' : ''}${isBuyboxTop(t) ? ' buybox-top' : ''}">${isGoldEarly(t) ? goldBadge(t) : ''}${isBuyboxTop(t) ? buyboxBadge(t) : ''}
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div class="target-name clickable" onclick="openDetails('${t.id}')" title="View full details">${esc(t.name)}</div>
         <div style="display:flex; gap:6px; align-items:center;">
@@ -756,7 +814,7 @@ function renderTargets() {
           ${!IS_CURATOR ? `<button onclick="toggleBookmark('${t.id}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem; color:${savedTargets.includes(t.id) ? '#FFA500' : '#ccc'};" title="Save for later">\u2605</button>` : ''}
         </div>
       </div>
-      <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>${curatorReasonHtml(t)}
+      <div class="target-meta">${esc(t.industry || '\u2014')} \u00b7 ${esc(t.location || '\u2014')} \u00b7 via ${esc(t.source)}</div>${curatorReasonHtml(t)}${insightBadges(t)}
       ${t.ai_scores && t.ai_scores[CUSTOMER_ID] ? `
         <div style="font-size:0.8rem; color:#0A3161; margin:6px 0;">
           <strong>Likelihood to close: ${t.ai_scores[CUSTOMER_ID].likelihood_to_close}%</strong> \u2014 ${esc(t.ai_scores[CUSTOMER_ID].why_it_fits || '')}
@@ -1112,5 +1170,185 @@ async function addLeadToContacts(i, btn) {
   <div class="ls-hint">Public professional info only. Results can be wrong, so check before reaching out.</div>
 </div>
 
+<script>
+const N8N_BASE = 'https://victoryvision.app.n8n.cloud/webhook';
+let FIN = null, CREDIT_PRICES = {}, LAST_CHAT = null, BUYBOX_CUTOFF = null;
+const FLAG_LABEL = { strong_cash_flow: ['Covers debt 1.5x+', 'ins-good'], covers_debt: ['Covers debt 1.25x+', 'ins-good'], thin_coverage: ['Thin debt coverage', 'ins-warn'], under_earning_vs_peers: ['Under-earning vs peers', 'ins-up'], priced_below_peers: ['Priced below peers', 'ins-up'], priced_above_peers: ['Priced above peers', 'ins-warn'], below_peer_price_psf: ['Below peer $/sq ft', 'ins-up'], high_cap_vs_peers: ['High cap vs peers', 'ins-up'], vacancy_upside: ['Vacancy upside', 'ins-up'], flood_zone_high_risk: ['Flood zone risk', 'ins-warn'], income_not_disclosed: ['Income not disclosed', 'ins-neutral'], value_add_candidate: ['Value-add', 'ins-up'], verify_financials: ['Verify financials', 'ins-warn'] };
+async function mergeInsights() {
+  try {
+    const map = {};
+    for (let from = 0; from < 20000; from += 1000) {
+      const { data, error } = await supabaseClient.from('targets_insights_v')
+        .select('id,kind,state,city,county,zip,peer_cat,sub_type,noi,noi_basis,cap_rate_pct,sq_ft,occupancy_pct,year_established,margin,multiple,price_psf,peer_margin,peer_multiple,peer_price_psf,peer_cap_rate,peer_basis,loan_rate_pct,annual_debt_service,income_for_debt,dscr,flags,flood_zone')
+        .range(from, from + 999);
+      if (error || !data) break;
+      data.forEach(r => { map[r.id] = r; });
+      if (data.length < 1000) break;
+    }
+    allTargets.forEach(t => { t._ins = map[t.id] || null; });
+    const types = [...new Set(allTargets.map(t => t._ins && t._ins.kind === 'cre' ? t._ins.peer_cat : null).filter(Boolean))].sort();
+    const sel = document.getElementById('advPropType');
+    if (sel && sel.options.length <= 1) types.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+  } catch (e) { console.warn('insights unavailable', e); }
+  computeBuyboxCutoff();
+  loadFinAndPrices();
+}
+async function loadFinAndPrices() {
+  try { const { data } = await supabaseClient.rpc('current_financing'); FIN = data; } catch (e) {}
+  try { const { data } = await supabaseClient.from('credit_catalog').select('key,credits').eq('kind', 'price'); (data || []).forEach(r => { CREDIT_PRICES[r.key] = r.credits; }); } catch (e) {}
+  const r = document.getElementById('dcRates');
+  if (r) r.textContent = FIN ? `Live rates: real estate loans ~${FIN.cre_rate_pct}%, SBA ~${FIN.sba_rate_pct}% (10-yr Treasury ${FIN.treasury_10y_pct}%, Prime ${FIN.prime_pct}%)` : '';
+  const c = document.getElementById('dcCost');
+  if (c && CREDIT_PRICES['deals.chat_search']) c.textContent = `Each search uses ${CREDIT_PRICES['deals.chat_search']} credits. Searches with no matches are free.`;
+  const rb = document.getElementById('rankBtn');
+  if (rb && (IS_GOLD || IS_CURATOR)) { rb.style.display = ''; if (CREDIT_PRICES['deals.buybox_rank']) rb.title = 'Uses ' + CREDIT_PRICES['deals.buybox_rank'] + ' credits'; }
+}
+function numVal(id) { const el = document.getElementById(id); const v = el ? parseFloat(el.value) : NaN; return isNaN(v) ? null : v; }
+function passesAdvanced(t) {
+  const i = t._ins || {};
+  const inc = document.getElementById('advInclUndisclosed'); const incl = inc ? inc.checked : true;
+  const ok = (val, test) => (val === null || val === undefined) ? incl : test(Number(val));
+  const kind = (document.getElementById('advKind') || {}).value;
+  if (kind && i.kind !== kind) return false;
+  const pt = (document.getElementById('advPropType') || {}).value;
+  if (pt && i.peer_cat !== pt) return false;
+  const d = numVal('advMinDscr'); if (d !== null && !ok(i.dscr, v => v >= d)) return false;
+  const mm = numVal('advMaxMultiple'); if (mm !== null && !ok(i.multiple, v => v <= mm)) return false;
+  const cap = numVal('advMinCap'); if (cap !== null && !ok(i.cap_rate_pct, v => v >= cap)) return false;
+  const noi = numVal('advMinNoi'); if (noi !== null && !ok(i.noi, v => v >= noi)) return false;
+  const s1 = numVal('advMinSqft'); if (s1 !== null && !ok(i.sq_ft, v => v >= s1)) return false;
+  const s2 = numVal('advMaxSqft'); if (s2 !== null && !ok(i.sq_ft, v => v <= s2)) return false;
+  const est = numVal('advEstBefore'); if (est !== null && !ok(i.year_established, v => v <= est)) return false;
+  const f = i.flags || [];
+  const hl = (document.getElementById('advHighlight') || {}).value;
+  if (hl === 'covers' && !(f.includes('covers_debt') || f.includes('strong_cash_flow'))) return false;
+  if (hl === 'turnkey' && (f.includes('value_add_candidate') || f.includes('verify_financials'))) return false;
+  if (hl && hl !== 'covers' && hl !== 'turnkey' && !f.includes(hl)) return false;
+  const hf = document.getElementById('advHideFlood');
+  if (hf && hf.checked && f.includes('flood_zone_high_risk')) return false;
+  return true;
+}
+function insightBadges(t) {
+  const i = t._ins; if (!i) return '';
+  let f = (i.flags || []).slice();
+  const verify = f.includes('verify_financials');
+  if (verify) f = f.filter(x => !['strong_cash_flow', 'covers_debt', 'priced_below_peers'].includes(x));
+  const order = ['verify_financials', 'strong_cash_flow', 'covers_debt', 'thin_coverage', 'value_add_candidate', 'priced_below_peers', 'under_earning_vs_peers', 'below_peer_price_psf', 'high_cap_vs_peers', 'vacancy_upside', 'priced_above_peers', 'flood_zone_high_risk', 'income_not_disclosed'];
+  f = order.filter(k => f.includes(k) && !(k === 'under_earning_vs_peers' && f.includes('value_add_candidate')));
+  const parts = f.slice(0, 4).map(k => `<span class="ins-b ${FLAG_LABEL[k][1]}">${FLAG_LABEL[k][0]}</span>`);
+  if (i.dscr != null && !verify) parts.push(`<span class="ins-b ins-neutral" title="Income divided by annual debt service at ${i.loan_rate_pct}%">${Number(i.dscr).toFixed(2)}x coverage</span>`);
+  return parts.length ? `<div class="ins-badges">${parts.join('')}</div>` : '';
+}
+function insightDetailsHtml(t) {
+  const i = t._ins; if (!i) return '';
+  const a = t.attributes || {}, p = a.parsed || {}, e = a.enriched || {}, fl = a.flood || null;
+  const money = v => v != null ? fmtMoney(v) : '\u2014';
+  const pct = v => v != null ? (Number(v) * 100).toFixed(1) + '%' : '\u2014';
+  const row = (l, v) => `<div><div class="stat-label">${l}</div><div class="stat-value">${v}</div></div>`;
+  let h = '<div class="ins-section"><h4>Deal math at today\'s rates</h4><div class="details-grid">';
+  const incomeLbl = i.kind === 'cre' ? 'NOI' + (i.noi_basis ? ' (' + String(i.noi_basis).replace(/_/g, ' ') + ')' : '') : 'Cash flow for debt';
+  h += row(incomeLbl, money(i.income_for_debt)) + row('Loan rate (live)', i.loan_rate_pct != null ? i.loan_rate_pct + '%' : '\u2014') + row('Annual debt service', money(i.annual_debt_service)) + row('Debt coverage', i.dscr != null ? Number(i.dscr).toFixed(2) + 'x' : '\u2014');
+  if (i.kind === 'cre') {
+    const fz = fl ? (fl.zone ? fl.zone + (fl.special_flood_hazard_area ? ' (high risk)' : '') : String(fl.status || '').replace(/_/g, ' ')) : 'Not checked yet';
+    h += row('Cap rate', i.cap_rate_pct != null ? i.cap_rate_pct + '%' : '\u2014') + row('Peer cap rate', i.peer_cap_rate != null ? Number(i.peer_cap_rate).toFixed(2) + '%' : '\u2014') + row('Price / sq ft', i.price_psf != null ? fmtMoney(i.price_psf) : '\u2014') + row('Peer price / sq ft', i.peer_price_psf != null ? fmtMoney(i.peer_price_psf) : '\u2014') + row('Occupancy', i.occupancy_pct != null ? i.occupancy_pct + '%' : '\u2014') + row('FEMA flood zone', esc(fz));
+  } else {
+    h += row('Margin', pct(i.margin)) + row('Peer margin', pct(i.peer_margin)) + row('Price / cash flow', i.multiple != null ? i.multiple + 'x' : '\u2014') + row('Peer multiple', i.peer_multiple != null ? Number(i.peer_multiple).toFixed(2) + 'x' : '\u2014');
+  }
+  h += '</div><div class="adv-note">Peers: ' + esc(i.peer_basis || '') + '. ' + (i.kind === 'cre' ? 'Assumes ' + (FIN ? FIN.cre_down_pct : 25) + '% down, ' + (FIN ? FIN.cre_amort_yrs : 25) + '-yr amortization.' : 'Assumes SBA ' + (FIN ? FIN.sba_down_pct : 10) + '% down, ' + (FIN ? FIN.sba_term_yrs : 10) + '-yr term; Main Street SDE reduced by a replacement owner salary.') + ' Rates as of ' + (FIN && FIN.rates_as_of ? FIN.rates_as_of : 'latest') + '.</div>' + insightBadges(t) + '</div>';
+  const list = (title, arr) => arr && arr.length ? `<div style="margin-top:6px;"><strong>${title}</strong><ul>${arr.map(x => '<li>' + esc(x) + '</li>').join('')}</ul></div>` : '';
+  const notes = [e.working_capital_note, e.customer_concentration_note, e.deferred_maintenance_note].filter(Boolean);
+  if ((e.key_risks || []).length || (e.diligence_items || []).length || e.value_add_thesis || notes.length) {
+    h += '<div class="ins-section"><h4>Risks and diligence (AI-read from the listing)</h4>';
+    if (e.value_add_thesis) h += `<div><strong>Upside:</strong> ${esc(e.value_add_thesis)}</div>`;
+    h += list('Key risks', e.key_risks) + list('Check first', e.diligence_items) + list('Licenses and consents', e.licenses_required) + list('Environmental', e.environmental_flags) + list('Notes', notes);
+    h += '<div class="adv-note" style="margin-top:6px;">Extracted only from what the listing states. Verify everything with the broker.</div></div>';
+  } else h += '<div class="adv-note" style="margin:8px 0;">The AI risk review for this listing is still in the queue.</div>';
+  if (p.hidden_fields && p.hidden_fields.length) h += `<div class="adv-note" style="margin:6px 0;">Not disclosed publicly (ask the broker): ${esc(p.hidden_fields.join(', '))}</div>`;
+  return h;
+}
+function buyboxScore(t) { const s = t.ai_scores && t.ai_scores[CUSTOMER_ID]; return s && s.rank_source === 'buybox' ? (Number(s.fit_score) || 0) : -1; }
+function computeBuyboxCutoff() { const xs = allTargets.map(buyboxScore).filter(x => x >= 0).sort((a, b) => b - a); BUYBOX_CUTOFF = xs.length >= 5 ? xs[Math.max(0, Math.ceil(xs.length * 0.1) - 1)] : null; }
+function isBuyboxTop(t) { return (IS_GOLD || IS_CURATOR) && BUYBOX_CUTOFF != null && buyboxScore(t) >= BUYBOX_CUTOFF && buyboxScore(t) >= 60; }
+function buyboxBadge(t) { const s = t.ai_scores[CUSTOMER_ID]; return `<span class="buybox-badge" title="${esc(s.why_it_fits || '')}">Top 10% for your buy box &middot; ${s.fit_score}</span>`; }
+function showToastMsg(m) { const b = document.getElementById('statusBanner'); if (!b) { alert(m); return; } b.innerHTML = `<div style="background:#d4edda;color:#155724;padding:10px 16px;margin:10px 16px;border-radius:6px;">${esc(m)}</div>`; setTimeout(() => { b.innerHTML = ''; }, 6000); }
+async function sendDealChat(msgOverride) {
+  const inp = document.getElementById('dcInput'); const msg = (msgOverride || inp.value || '').trim();
+  if (msg.length < 3) return;
+  const btn = document.getElementById('dcSend'), out = document.getElementById('dcOut');
+  btn.disabled = true; btn.textContent = 'Searching...';
+  out.innerHTML = '<div class="dc-intent">Reading your request, screening every current listing, then ranking the best fits at today\'s financing rates. This takes about 30 seconds.</div>';
+  try {
+    const r = await fetch(N8N_BASE + '/deals/chat-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_id: CUSTOMER_ID, message: msg }) });
+    const j = await r.json();
+    if (!j.ok) {
+      const why = j.reason === 'credits_required' ? `This search needs ${j.price} credits and you have ${j.balance}. Credits reset monthly, or <a href="settings#billing-section">add more</a>.` : (j.refunded ? 'Something went wrong ranking results. You were not charged. Please try again.' : esc(j.reason || 'Search failed.'));
+      out.innerHTML = `<div class="dc-intent">${why}</div>`; return;
+    }
+    LAST_CHAT = { message: msg, filters: j.filters, appetite: j.appetite };
+    let h = `<div class="dc-intent"><strong>I searched for:</strong> ${esc(j.intent || msg)}<br><span class="adv-note">${j.total_matches} listings passed the screen${j.relaxed && j.relaxed.length ? ' after loosening ' + esc(j.relaxed.join(', ').replace(/_/g, ' ')) : ''}. Showing the best ${(j.results || []).length}.${j.balance != null ? ' Credits left: ' + j.balance + '.' : ''}</span> <a href="#" onclick="saveChatAsCriteria(); return false;" style="margin-left:6px;">Save this as my criteria</a></div>`;
+    if (!j.results || !j.results.length) h += `<div class="dc-intent">${esc(j.message || 'No matches.')}</div>`;
+    else h += '<div class="dc-results">' + j.results.map(x => {
+      const sc = Number(x.fit_score) || 0;
+      const col = sc >= 75 ? 'background:#d4edda;color:#155724' : sc >= 55 ? 'background:#fff3cd;color:#856404' : 'background:#f8d7da;color:#721c24';
+      const t = allTargets.find(y => y.id === x.id);
+      return `<div class="dc-item"><span class="dc-score" style="${col}">${sc}</span><div class="nm" onclick="openDetails('${x.id}')">${esc(x.name)}</div>
+        <div class="target-meta" style="margin:2px 0 0;">${esc(x.location || '')} &middot; ${x.price ? fmtMoney(x.price) : 'Price n/d'}${x.cash_flow ? ' &middot; CF ' + fmtMoney(x.cash_flow) : ''}${x.noi ? ' &middot; NOI ' + fmtMoney(x.noi) : ''}${x.dscr != null ? ' &middot; ' + Number(x.dscr).toFixed(2) + 'x coverage' : ''}</div>
+        ${t ? insightBadges(t) : ''}
+        <div class="why">${esc(x.why || '')}</div><div class="cn">${esc(x.concerns || '')}</div>
+        <div style="margin-top:6px; display:flex; gap:6px;"><button class="btn btn-outline btn-sm" onclick="openDetails('${x.id}')">Details</button>${!IS_CURATOR ? `<button class="btn btn-success btn-sm" onclick="expressInterest('${x.id}')">I'm Interested</button>` : ''}</div></div>`;
+    }).join('') + '</div>';
+    out.innerHTML = h;
+  } catch (e) { out.innerHTML = '<div class="dc-intent">Could not reach the search service. Please try again.</div>'; }
+  finally { btn.disabled = false; btn.textContent = 'Find deals'; }
+}
+function useSavedCriteria() { sendDealChat('Show me the best current deals for my saved deal criteria and deal description.'); }
+async function saveAcquisitionPatch(patch) {
+  const { data } = await supabaseClient.from('users').select('acquisition_profile').eq('email', CUSTOMER_ID).limit(1);
+  const cur = (data && data[0] && data[0].acquisition_profile) || {};
+  const next = Object.assign({}, cur, patch, { updated_at: new Date().toISOString() });
+  const { error } = await supabaseClient.from('users').update({ acquisition_profile: next }).eq('email', CUSTOMER_ID);
+  if (error) { alert('Could not save: ' + error.message); return false; }
+  acquisitionProfile = next; return true;
+}
+async function saveCriteriaFromFilters() {
+  const f = {};
+  const kind = document.getElementById('advKind').value; if (kind) f.kinds = [kind];
+  const st = document.getElementById('filterState').value; if (st) f.states = [st];
+  const loc = document.getElementById('filterLocation').value.trim(); if (loc) f.places = [loc];
+  const pt = document.getElementById('advPropType').value; if (pt) f.property_types = [pt];
+  const ind = document.getElementById('filterIndustry').value; if (ind) f.industries_include = [ind];
+  const map = { filterMinPrice: 'price_min', filterMaxPrice: 'price_max', filterMinCashFlow: 'cash_flow_min', filterMinRevenue: 'revenue_min', advMinDscr: 'dscr_min', advMaxMultiple: 'multiple_max', advMinCap: 'cap_rate_min', advMinSqft: 'sq_ft_min', advMaxSqft: 'sq_ft_max', advEstBefore: 'established_before' };
+  Object.keys(map).forEach(id => { const v = numVal(id); if (v !== null) f[map[id]] = v; });
+  if (document.getElementById('filterSellerFinancing').checked) f.seller_financing = true;
+  const hl = document.getElementById('advHighlight').value;
+  if (hl === 'value_add_candidate') f.value_add_appetite = 'seek';
+  else if (hl === 'turnkey') f.value_add_appetite = 'avoid';
+  else if (hl === 'covers') f.dscr_min = f.dscr_min || 1.25;
+  else if (hl) f.flags_any = [hl];
+  if (document.getElementById('advHideFlood').checked) f.flags_avoid = ['flood_zone_high_risk'];
+  f.include_undisclosed = document.getElementById('advInclUndisclosed').checked;
+  f.exclude_fba_ecom = document.getElementById('filterHideFbaEcom').checked;
+  f.exclude_land = document.getElementById('filterHideLand').checked;
+  if (await saveAcquisitionPatch({ filters: f })) showToastMsg('Saved as your deal criteria. The deal chat, alerts and ranking will use it.');
+}
+async function saveChatAsCriteria() {
+  if (!LAST_CHAT) return;
+  const f = Object.assign({}, LAST_CHAT.filters || {}); if (LAST_CHAT.appetite) f.value_add_appetite = LAST_CHAT.appetite;
+  if (await saveAcquisitionPatch({ filters: f, last_chat_request: LAST_CHAT.message })) showToastMsg('Saved this search as your deal criteria.');
+}
+async function rankMyBuyBox() {
+  const price = CREDIT_PRICES['deals.buybox_rank'] || 100;
+  if (!confirm(`Rank current listings against your saved buy box? This uses ${price} credits and takes about a minute.`)) return;
+  const btn = document.getElementById('rankBtn'); btn.disabled = true; btn.textContent = 'Ranking...';
+  try {
+    const r = await fetch(N8N_BASE + '/deals/rank-buybox', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_id: CUSTOMER_ID }) });
+    const j = await r.json();
+    if (!j.ok) { alert(j.reason === 'save_your_buy_box_first' ? 'Save your deal criteria first (filters or a deal description).' : j.reason === 'gold_required' ? 'Buy-box ranking is a Gold feature.' : j.reason === 'credits_required' ? `This needs ${j.price} credits and you have ${j.balance}.` : j.reason === 'no_listings_match_your_buy_box' ? 'No current listings match your saved criteria.' : 'Ranking failed. You were not charged.'); return; }
+    showToastMsg(`Ranked ${j.scored} listings against your buy box. Your top 10% are highlighted in green.`);
+    await loadTargets();
+  } catch (e) { alert('Could not reach the ranking service.'); }
+  finally { btn.disabled = false; btn.innerHTML = '&#11088; Rank top 10% for my buy box'; }
+}
+</script>
 </body>
 </html>
