@@ -157,6 +157,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- ONBOARDING -->
 <div id="p-onboarding" class="panel">
   <div class="ph"><h1>Onboarding &amp; Customer Success</h1><p>Every customer's real, live activation status — tier-aware, not a universal checklist</p></div>
+  <div class="card" id="callPanel" style="overflow-x:auto">
+    <div class="ct-title">📞 Who to call today (<span id="callCount">0</span>)
+      <span style="float:right;display:flex;gap:6px;"><button onclick="loadCallPanel()" style="font-size:11px;padding:3px 8px;cursor:pointer;">Refresh</button><button onclick="runOnboardingNow()" style="font-size:11px;padding:3px 8px;cursor:pointer;">Run AI notes now</button></span></div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Gold: quiet 1 to 2 days on a step. Starter: two AI notes with no movement. Everyone else is handled by the daily AI notes (preview to you until Thu 7am PT).</div>
+    <table><thead><tr><th>Member</th><th>Tier</th><th>Progress</th><th>Stuck on</th><th>Quiet</th><th>Notes on step</th><th>Risk</th></tr></thead>
+    <tbody id="tblCallToday"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+    <div id="obFunnels" style="display:flex;gap:28px;flex-wrap:wrap;margin-top:18px;"></div>
+    <div class="ct-title" style="margin-top:18px;">Still onboarding (AI notes are handling these)</div>
+    <table><thead><tr><th>Member</th><th>Tier</th><th>Progress</th><th>Next step</th><th>Quiet</th><th>Notes on step</th><th>Risk</th></tr></thead>
+    <tbody id="tblStillOnboarding"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
   <div class="card" style="overflow-x:auto">
     <div class="ct-title">🎯 Activation Status</div>
     <table><thead><tr><th>Customer</th><th>Tier</th><th>Activation</th><th>Current Step</th><th>Last Activity</th><th>Victories</th><th>Risk</th></tr></thead>
@@ -525,6 +536,42 @@ async function saveEdits() {
   document.getElementById('authLoading').style.display = 'none';
   await loadUsers();
 })();
+</script>
+<script>
+async function loadCallPanel() {
+  const box = document.getElementById('callPanel'); if (!box) return;
+  const e2 = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  try {
+    const { data, error } = await sb.from('onboarding_state_v').select('email,name,company_name,tier,path,steps_done,steps_total,pct_complete,activation_state,next_step_label,days_inactive,nudges_for_step,last_nudge_at,risk_color,call_today');
+    if (error) throw error;
+    const internal = ['glaze@equitablecap.com', 'glaze@vvdoh.com', 'andrew.glaze@gmail.com', 'andrew@victoryvisionai.com'];
+    const rows = (data || []).filter(r => !internal.includes(String(r.email).toLowerCase()));
+    const stages = { starter: ['Getting started', 'Ready', 'First value', 'Meeting Engine Ready'], Gold: ['Getting started', 'Network loaded', 'Infrastructure tested', 'AI Sales Desk Live'] };
+    let fh = '';
+    ['starter', 'Gold'].forEach(tier => {
+      const tr = rows.filter(r => r.tier === tier); const max = Math.max(1, tr.length);
+      fh += `<div style="flex:1;min-width:300px;"><div class="ct-title">${tier === 'Gold' ? 'Gold' : 'Starter'} activation funnel (${tr.length})</div>` + stages[tier].map(s => {
+        const n = tr.filter(r => r.activation_state === s).length;
+        return `<div style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px;"><span style="width:160px;color:var(--text-dim);">${e2(s)}</span><span style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden;"><span style="display:block;height:14px;width:${Math.round(100 * n / max)}%;background:var(--green);"></span></span><b style="width:24px;text-align:right;">${n}</b></div>`;
+      }).join('') + '</div>';
+    });
+    document.getElementById('obFunnels').innerHTML = fh;
+    const row = r => `<tr><td><b>${e2(r.name || r.email)}</b><div style="font-size:11px;color:var(--text-dim);">${e2(r.email)}${r.company_name ? ' &middot; ' + e2(r.company_name) : ''}</div></td><td>${e2(r.tier)}${r.path === 'acquisition' ? ' &middot; acquisition' : ''}</td><td>${r.steps_done}/${r.steps_total} <span style="color:var(--text-dim);">${e2(r.activation_state)}</span></td><td>${e2(r.next_step_label || 'Done')}</td><td>${r.days_inactive >= 999 ? 'never logged in' : r.days_inactive + 'd'}</td><td>${r.nudges_for_step || 0}${r.last_nudge_at ? ' &middot; last ' + String(r.last_nudge_at).slice(5, 10) : ''}</td><td><span style="color:var(--${r.risk_color === 'red' ? 'red' : r.risk_color === 'yellow' ? 'yellow' : 'green'});font-size:16px;">&#9679;</span></td></tr>`;
+    const calls = rows.filter(r => r.call_today).sort((a, b) => (b.days_inactive || 0) - (a.days_inactive || 0));
+    const rest = rows.filter(r => !r.call_today && r.next_step_label).sort((a, b) => (b.days_inactive || 0) - (a.days_inactive || 0));
+    document.getElementById('callCount').textContent = calls.length;
+    document.getElementById('tblCallToday').innerHTML = calls.length ? calls.map(row).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Nobody needs a call today.</td></tr>';
+    document.getElementById('tblStillOnboarding').innerHTML = rest.length ? rest.map(row).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Everyone else is fully onboarded.</td></tr>';
+  } catch (err) {
+    document.getElementById('tblCallToday').innerHTML = `<tr><td colspan="7" style="color:var(--red)">Could not load onboarding state: ${e2(err.message || err)}</td></tr>`;
+  }
+}
+async function runOnboardingNow() {
+  if (!confirm('Run the AI onboarding notes now? Until Thursday 7am PT every note goes to you as a preview.')) return;
+  try { await fetch('https://victoryvision.app.n8n.cloud/webhook/onboarding/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); alert('Started. Check your inbox in about a minute.'); loadCallPanel(); }
+  catch (e) { alert('Could not reach the onboarding workflow.'); }
+}
+(function waitForAuth() { const a = document.getElementById('authLoading'); if (a && a.style.display === 'none' && typeof sb !== 'undefined') loadCallPanel(); else setTimeout(waitForAuth, 500); })();
 </script>
 </body>
 </html>
