@@ -19,7 +19,7 @@
                         transition:background 0.3s; }
   .navbar nav ul li a.active, .navbar nav ul li a:hover { background:rgba(255,255,255,0.2); }
   .user-info { display:flex; align-items:center; gap:15px; }
-  .medallion { background:linear-gradient(45deg,#CD7F32,#A0522D); color:white; padding:8px 15px;
+  .medallion { background:linear-gradient(45deg,#0B3162, #1D4F91); color:white; padding:8px 15px;
                border-radius:20px; font-weight:bold; font-size:12px; text-transform:uppercase; }
   
   .container { max-width:1400px; margin:0 auto; padding:30px; }
@@ -354,7 +354,7 @@
     </ul>
   </nav>
   <div class="user-info">
-    <div id="medallion" class="medallion">BRONZE</div>
+    <div id="medallion" class="medallion">STARTER</div>
     <span id="userEmail">…</span>
   </div>
 </header>
@@ -605,8 +605,8 @@ async function loadUser() {
     .eq('email', CUSTOMER_ID).single();
   if (data) {
     const m = document.getElementById('medallion');
-    m.textContent = (data.subscription_plan || 'BRONZE').toUpperCase();
-    m.className = 'medallion ' + (data.subscription_plan || 'bronze').toLowerCase();
+    m.textContent = (data.subscription_plan || 'STARTER').toUpperCase();
+    m.className = 'medallion ' + (data.subscription_plan || 'starter').toLowerCase();
     document.getElementById('sdrToggle').checked = data.aisdr === true || data.aisdr === 'true';
     userAifeedback = data.aifeedback || null;
   }
