@@ -47,7 +47,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      background: linear-gradient(45deg, #CD7F32, #A0522D);
+      background: linear-gradient(45deg, #0B3162, #1D4F91);
       color: white;
       padding: 8px 15px;
       border-radius: 20px;
@@ -60,11 +60,8 @@
       border: none;
       transition: all 0.3s ease;
     }
-    .subscription-medallion.bronze {
-      background: linear-gradient(45deg, #CD7F32, #A0522D);
-    }
-    .subscription-medallion.silver {
-      background: linear-gradient(45deg, #C0C0C0, #808080);
+    .subscription-medallion.starter {
+      background: linear-gradient(45deg, #0B3162, #1D4F91);
     }
     .subscription-medallion.gold {
       background: linear-gradient(45deg, #FFD700, #FFA500);
@@ -1288,8 +1285,8 @@
     <button onclick="startTour()" style="background: #28a745; padding: 6px 12px; font-size: 11px; margin-left: 10px;" id="tourButton">
       Take Tour
     </button>
-    <div id="subscriptionMedallion" class="subscription-medallion bronze">
-      <span class="plan-name">Bronze</span>
+    <div id="subscriptionMedallion" class="subscription-medallion starter">
+      <span class="plan-name">Starter</span>
     </div>
   </div>
 </header>
@@ -2067,7 +2064,7 @@ async function loadUserData() {
       
       // Update subscription medallion
       const medallion = document.getElementById('subscriptionMedallion');
-      const plan = userData.subscription_plan || 'bronze';
+      const plan = userData.subscription_plan || 'starter';
       medallion.className = `subscription-medallion ${plan.toLowerCase()}`;
       medallion.querySelector('.plan-name').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
       
