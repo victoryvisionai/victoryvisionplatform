@@ -1363,7 +1363,7 @@ async function rankMyBuyBox() {
 </script>
 <script>
 function cashMoney(v) { v = Number(v); if (!isFinite(v)) return '—'; const a = Math.abs(v); const s = a >= 1e6 ? '$' + (a / 1e6).toFixed(1) + 'M' : '$' + Math.round(a / 1000) + 'K'; return (v < 0 ? '-' : '') + s; }
-function cashTier(i) { if (!i || !i.income_basis || i.cash_after_debt_base == null) return 0; if (i.needs_verification) return 1; if (i.income_estimated) return 2; return 3; }
+function cashTier(i) { if (!i || !i.income_basis || i.cash_after_debt_base == null) return 0; if (i.needs_verification) return 1; const covers = Number(i.cash_after_debt_base) >= 0; if (i.income_estimated) return covers ? 4 : 2; return covers ? 5 : 3; }
 function cashSortKey(t, mode) { const i = t._ins; const tier = cashTier(i); if (!tier) return -9e15; const v = mode === 'coc' ? Number(i.cash_on_cash_pct || 0) : Number(i.cash_after_debt_base || 0); return tier * 1e12 + Math.max(-4e11, Math.min(4e11, v)); }
 function cashBadge(i) {
   if (!i || !i.income_basis || i.cash_after_debt_base == null) return '';
