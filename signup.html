@@ -3,617 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Create your Victory Vision account and start automating your marketing campaigns."/>
-  <title>Victory Vision AI - Sign Up</title>
+  <meta name="description" content="Request access to Victory Vision, an invitation-only AI platform for operators and dealmakers."/>
+  <title>Victory Vision - Request Access</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #0A3161 0%, #1a4c80 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    
-    .signup-container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-      width: 100%;
-      max-width: 480px;
-      overflow: hidden;
-    }
-    
-    .signup-header {
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      padding: 40px 30px 30px;
-      text-align: center;
-    }
-    
-    .logo {
-      margin-bottom: 20px;
-    }
-    
-    .logo img {
-      height: 60px;
-      width: auto;
-    }
-    
-    .signup-header h1 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    
-    .signup-header p {
-      font-size: 16px;
-      opacity: 0.9;
-    }
-    
-    .signup-form {
-      padding: 40px 30px;
-    }
-    
-    .form-group {
-      margin-bottom: 20px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      color: #333;
-      font-size: 14px;
-    }
-    
-    .form-group input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 2px solid #e1e5e9;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: border-color 0.3s ease;
-    }
-    
-    .form-group input:focus {
-      outline: none;
-      border-color: #0A3161;
-      box-shadow: 0 0 0 3px rgba(10, 49, 97, 0.1);
-    }
-    
-    .form-group input.error {
-      border-color: #dc3545;
-    }
-    
-    .password-requirements {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #666;
-    }
-    
-    .requirement {
-      display: flex;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    
-    .requirement.valid {
-      color: #28a745;
-    }
-    
-    .requirement.invalid {
-      color: #dc3545;
-    }
-    
-    .requirement::before {
-      content: "✓";
-      margin-right: 8px;
-      font-weight: bold;
-    }
-    
-    .requirement.invalid::before {
-      content: "✗";
-    }
-    
-    .checkbox-group {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 25px;
-    }
-    
-    .checkbox-group input[type="checkbox"] {
-      margin-right: 12px;
-      margin-top: 2px;
-      transform: scale(1.2);
-    }
-    
-    .checkbox-group label {
-      font-size: 13px;
-      line-height: 1.4;
-      color: #555;
-      margin-bottom: 0;
-    }
-    
-    .checkbox-group a {
-      color: #0A3161;
-      text-decoration: none;
-    }
-    
-    .checkbox-group a:hover {
-      text-decoration: underline;
-    }
-    
-    .signup-button {
-      width: 100%;
-      background: linear-gradient(135deg, #0A3161, #1a4c80);
-      color: white;
-      border: none;
-      padding: 14px 20px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 15px;
-    }
-    
-    .signup-button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(10, 49, 97, 0.3);
-    }
-    
-    .signup-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    .google-button {
-      width: 100%;
-      background: #dc4e41;
-      color: white;
-      border: none;
-      padding: 14px 20px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 20px;
-    }
-    
-    .google-button:hover {
-      background: #c23321;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(220, 78, 65, 0.3);
-    }
-    
-    .divider {
-      text-align: center;
-      margin: 20px 0;
-      position: relative;
-      color: #666;
-    }
-    
-    .divider::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: #e1e5e9;
-    }
-    
-    .divider span {
-      background: white;
-      padding: 0 15px;
-    }
-    
-    .login-link {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 14px;
-      color: #666;
-    }
-    
-    .login-link a {
-      color: #0A3161;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    
-    .login-link a:hover {
-      text-decoration: underline;
-    }
-    
-    .status-message {
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      display: none;
-    }
-    
-    .status-success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    
-    .status-error {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-    
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 1s ease-in-out infinite;
-      margin-left: 8px;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .debug-info {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 4px;
-      padding: 10px;
-      margin-top: 15px;
-      font-size: 12px;
-      color: #6c757d;
-      display: none;
-    }
-    
-    @media (max-width: 480px) {
-      .signup-container {
-        margin: 10px;
-      }
-      
-      .signup-header {
-        padding: 30px 20px 20px;
-      }
-      
-      .signup-form {
-        padding: 30px 20px;
-      }
-    }
+    :root { --navy: #0B3162; --navy-2: #12417c; --red: #BC133E; --text: #1f2937; --muted: #6b7280; --line: #dde3ec; --soft: #f3f6fa; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Montserrat, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; color: var(--text); }
+    .card { background: #fff; width: 100%; max-width: 560px; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+    .head { background: var(--navy); text-align: center; padding: 26px 20px 22px; border-bottom: 4px solid var(--red); }
+    .head img { width: 96px; height: auto; display: block; margin: 0 auto 12px; }
+    .head h1 { color: #fff; font-size: 1.45rem; font-weight: 700; letter-spacing: .2px; }
+    .head p { color: #d6deeb; font-size: .9rem; margin-top: 6px; line-height: 1.5; }
+    form, .done { padding: 24px 26px 26px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: .78rem; font-weight: 700; color: var(--navy); margin-bottom: 5px; letter-spacing: .2px; }
+    label .req { color: var(--red); }
+    input, textarea { width: 100%; padding: 11px 12px; border: 1px solid #cfd6e1; border-radius: 8px; font: inherit; font-size: .92rem; color: var(--text); background: #fff; }
+    input:focus, textarea:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,49,98,.12); }
+    textarea { min-height: 92px; resize: vertical; line-height: 1.5; }
+    .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+    .nolink { background: var(--soft); border-left: 4px solid var(--navy); border-radius: 6px; padding: 12px 14px; font-size: .8rem; color: var(--text); line-height: 1.55; margin: 4px 0 18px; }
+    .nolink a { color: var(--red); font-weight: 700; text-decoration: none; }
+    button { width: 100%; background: var(--navy); color: #fff; border: 0; border-radius: 8px; padding: 14px; font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer; letter-spacing: .3px; }
+    button:hover:not(:disabled) { background: var(--navy-2); }
+    button:disabled { opacity: .65; cursor: default; }
+    .msg { display: none; margin-bottom: 14px; padding: 11px 13px; border-radius: 8px; font-size: .85rem; line-height: 1.5; }
+    .msg.err { display: block; background: #fbeef2; color: var(--red); border: 1px solid #efc3cf; }
+    .foot { text-align: center; font-size: .82rem; color: var(--muted); margin-top: 16px; }
+    .foot a { color: var(--navy); font-weight: 700; text-decoration: none; }
+    .done { display: none; text-align: center; }
+    .done h2 { color: var(--navy); font-size: 1.3rem; margin: 6px 0 10px; }
+    .done p { color: var(--text); font-size: .92rem; line-height: 1.6; margin-bottom: 10px; }
+    .check { width: 54px; height: 54px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 28px; line-height: 54px; margin: 0 auto 8px; }
+    @media (max-width: 520px) { .row { grid-template-columns: 1fr; gap: 0; } form, .done { padding: 20px 18px 22px; } .head h1 { font-size: 1.25rem; } }
   </style>
 </head>
 <body>
-  <div class="signup-container">
-    <div class="signup-header">
-      <div class="logo">
-        <img src="logo.jpg" alt="Victory Vision Logo"
-             onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23ffffff%22 /><text x=%2215%22 y=%2235%22 font-size=%2220%22 fill=%22%230A3161%22>VV</text></svg>'"/>
-      </div>
-      <h1>Create Your Account</h1>
-      <p>Start your AI marketing automation journey</p>
+  <div class="card">
+    <div class="head">
+      <img src="https://res.cloudinary.com/dv94te4zt/image/upload/v1753320422/sd4auec2bgofhaleur7o.jpg" alt="Victory Vision">
+      <h1>Request access</h1>
+      <p>Victory Vision is invitation-only. We are building an elite, trusted community of operators and dealmakers, and we review every request personally.</p>
     </div>
-    
-    <div class="signup-form">
-      <div id="statusMessage" class="status-message"></div>
-      
-      <form id="signupForm">
-        <div class="form-group">
-          <label for="email">Email Address *</label>
-          <input type="email" id="email" name="email" required autocomplete="email">
-        </div>
-        
-        <div class="form-group">
-          <label for="password">Password *</label>
-          <input type="password" id="password" name="password" required autocomplete="new-password">
-          <div class="password-requirements">
-            <div class="requirement" id="lengthReq">At least 8 characters</div>
-            <div class="requirement" id="uppercaseReq">One uppercase letter</div>
-            <div class="requirement" id="lowercaseReq">One lowercase letter</div>
-            <div class="requirement" id="numberReq">One number</div>
-            <div class="requirement" id="specialReq">One special character</div>
-          </div>
-        </div>
-        
-        <div class="checkbox-group">
-          <input type="checkbox" id="agree" name="agree" required>
-          <label for="agree">
-            I agree to the <a href="terms.html" target="_blank">Terms of Service</a>, 
-            <a href="privacy.html" target="_blank">Privacy Policy</a> and 
-            <a href="eula.html" target="_blank">EULA</a>
-          </label>
-        </div>
-        
-        <button type="submit" class="signup-button" id="signupBtn">
-          <span id="signupText">Sign Up</span>
-          <span id="signupSpinner" class="spinner" style="display: none;"></span>
-        </button>
-      </form>
-      
-      <div class="divider">
-        <span>or</span>
+
+    <form id="accessForm" novalidate>
+      <div id="msg" class="msg"></div>
+      <div class="row">
+        <div class="field"><label for="name">Full name <span class="req">*</span></label><input id="name" name="name" autocomplete="name" required maxlength="120"></div>
+        <div class="field"><label for="email">Email <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" required maxlength="160"></div>
       </div>
-      
-      <button type="button" class="google-button" id="googleBtn">
-        Continue with Google
-      </button>
-      
-      <div class="login-link">
-        Already have an account? <a href="login.html">Log in instead</a>
+      <div class="field">
+        <label for="linkedin">LinkedIn profile <span class="req">*</span></label>
+        <input id="linkedin" name="linkedin" placeholder="https://www.linkedin.com/in/your-name" required maxlength="300">
       </div>
-      
-      <div id="debugInfo" class="debug-info"></div>
+      <div class="row">
+        <div class="field"><label for="company">Company <span class="req">*</span></label><input id="company" name="company" autocomplete="organization" required maxlength="160"></div>
+        <div class="field"><label for="website">Company website</label><input id="website" name="website" placeholder="yourcompany.com" maxlength="200"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="location">Location</label><input id="location" name="location" placeholder="City, State" maxlength="120"></div>
+        <div class="field"><label for="industry">Industry</label><input id="industry" name="industry" placeholder="e.g. Executive search, M&amp;A" maxlength="120"></div>
+      </div>
+      <div class="field">
+        <label for="why">How did you hear about us, and why would you like access? <span class="req">*</span></label>
+        <textarea id="why" name="why" required maxlength="1200" placeholder="One or two sentences is perfect."></textarea>
+      </div>
+      <div class="hp" aria-hidden="true"><label for="company_url_confirm">Leave this empty</label><input id="company_url_confirm" name="company_url_confirm" tabindex="-1" autocomplete="off"></div>
+      <div class="nolink">No LinkedIn? Email <a id="mailLink" href="#">andrew@victoryvisionai.com</a> with your company, location, industry and website, plus a sentence or two on how you heard about us and why you would like access.</div>
+      <button type="submit" id="submitBtn">Request access</button>
+      <div class="foot">Already a member? <a href="login.html">Log in</a></div>
+    </form>
+
+    <div class="done" id="done">
+      <div class="check">&#10003;</div>
+      <h2 id="doneTitle">Thank you</h2>
+      <p id="doneText">We review every request personally. You will hear from us by email, usually within one business day.</p>
+      <div class="foot"><a href="https://www.victoryvisionai.com">Back to Victory Vision</a></div>
     </div>
   </div>
 
   <script>
-    // Prevent favicon error
-    if (!document.querySelector('link[rel="icon"]')) {
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.href = 'data:,';
-      document.head.appendChild(link);
-    }
+    (function () {
+      var ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/access/request';
+      var subject = 'Victory Vision access request';
+      var body = 'Hi Andrew,\n\nCompany:\nLocation:\nIndustry:\nWebsite:\n\nHow I heard about Victory Vision and why I would like access:\n\n';
+      document.getElementById('mailLink').href = 'mailto:andrew@victoryvisionai.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 
-    // Supabase configuration - Same as companyprofile.html
-    const supabaseUrl = 'https://nyyvsdkumxvuwimmucdb.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXZzZGt1bXh2dXdpbW11Y2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MzY5OTQsImV4cCI6MjA1OTMxMjk5NH0.7m7R_8mBhp7X8itl5cR81xbX2AjJUm2SIPR0FUv6ouU';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+      var form = document.getElementById('accessForm');
+      var msg = document.getElementById('msg');
+      var btn = document.getElementById('submitBtn');
+      function fail(text) { msg.className = 'msg err'; msg.textContent = text; btn.disabled = false; btn.textContent = 'Request access'; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      function val(id) { return (document.getElementById(id).value || '').trim(); }
 
-    // Email signup endpoint
-    const EMAIL_SIGNUP_ENDPOINT = 'https://victoryvision.app.n8n.cloud/webhook/email/signup';
-    
-    let isSigningUp = false;
-
-    // Password validation
-    function validatePassword(password) {
-      const requirements = {
-        length: password.length >= 8,
-        uppercase: /[A-Z]/.test(password),
-        lowercase: /[a-z]/.test(password),
-        number: /\d/.test(password),
-        special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-      };
-      
-      // Update UI indicators
-      document.getElementById('lengthReq').className = `requirement ${requirements.length ? 'valid' : 'invalid'}`;
-      document.getElementById('uppercaseReq').className = `requirement ${requirements.uppercase ? 'valid' : 'invalid'}`;
-      document.getElementById('lowercaseReq').className = `requirement ${requirements.lowercase ? 'valid' : 'invalid'}`;
-      document.getElementById('numberReq').className = `requirement ${requirements.number ? 'valid' : 'invalid'}`;
-      document.getElementById('specialReq').className = `requirement ${requirements.special ? 'valid' : 'invalid'}`;
-      
-      return Object.values(requirements).every(req => req);
-    }
-
-    // Input sanitization
-    function sanitizeInput(value) {
-      if (typeof value !== 'string') return value;
-      return value
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/javascript:/gi, '')
-        .replace(/on\w+\s*=/gi, '')
-        .trim();
-    }
-
-    // Show status message
-    function showStatus(message, isError = false) {
-      const statusDiv = document.getElementById('statusMessage');
-      statusDiv.textContent = sanitizeInput(message);
-      statusDiv.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
-      statusDiv.style.display = 'block';
-      
-      // Auto-hide success messages
-      if (!isError) {
-        setTimeout(() => {
-          statusDiv.style.display = 'none';
-        }, 5000);
-      }
-    }
-
-    // Show debug info
-    function showDebugInfo(info) {
-      const debugDiv = document.getElementById('debugInfo');
-      debugDiv.innerHTML = `Debug Information:<br>${JSON.stringify(info, null, 2).replace(/\n/g, '<br>')}`;
-      debugDiv.style.display = 'block';
-    }
-
-    // Email signup via n8n webhook
-    async function signupUserEmail(email) {
-      try {
-        const response = await fetch(EMAIL_SIGNUP_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email,
-            source: 'signup_page',
-            timestamp: new Date().toISOString()
-          })
-        });
-
-        const result = await response.json();
-        console.log('Email signup response:', result);
-        
-        return result;
-      } catch (error) {
-        console.error('Email signup error:', error);
-        throw error;
-      }
-    }
-
-    // Main signup function
-    async function handleSignup(email, password) {
-      try {
-        console.log('Starting signup process for:', email);
-        
-        // Step 1: Create Supabase auth user
-        const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/companyprofile.html`
-          }
-        });
-
-        console.log('Supabase auth result:', { authData, authError });
-
-        if (authError) {
-          throw new Error(`Authentication error: ${authError.message}`);
-        }
-
-        // Step 2: Sign up email via n8n webhook
-        try {
-          await signupUserEmail(email);
-          console.log('Email signup completed');
-        } catch (webhookError) {
-          console.warn('Email signup webhook failed, but auth succeeded:', webhookError);
-          // Don't fail the entire signup if email webhook fails
-        }
-
-        // Step 3: Handle success
-        if (authData.user) {
-          if (authData.user.email_confirmed_at) {
-            // User is confirmed, redirect immediately
-            showStatus('Account created successfully! Redirecting...', false);
-            setTimeout(() => {
-              window.location.href = 'companyprofile.html';
-            }, 2000);
-          } else {
-            // User needs to confirm email
-            showStatus(`Account created! Please check your email (${email}) to confirm your account before logging in.`, false);
-          }
-        } else {
-          throw new Error('No user data returned from signup');
-        }
-
-      } catch (error) {
-        console.error('Signup error:', error);
-        
-        // Show specific error messages
-        let errorMessage = 'Signup failed. Please try again.';
-        
-        if (error.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Try logging in instead.';
-        } else if (error.message.includes('invalid email')) {
-          errorMessage = 'Please enter a valid email address.';
-        } else if (error.message.includes('Password')) {
-          errorMessage = 'Password must meet all requirements.';
-        } else if (error.message.includes('rate limit')) {
-          errorMessage = 'Too many signup attempts. Please wait before trying again.';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        showStatus(errorMessage, true);
-        showDebugInfo({
-          error: error.message,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent
-        });
-      }
-    }
-
-    // Google signup
-    async function handleGoogleSignup() {
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/companyprofile.html`
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-      } catch (error) {
-        console.error('Google signup error:', error);
-        showStatus('Google signup failed: ' + error.message, true);
-      }
-    }
-
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-      const form = document.getElementById('signupForm');
-      const passwordInput = document.getElementById('password');
-      const signupBtn = document.getElementById('signupBtn');
-      const signupText = document.getElementById('signupText');
-      const signupSpinner = document.getElementById('signupSpinner');
-      const googleBtn = document.getElementById('googleBtn');
-
-      // Password validation on input
-      passwordInput.addEventListener('input', function() {
-        validatePassword(this.value);
-      });
-
-      // Form submission
-      form.addEventListener('submit', async function(e) {
+      form.addEventListener('submit', async function (e) {
         e.preventDefault();
-        
-        if (isSigningUp) return;
-
-        const email = sanitizeInput(document.getElementById('email').value);
-        const password = document.getElementById('password').value;
-        const agree = document.getElementById('agree').checked;
-
-        // Validation
-        if (!email || !password) {
-          showStatus('Please fill in all required fields.', true);
-          return;
-        }
-
-        if (!agree) {
-          showStatus('Please agree to the terms and conditions.', true);
-          return;
-        }
-
-        if (!validatePassword(password)) {
-          showStatus('Password must meet all requirements.', true);
-          return;
-        }
-
-        // Show loading state
-        isSigningUp = true;
-        signupBtn.disabled = true;
-        signupText.style.display = 'none';
-        signupSpinner.style.display = 'inline-block';
-
+        msg.className = 'msg';
+        var data = { name: val('name'), email: val('email'), linkedin: val('linkedin'), company: val('company'), website: val('website'), location: val('location'), industry: val('industry'), why: val('why'), company_url_confirm: val('company_url_confirm') };
+        if (!data.name || !data.email || !data.company || !data.why) return fail('Please complete your name, email, company, and how you heard about us.');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) return fail('Please enter a valid email address.');
+        if (!/linkedin\.com\/(in|pub)\/[A-Za-z0-9\-_%.]+/i.test(data.linkedin)) return fail('Please enter your LinkedIn profile URL (linkedin.com/in/...). No LinkedIn? Email andrew@victoryvisionai.com instead.');
+        btn.disabled = true; btn.textContent = 'Sending...';
         try {
-          await handleSignup(email, password);
-        } finally {
-          // Reset loading state
-          isSigningUp = false;
-          signupBtn.disabled = false;
-          signupText.style.display = 'inline';
-          signupSpinner.style.display = 'none';
+          var res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+          var out = await res.json().catch(function () { return {}; });
+          if (Array.isArray(out)) out = out[0] || {};
+          if (!res.ok || out.ok === false) return fail(out.error || 'Something went wrong. Please email andrew@victoryvisionai.com.');
+          if (out.status === 'existing') {
+            document.getElementById('doneTitle').textContent = 'You already have access';
+            document.getElementById('doneText').innerHTML = 'Please <a href="login.html" style="color:#BC133E;font-weight:700;text-decoration:none;">log in here</a>.';
+          }
+          form.style.display = 'none';
+          document.getElementById('done').style.display = 'block';
+        } catch (err) {
+          fail('We could not reach the server. Please try again, or email andrew@victoryvisionai.com.');
         }
       });
-
-      // Google signup
-      googleBtn.addEventListener('click', handleGoogleSignup);
-
-      // Check if user is already logged in
-      supabaseClient.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          window.location.href = 'companyprofile.html';
-        }
-      });
-    });
+    })();
   </script>
 </body>
 </html>
