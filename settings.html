@@ -1106,6 +1106,11 @@
       </div>
     </div>
 
+    <!-- Gold upgrade section: rendered by gold-path.js (plans, checkout, credits). -->
+    <div id="upgrade"><div id="vvUpgrade"></div></div>
+
+    <!-- Legacy plan cards: hidden (prices and credits were out of date). Kept for the JS that references them. -->
+    <div id="legacyPlans" style="display:none">
     <!-- Billing Toggle -->
     <div class="billing-toggle-section" style="text-align: center; margin: 20px 0;">
       <div class="billing-toggle">
@@ -1237,6 +1242,7 @@
         </div>
       </div>
     </details>
+    </div><!-- /legacyPlans -->
   </div>
 
   <!-- Account Deletion Section -->
@@ -1681,25 +1687,25 @@ function connectCalendly() {
           noticeEl.style.background = 'linear-gradient(135deg,#fff8e1,#ffe082)';
           noticeEl.style.borderColor = '#FFD700';
           if (noticeTitleEl) noticeTitleEl.textContent = '🥇 You\'re on ' + plan + ' — Full Access';
-          if (noticeTextEl)  noticeTextEl.textContent  = 'All features unlocked including video creation, ads management, and 10,000 credits/month. Credits reset on your billing date.';
+          if (noticeTextEl)  noticeTextEl.textContent  = 'All features unlocked including video creation, ads management, and 15,000 credits/month. Credits reset on your billing date.';
           if (noticeCtaEl)   noticeCtaEl.style.display = 'none';
         } else if (planLower === 'starter' || planLower === 'starter-annual') {
           noticeEl.style.background = 'linear-gradient(135deg,#eef5ff,#dbe9ff)';
           noticeEl.style.borderColor = '#3b82f6';
           if (noticeTitleEl) noticeTitleEl.textContent = '⭐ Starter — included with your Operator\'s Edge membership';
-          if (noticeTextEl)  noticeTextEl.textContent  = 'Contacts, goals, AI plans, campaigns, AI-drafted outreach, social posts, landing pages and deal search are unlocked, plus weekly office hours. Gold adds AI video, ads, AI calling and SMS, a dedicated sending domain and 10,000 credits a month.';
+          if (noticeTextEl)  noticeTextEl.textContent  = 'Contacts, goals, AI plans, campaigns, AI-drafted outreach, social posts, landing pages and deal search are unlocked, plus weekly office hours. Gold adds AI video, ads, AI calling and SMS, a dedicated sending domain and 15,000 credits a month.';
           if (noticeCtaEl) { noticeCtaEl.textContent = 'Compare Starter and Gold →'; noticeCtaEl.style.display = 'inline-block'; }
         } else {
           // Trial (legacy Bronze/Silver rows land here too)
           noticeEl.style.background = '';
           if (noticeTitleEl) noticeTitleEl.textContent = '🌟 Free trial';
-          if (noticeTextEl)  noticeTextEl.textContent  = 'Pick a plan to keep going. Starter comes with Operator\'s Edge membership ($999/year, including weekly office hours with Andrew). Gold is the full platform: AI video, ads, calling and SMS, and 10,000 credits a month.';
+          if (noticeTextEl)  noticeTextEl.textContent  = 'Pick a plan to keep going. Starter comes with Operator\'s Edge membership ($999/year, including weekly office hours with Andrew). Gold is the full platform: AI video, ads, calling and SMS, and 15,000 credits a month.';
           if (noticeCtaEl) { noticeCtaEl.textContent = 'Compare plans →'; noticeCtaEl.style.display = 'inline-block'; }
         }
       }
 
       // Credit maxes per tier
-      const TIER_CREDITS = { bronze: 500, silver: 2500, starter: 1000, 'starter-annual': 1000, gold: 10000, enterprise: 99999 };
+      const TIER_CREDITS = { bronze: 500, silver: 2500, starter: 2500, 'starter-annual': 2500, gold: 15000, enterprise: 99999 };
       const isStarterPlan = ['starter','starter-annual'].includes(plan.toLowerCase());
       const tierMax = TIER_CREDITS[plan.toLowerCase()] || 500;
 
@@ -2933,5 +2939,6 @@ window.onclick = function(event) {
   // Initialize when DOM loads
   document.addEventListener('DOMContentLoaded', init);
 </script>
+<script src="/gold-path.js?v=1" defer></script>
 </body>
 </html>
