@@ -157,6 +157,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- ONBOARDING -->
 <div id="p-onboarding" class="panel">
   <div class="ph"><h1>Onboarding &amp; Customer Success</h1><p>Every customer's real, live activation status — tier-aware, not a universal checklist</p></div>
+  <div class="card" id="accessPanel" style="overflow-x:auto">
+    <div class="ct-title">🔐 Access: invite a member and review requests</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 14px;">
+      <div><div style="font-size:11px;color:var(--text-dim);">Email</div><input id="invEmail" type="email" placeholder="name@company.com" style="padding:6px 8px;min-width:220px;"></div>
+      <div><div style="font-size:11px;color:var(--text-dim);">Name</div><input id="invName" placeholder="First Last" style="padding:6px 8px;min-width:160px;"></div>
+      <div><div style="font-size:11px;color:var(--text-dim);">Plan</div><select id="invPlan" style="padding:6px 8px;"><option value="trial">14-day trial (500 credits)</option><option value="starter">Starter (annual)</option><option value="Gold">Gold (annual)</option></select></div>
+      <div style="flex:1;min-width:180px;"><div style="font-size:11px;color:var(--text-dim);">Note (optional, internal)</div><input id="invNote" placeholder="How you know them" style="padding:6px 8px;width:100%;"></div>
+      <button onclick="sendInvite()" id="invBtn" style="padding:7px 14px;cursor:pointer;font-weight:700;">Send invite</button>
+    </div>
+    <div id="invStatus" style="font-size:12px;margin-bottom:10px;color:var(--text-dim);">Invites create the login and email a set-password link from andrew@victoryvisionai.com. An existing member is never downgraded.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:700;font-size:13px;">Access requests (last 60 days)</div><button onclick="loadAccessQueue()" style="font-size:11px;padding:3px 8px;cursor:pointer;">Refresh</button></div>
+    <table><thead><tr><th>Requested</th><th>Person</th><th>Why they want access</th><th>Screening</th><th>Status</th><th></th></tr></thead>
+    <tbody id="tblAccess"><tr><td colspan="6" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
   <div class="card" id="callPanel" style="overflow-x:auto">
     <div class="ct-title">📞 Who to call today (<span id="callCount">0</span>)
       <span style="float:right;display:flex;gap:6px;"><button onclick="loadCallPanel()" style="font-size:11px;padding:3px 8px;cursor:pointer;">Refresh</button><button onclick="runOnboardingNow()" style="font-size:11px;padding:3px 8px;cursor:pointer;">Run AI notes now</button></span></div>
@@ -572,6 +586,54 @@ async function runOnboardingNow() {
   catch (e) { alert('Could not reach the onboarding workflow.'); }
 }
 (function waitForAuth() { const a = document.getElementById('authLoading'); if (a && a.style.display === 'none' && typeof sb !== 'undefined') loadCallPanel(); else setTimeout(waitForAuth, 500); })();
+</script>
+<script>
+async function vvAdminCall(payload) {
+  const s = await sb.auth.getSession();
+  const token = s && s.data && s.data.session ? s.data.session.access_token : '';
+  const res = await fetch('https://victoryvision.app.n8n.cloud/webhook/admin/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(payload) });
+  let out = await res.json().catch(() => ({})); if (Array.isArray(out)) out = out[0] || {};
+  if (!res.ok || out.ok === false) throw new Error(out.error || ('HTTP ' + res.status));
+  return out;
+}
+async function sendInvite() {
+  const st = document.getElementById('invStatus'), btn = document.getElementById('invBtn');
+  const email = document.getElementById('invEmail').value.trim(), name = document.getElementById('invName').value.trim(), plan = document.getElementById('invPlan').value, note = document.getElementById('invNote').value.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { st.style.color = 'var(--red)'; st.textContent = 'Enter a valid email.'; return; }
+  if (!confirm('Invite ' + email + ' on ' + (plan === 'trial' ? 'a 14-day trial' : plan) + '? They will get a set-password email now.')) return;
+  btn.disabled = true; st.style.color = 'var(--text-dim)'; st.textContent = 'Creating the account...';
+  try {
+    const r = await vvAdminCall({ action: 'invite', email, name, plan, note });
+    st.style.color = 'var(--green)';
+    st.textContent = (r.kept_current ? email + ' already has ' + r.plan + ' (' + r.status + '); kept as is and sent a fresh login link.' : 'Invited ' + email + ' on ' + (r.requested_plan === 'trial' ? 'a 14-day trial' : r.plan) + '.') + ' Email: ' + (r.email_status || 'sent') + '.';
+    ['invEmail', 'invName', 'invNote'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { st.style.color = 'var(--red)'; st.textContent = 'Invite failed: ' + e.message; }
+  btn.disabled = false;
+}
+async function decideAccess(id, decision, who) {
+  const label = { approve: 'approve (14-day trial)', not_fit: 'decline politely', spam: 'mark as spam (no email)' }[decision];
+  if (!confirm(who + ': ' + label + '?')) return;
+  try { await vvAdminCall({ action: 'decide', contact_id: id, decision }); loadAccessQueue(); }
+  catch (e) { alert('Could not apply: ' + e.message); }
+}
+async function loadAccessQueue() {
+  const tb = document.getElementById('tblAccess'); if (!tb) return;
+  const e3 = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  try {
+    const { data, error } = await sb.rpc('admin_access_requests', { p_days: 60 });
+    if (error) throw error;
+    if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim)">No access requests yet.</td></tr>'; return; }
+    const color = { approved: 'var(--green)', review: 'var(--yellow)', requested: 'var(--yellow)', 'not-fit': 'var(--text-dim)', spam: 'var(--red)' };
+    tb.innerHTML = data.map(r => {
+      const who = (r.name || r.email) + '';
+      const open = r.status === 'review' || r.status === 'requested';
+      const person = '<b>' + e3(r.name || '') + '</b><div style="font-size:11px;color:var(--text-dim);">' + e3([r.enriched_title || r.title, r.enriched_company || r.company].filter(Boolean).join(' · ')) + '</div><div style="font-size:11px;">' + e3(r.email) + (r.location ? ' · ' + e3(r.location) : '') + (r.linkedin ? ' · <a href="' + e3(r.linkedin) + '" target="_blank" rel="noopener">LinkedIn</a>' : '') + (r.website ? ' · ' + e3(r.website) : '') + '</div>';
+      const actions = open ? '<button onclick="decideAccess(\'' + r.contact_id + '\',\'approve\',\'' + e3(who).replace(/'/g, '') + '\')" style="font-size:11px;padding:3px 7px;cursor:pointer;">Approve</button> <button onclick="decideAccess(\'' + r.contact_id + '\',\'not_fit\',\'' + e3(who).replace(/'/g, '') + '\')" style="font-size:11px;padding:3px 7px;cursor:pointer;">Not a fit</button> <button onclick="decideAccess(\'' + r.contact_id + '\',\'spam\',\'' + e3(who).replace(/'/g, '') + '\')" style="font-size:11px;padding:3px 7px;cursor:pointer;">Spam</button>' : '';
+      return '<tr><td style="white-space:nowrap;">' + e3(String(r.requested_at || '').slice(0, 10)) + '</td><td>' + person + '</td><td style="max-width:280px;font-size:12px;">' + e3(r.why || '') + '</td><td style="max-width:240px;font-size:11px;color:var(--text-dim);">' + e3(r.screening_notes || (r.enriched ? 'Enriched, awaiting screening' : 'Waiting for LinkedIn enrichment')) + '</td><td><b style="color:' + (color[r.status] || 'var(--text)') + ';">' + e3(r.status) + '</b></td><td style="white-space:nowrap;">' + actions + '</td></tr>';
+    }).join('');
+  } catch (err) { tb.innerHTML = '<tr><td colspan="6" style="color:var(--red)">Could not load requests: ' + e3(err.message || err) + '</td></tr>'; }
+}
+(function waitAccess() { const a = document.getElementById('authLoading'); if (a && a.style.display === 'none' && typeof sb !== 'undefined') loadAccessQueue(); else setTimeout(waitAccess, 500); })();
 </script>
 </body>
 </html>
