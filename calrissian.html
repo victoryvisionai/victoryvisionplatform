@@ -89,6 +89,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .toast.vis{opacity:1;transform:translateY(0)}
 .toast.err{border-color:var(--red);color:#ff8fa8}
 .event-row{font-size:12px;font-family:'JetBrains Mono',monospace}
+.ctog{margin-left:auto;display:inline-flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px}
+.ctog button{background:none;border:none;color:var(--text-dim);font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit}
+.ctog button.on{background:var(--orange);color:#000}
+.rec-card{border-left:4px solid var(--orange)}
+.rec-h{font-size:18px;font-weight:700;color:var(--text-bright);margin-bottom:6px}
+.rec-w{font-size:13px;color:var(--text-dim);margin-bottom:12px;line-height:1.5}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:rgba(255,255,255,.06);color:var(--text-dim);margin:2px 4px 2px 0}
+.told{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.told summary{cursor:pointer;font-size:13px;color:var(--text-bright);list-style:none}
+.told summary::-webkit-details-marker{display:none}
+.told .tx{white-space:pre-wrap;font-size:12.5px;color:var(--text);margin-top:8px;line-height:1.55}
+.ubar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;min-width:90px}
+.ubar span{display:block;height:100%}
+.lnk{color:var(--orange);cursor:pointer;text-decoration:none;background:none;border:none;font:inherit;padding:0;text-align:left}
+.tl{display:flex;flex-direction:column;gap:7px}
+.tl-i{display:flex;gap:10px;align-items:center;font-size:13px}
+.tl-d{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.tl-d.ok{background:rgba(34,197,94,.18);color:var(--green)}.tl-d.cur{background:rgba(253,126,20,.22);color:var(--orange)}.tl-d.no{background:rgba(255,255,255,.06);color:var(--text-dim)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px}
+.kv div:nth-child(odd){color:var(--text-dim)}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.two-col{grid-template-columns:1fr}.sidebar{display:none}.main{padding:18px 16px;max-height:none}.topbar{padding:10px 16px;flex-wrap:wrap;gap:8px}.card{overflow-x:auto;padding:16px}.mrow{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.kv{grid-template-columns:110px 1fr}}
 </style>
 </head>
 <body>
@@ -109,9 +130,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sb-title">Overview</div>
     <button class="sb-link active" data-p="overview" onclick="nav('overview',this)"><span class="ic">📊</span>Dashboard</button>
     <button class="sb-link" data-p="users" onclick="nav('users',this)"><span class="ic">👥</span>All Users<span class="ct" id="badgeTotal">0</span></button>
+    <button class="sb-link" data-p="usage" onclick="nav('usage',this)"><span class="ic">💰</span>Usage &amp; Margin<span class="ct" id="badgeNear" style="display:none">0</span></button>
   </div>
   <div class="sb-section">
     <div class="sb-title">Management</div>
+    <button class="sb-link" data-p="focus" onclick="nav('focus',this)"><span class="ic">🔎</span>User Focus</button>
+    <button class="sb-link" data-p="gold" onclick="nav('gold',this)"><span class="ic">⭐</span>Gold Path<span class="ct" id="badgeGold" style="background:#FFD700;color:#000;display:none">0</span></button>
     <button class="sb-link" data-p="onboarding" onclick="nav('onboarding',this)"><span class="ic">🚀</span>Onboarding</button>
     <button class="sb-link" data-p="churn" onclick="nav('churn',this)"><span class="ic">⚠️</span>Churn Risk<span class="ct" id="badgeChurn" style="background:var(--yellow);color:#000">0</span></button>
     <button class="sb-link" data-p="events" onclick="nav('events',this)"><span class="ic">📡</span>User Events</button>
@@ -122,7 +146,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
   <div class="user-sel">
     <label>Select User</label>
-    <select id="userDD" onchange="pickUser(this.value)"><option value="">-- All Users --</option></select>
+    <select id="userDD" onchange="pickUser(this.value); if (this.value) openFocus(this.value);"><option value="">-- All Users --</option></select>
   </div>
 </aside>
 
@@ -140,7 +164,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
   <div class="two-col">
     <div class="card"><div class="ct-title">📊 Users by Plan</div><div class="chart-box"><canvas id="cPlan"></canvas></div></div>
-    <div class="card"><div class="ct-title">📈 Signups (30d)</div><div class="chart-box"><canvas id="cSignups"></canvas></div></div>
+    <div class="card"><div class="ct-title">📈 Signups (30d)<span class="ctog" data-k="signups"></span></div><div class="chart-box"><canvas id="cSignups"></canvas></div></div>
   </div>
   <div class="card"><div class="ct-title">🏆 Platform Activity (30d)</div><div id="overviewBars"><p style="color:var(--text-dim)"><span class="mini-spin"></span>Loading...</p></div></div>
 </div>
@@ -217,11 +241,68 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="fg"><label>Tag / Feature</label><select id="evTag" onchange="renderEvents()"><option value="">All</option></select></div>
   </div>
   <div class="mrow" id="evMetrics"></div>
-  <div class="card"><div class="ct-title">📊 Event Volume by Feature</div><div class="chart-box"><canvas id="cEvents"></canvas></div></div>
+  <div class="card"><div class="ct-title">📊 Event Volume by Feature<span class="ctog" data-k="events"></span></div><div class="chart-box"><canvas id="cEvents"></canvas></div></div>
   <div class="card" style="overflow-x:auto">
     <div class="ct-title">📜 Raw Event Stream <span style="font-weight:400;color:var(--text-dim);font-size:12px;" id="evCount"></span></div>
     <table><thead><tr><th>Time</th><th>User</th><th>Company</th><th>Tier</th><th>Feature</th><th>Action</th><th>Status</th></tr></thead>
     <tbody id="tblEvents"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- USAGE & MARGIN -->
+<div id="p-usage" class="panel">
+  <div class="ph"><h1>Usage &amp; Margin</h1><p>What members use, what it costs to run, and what it is worth at current credit prices ($0.01 per credit). <span id="usMode"></span></p></div>
+  <div class="tw" id="usWin"><button class="tb" onclick="loadUsage(7,this)">7d</button><button class="tb active" onclick="loadUsage(30,this)">30d</button><button class="tb" onclick="loadUsage(90,this)">90d</button><button class="tb" onclick="loadUsage(null)">Refresh</button></div>
+  <div class="mrow" id="usMetrics"></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">🚦 Members near their limit <span class="pill" id="usNearCount">0</span></div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">This month's charged plus shadow credits against the monthly allowance. In shadow mode nobody is actually blocked; this shows who would be.</div>
+    <table><thead><tr><th>Member</th><th>Plan</th><th>Used this month</th><th>Would-be balance</th><th>Status</th><th>Top features</th></tr></thead><tbody id="tblNear"><tr><td colspan="6" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
+  <div class="card"><div class="ct-title">📈 Credit value vs measured cost, top features<span class="ctog" data-k="usage"></span></div><div class="chart-box"><canvas id="cUsage"></canvas></div></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">🧾 Features</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Cost is measured from each run's tokens and provider charges every 2 hours. Margin extrapolates the average measured cost per event to all events of that feature.</div>
+    <table><thead><tr><th>Feature</th><th>Events</th><th>Members</th><th>Price</th><th>Credit value</th><th>Cost (est.)</th><th>Margin</th><th>Issues</th><th>Last</th></tr></thead><tbody id="tblFeat"><tr><td colspan="9" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">👥 All members this month</div>
+    <table><thead><tr><th>Member</th><th>Plan</th><th>Used / allowance</th><th>Balance</th><th>Events 7d</th><th>Top features</th><th>Last seen</th></tr></thead><tbody id="tblMembers"></tbody></table>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">⛔ Work on hold for credits</div>
+    <table><thead><tr><th>When</th><th>Member</th><th>Feature</th><th>Detail</th></tr></thead><tbody id="tblHolds"></tbody></table>
+  </div>
+</div>
+
+<!-- USER FOCUS -->
+<div id="p-focus" class="panel">
+  <div class="ph"><h1 id="fTitle">User Focus</h1><p id="fSub">Pick a member from the dropdown at the bottom left, or click any member name.</p></div>
+  <div id="fBody" style="display:none">
+    <div class="card rec-card" id="fRec"></div>
+    <div class="mrow" id="fMetrics"></div>
+    <div class="two-col">
+      <div class="card"><div class="ct-title">🧭 Onboarding</div><div id="fOnb"></div></div>
+      <div class="card"><div class="ct-title">📊 Activity, last 30 days<span class="ctog" data-k="focus"></span></div><div class="chart-box"><canvas id="cFocus"></canvas></div></div>
+    </div>
+    <div class="card"><div class="ct-title">✉️ What the platform told them <span style="font-weight:400;font-size:12px;color:var(--text-dim);">(last 60 days; previews were sent to you instead of them)</span></div><div id="fTold"></div></div>
+    <div class="two-col">
+      <div class="card" id="fGoldCard"><div class="ct-title">⭐ Gold readiness</div><div id="fGold"></div></div>
+      <div class="card"><div class="ct-title">👤 Account</div><div id="fAcct"></div></div>
+    </div>
+    <div class="two-col">
+      <div class="card" style="overflow-x:auto"><div class="ct-title">🧩 Features used, 30 days</div><table><thead><tr><th>Feature</th><th>Events</th><th>Credits</th></tr></thead><tbody id="fFeat"></tbody></table></div>
+      <div class="card" style="overflow-x:auto"><div class="ct-title">🕘 Recent activity</div><table><thead><tr><th>When</th><th>Feature</th><th>Credits</th><th>What they asked</th></tr></thead><tbody id="fRecent"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- GOLD PATH -->
+<div id="p-gold" class="panel">
+  <div class="ph"><h1>Gold Path</h1><p>Readiness score from what each Starter member actually did. At 4 points a contextual Gold explanation can show. At 6 a review task is created for you. Offers respect the 7-day and 14-day suppression rules.</p></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="ct-title">⭐ Upgrade-ready list <span style="margin-left:auto"><button class="tb" onclick="loadGold(true)">Refresh</button></span></div>
+    <table><thead><tr><th>Member</th><th>Score</th><th>Why</th><th>Proactive offer</th><th>Last offer</th><th>Review task</th></tr></thead><tbody id="tblGold"><tr><td colspan="6" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
   </div>
 </div>
 
@@ -257,6 +338,14 @@ const sb = supabase.createClient(supabaseUrl, supabaseKey);
 let CUSTOMER_ID = null, authToken = null;
 let allUsers = [], selId = null, charts = {};
 let allEvents = [], evWin = 30, evCustomFrom = null, evCustomTo = null;
+// Chart style per chart (Bar / Line / Area), remembered in this browser. Defined here so early renders can use it.
+const CHART_PREF = {};
+function ctype(k) {
+  let t = CHART_PREF[k];
+  if (!t) { try { t = localStorage.getItem('vvChart:' + k); } catch (e) {} }
+  t = (t === 'line' || t === 'area') ? t : 'bar';
+  return { type: t === 'bar' ? 'bar' : 'line', fill: t === 'area', key: t };
+}
 
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
@@ -311,7 +400,7 @@ async function loadUsers() {
 function fillDD() {
   const dd = document.getElementById('userDD');
   dd.innerHTML = '<option value="">-- All Users --</option>';
-  allUsers.forEach(u => { const o=document.createElement('option'); o.value=u.email; o.textContent=u.company_name||u.email; dd.appendChild(o); });
+  allUsers.forEach(u => { const o=document.createElement('option'); o.value=u.email; o.textContent=(u.name||u.email)+(u.company_name?' · '+u.company_name:''); dd.appendChild(o); });
 }
 
 // ═══════════════════════════════════════════════
@@ -356,7 +445,7 @@ function renderSignupsChart() {
   for (let i=29;i>=0;i--) { const d=new Date(now); d.setDate(d.getDate()-i); const k=d.toISOString().split('T')[0]; labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'})); data.push(allUsers.filter(u=>u.created_at && u.created_at.startsWith(k)).length); }
   if (charts.signups) charts.signups.destroy();
   charts.signups = new Chart(document.getElementById('cSignups'), {
-    type: 'bar', data: { labels, datasets: [{ label: 'Signups', data, backgroundColor: 'rgba(253,126,20,.6)', borderColor: '#fd7e14', borderWidth: 1, borderRadius: 4 }] },
+    type: ctype('signups').type, data: { labels, datasets: [{ label: 'Signups', data, backgroundColor: 'rgba(253,126,20,.45)', borderColor: '#fd7e14', borderWidth: ctype('signups').type === 'line' ? 2 : 1, borderRadius: 4, fill: ctype('signups').fill, tension: .3, pointRadius: 2 }] },
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#8899b0', font: { size: 10 }, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: '#8899b0', stepSize: 1 }, grid: { color: 'rgba(255,255,255,.04)' }, beginAtZero: true } }, plugins: { legend: { display: false } } }
   });
 }
@@ -390,10 +479,10 @@ function renderUsersTable() {
     <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td>
     <td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td>
     <td>${stBadge()}</td>
-    <td style="font-family:'JetBrains Mono';font-size:13px">${moSub(u)}</td>
-    <td style="font-family:'JetBrains Mono';font-size:13px">${u.credits||0}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${moSub(u)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${u.credits||0}</td>
     <td style="font-size:12px;color:var(--text-dim)">${u.last_active?ago(u.last_active):'Never'}</td>
-    <td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">Edit</button></td>
+    <td style="white-space:nowrap"><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="openFocus('${esc(u.email)}')">Focus</button> <button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">Edit</button></td>
   </tr>`).join('');
 }
 
@@ -410,10 +499,10 @@ function renderOnboardingTable() {
     return `<tr>
       <td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td>
       <td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td>
-      <td style="font-family:'JetBrains Mono'">${u.pct_complete!=null?u.pct_complete+'%':'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${u.pct_complete!=null?u.pct_complete+'%':'—'}</td>
       <td style="font-size:13px;">${esc((u.next_step||'').replace(/_/g,' '))}</td>
       <td style="font-size:12px;color:var(--text-dim)">${lastAct}</td>
-      <td style="font-family:'JetBrains Mono';text-align:center">${u.victories_count||0}${u.has_victory?' 🏆':''}</td>
+      <td style="font-family:'JetBrains Mono',monospace;text-align:center">${u.victories_count||0}${u.has_victory?' 🏆':''}</td>
       <td><span class="badge ${riskBadge}">${u.risk_color}</span></td>
     </tr>`;
   }).join('');
@@ -437,7 +526,7 @@ function renderChurn() {
   if (!at.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--green)">🎉 No churn risk!</td></tr>'; return; }
   tb.innerHTML = at.map(u => {
     const lv = riskLvl(u), bg = lv==='high'?'b-red':lv==='medium'?'b-yellow':'b-blue';
-    return `<tr><td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td><td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td><td><span class="badge ${bg}">${lv}</span></td><td style="font-family:'JetBrains Mono'">${u.days_since_last_activity??'—'}</td><td style="font-family:'JetBrains Mono'">${moSub(u)}</td><td style="font-size:13px;color:var(--text-dim)">${riskWhy(u)}</td><td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">View</button></td></tr>`;
+    return `<tr><td><div style="font-weight:600;color:var(--text-bright)">${esc(u.company_name||'—')}</div><div style="font-size:12px;color:var(--text-dim)">${esc(u.email)}</div></td><td><span class="plan-badge plan-${u.subscription_plan.toLowerCase()}">${u.subscription_plan}</span></td><td><span class="badge ${bg}">${lv}</span></td><td style="font-family:'JetBrains Mono',monospace">${u.days_since_last_activity??'—'}</td><td style="font-family:'JetBrains Mono',monospace">${moSub(u)}</td><td style="font-size:13px;color:var(--text-dim)">${riskWhy(u)}</td><td><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="openFocus('${esc(u.email)}')">Focus</button></td></tr>`;
   }).join('');
 }
 
@@ -491,12 +580,16 @@ function renderEvents() {
   const days = [...new Set(filtered.map(e => e.ts.slice(0,10)))].sort();
   const features = Object.keys(byFeature);
   const palette = ['#3b82f6','#22c55e','#fd7e14','#8b5cf6','#06b6d4','#eab308','#bb133e','#60a5fa','#f472b6'];
+  const evCt = ctype('events');
   charts.events = new Chart(document.getElementById('cEvents'), {
-    type: 'bar',
+    type: evCt.type,
     data: { labels: days, datasets: features.map((f,i) => ({
       label: f,
       data: days.map(d => filtered.filter(e => e.feature===f && e.ts.slice(0,10)===d).length),
-      backgroundColor: palette[i%palette.length]
+      backgroundColor: palette[i%palette.length] + (evCt.fill ? '99' : ''),
+      borderColor: palette[i%palette.length],
+      fill: evCt.fill ? (i === 0 ? 'origin' : '-1') : false,
+      tension: .3, pointRadius: evCt.type === 'line' ? 1 : 0
     })) },
     options: { responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, ticks:{color:'#8899b0',font:{size:9},maxTicksLimit:12}, grid:{display:false}}, y:{stacked:true, ticks:{color:'#8899b0'}, grid:{color:'rgba(255,255,255,.04)'}} }, plugins:{legend:{position:'bottom',labels:{color:'#8899b0',font:{size:10}}}} }
   });
@@ -634,6 +727,260 @@ async function loadAccessQueue() {
   } catch (err) { tb.innerHTML = '<tr><td colspan="6" style="color:var(--red)">Could not load requests: ' + e3(err.message || err) + '</td></tr>'; }
 }
 (function waitAccess() { const a = document.getElementById('authLoading'); if (a && a.style.display === 'none' && typeof sb !== 'undefined') loadAccessQueue(); else setTimeout(waitAccess, 500); })();
+</script>
+<script>
+// ═══════════════════════════════════════════════
+// CHART STYLE toggles (ctype is defined in the first script)
+// ═══════════════════════════════════════════════
+const CHART_RENDER = { signups: () => renderSignupsChart(), events: () => renderEvents(), usage: () => renderUsageChart(), focus: () => renderFocusChart() };
+function initToggles() {
+  document.querySelectorAll('.ctog').forEach(el => {
+    const k = el.dataset.k;
+    el.innerHTML = ['bar', 'line', 'area'].map(t => `<button type="button" data-t="${t}" class="${ctype(k).key === t ? 'on' : ''}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('');
+    el.querySelectorAll('button').forEach(b => b.onclick = () => {
+      CHART_PREF[k] = b.dataset.t;
+      try { localStorage.setItem('vvChart:' + k, b.dataset.t); } catch (e) {}
+      el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      try { if (CHART_RENDER[k]) CHART_RENDER[k](); } catch (e) { console.error(e); }
+    });
+  });
+}
+initToggles();
+const DARK_SCALES = { x: { ticks: { color: '#8899b0', font: { size: 10 }, maxTicksLimit: 12 }, grid: { display: false } }, y: { ticks: { color: '#8899b0' }, grid: { color: 'rgba(255,255,255,.04)' }, beginAtZero: true } };
+const fmt$ = v => v == null || isNaN(v) ? '—' : '$' + (Math.abs(v) >= 100 ? Math.round(v).toLocaleString() : Number(v).toFixed(2));
+const fmtN = v => v == null ? '—' : Number(v).toLocaleString();
+const sDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+const sTime = d => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+const planBadge = p => { const g = String(p || '').toLowerCase() === 'gold'; return `<span class="plan-badge ${g ? 'plan-gold' : 'plan-starter'}">${g ? 'Gold' : 'Starter'}</span>`; };
+const memberLink = (email, label) => `<button class="lnk" onclick="openFocus('${esc(email)}')">${esc(label || email)}</button>`;
+
+// Load the new panels when they are opened.
+const _navBase = nav;
+nav = function (id, btn) {
+  _navBase(id, btn);
+  if (id === 'usage' && !usageData) loadUsage(30);
+  if (id === 'gold') loadGold();
+  if (id === 'focus' && !focusEmail) { document.getElementById('fBody').style.display = 'none'; }
+};
+
+// ═══════════════════════════════════════════════
+// USAGE & MARGIN (admin_usage_overview)
+// ═══════════════════════════════════════════════
+let usageData = null, usageDays = 30;
+async function loadUsage(days, btn) {
+  if (days) usageDays = days;
+  if (btn) { document.querySelectorAll('#usWin .tb').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  document.getElementById('tblFeat').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim)"><span class="mini-spin"></span>Loading...</td></tr>';
+  try {
+    const { data, error } = await sb.rpc('admin_usage_overview', { p_days: usageDays });
+    if (error) throw error;
+    usageData = data || {};
+    renderUsage();
+  } catch (e) { document.getElementById('tblFeat').innerHTML = `<tr><td colspan="9" style="color:var(--red)">Could not load usage: ${esc(e.message || e)}</td></tr>`; }
+}
+function usedBar(m) {
+  const used = (m.charged_month || 0) + (m.shadow_month || 0), pct = m.allowance ? Math.min(100, Math.round(100 * used / m.allowance)) : 0;
+  const col = m.out_of_credits ? 'var(--red)' : m.near_limit ? 'var(--yellow)' : 'var(--green)';
+  return `<div style="display:flex;align-items:center;gap:8px;"><div class="ubar" style="flex:1"><span style="width:${pct}%;background:${col}"></span></div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap">${fmtN(used)} / ${fmtN(m.allowance)}</span></div>`;
+}
+function renderUsage() {
+  const d = usageData || {}, t = d.totals || {}, feats = d.features || [], mems = d.members || [];
+  document.getElementById('usMode').innerHTML = d.mode === 'enforce' ? '<span class="badge b-red">Enforcing</span>' : '<span class="badge b-yellow">Shadow mode: recording only</span>';
+  let value = 0, cost = 0, platform = 0;
+  feats.forEach(f => {
+    if (f.platform_only) { platform += Number(f.est_cost_usd || f.cost_usd || 0); return; }
+    if (f.costed_events > 0) { value += Number(f.credit_value_usd || 0); cost += Number(f.est_cost_usd || 0); }
+  });
+  const margin = value > 0 ? Math.round(100 * (1 - cost / value)) : null;
+  document.getElementById('usMetrics').innerHTML = [
+    ['Events', fmtN(t.events), usageDays + ' days, tests excluded'],
+    ['Active members', fmtN(t.users), ''],
+    ['Credit value', fmt$(((t.shadow_credits || 0) + (t.charged_credits || 0)) * 0.01), fmtN(t.shadow_credits) + ' shadow + ' + fmtN(t.charged_credits) + ' charged'],
+    ['Member margin', margin == null ? '—' : margin + '%', 'on features with measured cost'],
+    ['Platform cost', fmt$(platform), 'scheduled jobs and syncs'],
+    ['Measured cost', fmt$(t.cost_usd), fmtN(t.costed_events) + ' events costed so far']
+  ].map(([l, v, s]) => `<div class="mcard"><div class="ml">${l}</div><div class="mv" style="font-size:24px">${v}</div><div class="ms">${s}</div></div>`).join('');
+
+  const near = mems.filter(m => m.near_limit || m.out_of_credits || (m.pct_used || 0) >= 60);
+  document.getElementById('usNearCount').textContent = near.length;
+  const bn = document.getElementById('badgeNear'); bn.textContent = near.length; bn.style.display = near.length ? '' : 'none';
+  document.getElementById('tblNear').innerHTML = near.length ? near.map(m => `<tr>
+      <td>${memberLink(m.email, m.name || m.email)}<div style="font-size:11px;color:var(--text-dim)">${esc(m.company_name || '')}</div></td>
+      <td>${planBadge(m.plan)}${m.status === 'trial' ? ' <span class="badge b-blue">trial</span>' : ''}</td>
+      <td style="min-width:200px">${usedBar(m)}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${fmtN(m.would_be_balance)}</td>
+      <td>${m.out_of_credits ? '<span class="badge b-red">would be on hold</span>' : m.near_limit ? '<span class="badge b-yellow">under 20% left</span>' : '<span class="badge b-blue">over 60% used</span>'}</td>
+      <td>${(m.top_features || []).map(f => `<span class="pill">${esc(f)}</span>`).join('')}</td></tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--green)">Nobody is near their limit.</td></tr>';
+
+  document.getElementById('tblFeat').innerHTML = feats.length ? feats.map(f => {
+    const mg = f.margin_pct, mc = mg == null ? 'var(--text-dim)' : mg < 50 ? '#ff8fa8' : mg < 70 ? 'var(--yellow)' : 'var(--green)';
+    return `<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(f.feature_key)}${f.platform_only ? ' <span class="pill">platform</span>' : ''}</td>
+      <td>${fmtN(f.events)}</td><td>${fmtN(f.users)}</td>
+      <td>${f.price != null ? fmtN(f.price) : '<span style="color:var(--text-dim)">cost x5</span>'}</td>
+      <td>${fmt$(f.credit_value_usd)}</td>
+      <td>${f.costed_events ? fmt$(f.est_cost_usd) + `<div style="font-size:10px;color:var(--text-dim)">${f.costed_events} of ${f.events} measured</div>` : '<span style="color:var(--text-dim)">pending</span>'}</td>
+      <td style="color:${mc};font-weight:700">${mg == null ? '—' : mg + '%'}</td>
+      <td>${f.problems ? '<span class="badge b-red">' + f.problems + '</span>' : ''}</td>
+      <td style="font-size:12px;color:var(--text-dim)">${sDate(f.last_ts)}</td></tr>`;
+  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--text-dim)">No usage recorded in this window yet.</td></tr>';
+
+  document.getElementById('tblMembers').innerHTML = mems.length ? mems.map(m => `<tr>
+      <td>${memberLink(m.email, m.name || m.email)}<div style="font-size:11px;color:var(--text-dim)">${esc(m.company_name || '')}</div></td>
+      <td>${planBadge(m.plan)}${m.status === 'trial' ? ' <span class="badge b-blue">trial</span>' : ''}</td>
+      <td style="min-width:200px">${usedBar(m)}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${fmtN(m.balance)}${m.shadow_month ? `<div style="font-size:10px;color:var(--text-dim)">would be ${fmtN(m.would_be_balance)}</div>` : ''}</td>
+      <td>${fmtN(m.events_7d)}</td>
+      <td>${(m.top_features || []).map(f => `<span class="pill">${esc(f)}</span>`).join('')}</td>
+      <td style="font-size:12px;color:var(--text-dim)">${m.last_event ? ago(m.last_event) : 'never'}</td></tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No active members.</td></tr>';
+
+  const holds = d.holds || [];
+  document.getElementById('tblHolds').innerHTML = holds.length ? holds.map(h => `<tr><td style="font-size:12px">${sTime(h.ts)}</td><td>${memberLink(h.email)}</td><td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(h.feature_key)}</td><td style="font-size:12px;color:var(--text-dim)">${esc(h.error || '')}${h.meta && h.meta.balance != null ? ' · balance ' + h.meta.balance + ', price ' + h.meta.price : ''}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:var(--green)">Nothing on hold.</td></tr>';
+  renderUsageChart();
+}
+function renderUsageChart() {
+  if (!usageData) return;
+  const top = (usageData.features || []).filter(f => !f.platform_only).sort((a, b) => (b.credit_value_usd || 0) - (a.credit_value_usd || 0)).slice(0, 12);
+  const ct = ctype('usage');
+  if (charts.usage) charts.usage.destroy();
+  charts.usage = new Chart(document.getElementById('cUsage'), {
+    type: ct.type,
+    data: { labels: top.map(f => f.feature_key), datasets: [
+      { label: 'Credit value ($)', data: top.map(f => Number(f.credit_value_usd || 0)), backgroundColor: 'rgba(34,197,94,.45)', borderColor: '#22c55e', borderWidth: 2, fill: ct.fill, tension: .3, borderRadius: 4 },
+      { label: 'Measured cost, est. ($)', data: top.map(f => Number(f.est_cost_usd || 0)), backgroundColor: 'rgba(187,19,62,.45)', borderColor: '#bb133e', borderWidth: 2, fill: ct.fill, tension: .3, borderRadius: 4 }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, scales: DARK_SCALES, plugins: { legend: { position: 'bottom', labels: { color: '#8899b0' } } } }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// USER FOCUS (admin_user_focus + admin_gold_ready)
+// ═══════════════════════════════════════════════
+let focusData = null, focusEmail = null, goldList = null;
+async function openFocus(email) {
+  if (!email) return;
+  focusEmail = email; selId = email;
+  const dd = document.getElementById('userDD'); if (dd) dd.value = email;
+  nav('focus', document.querySelector('[data-p="focus"]'));
+  document.getElementById('fBody').style.display = 'none';
+  document.getElementById('fTitle').innerHTML = '<span class="mini-spin"></span>Loading...';
+  document.getElementById('fSub').textContent = email;
+  try {
+    const [f, g] = await Promise.all([sb.rpc('admin_user_focus', { p_email: email }), sb.rpc('admin_gold_ready')]);
+    if (f.error) throw f.error;
+    if (!g.error) goldList = g.data || [];
+    if (!f.data || f.data.ok === false) throw new Error((f.data && f.data.error) || 'No data');
+    focusData = f.data;
+    renderFocus();
+  } catch (e) { document.getElementById('fTitle').textContent = 'Could not load this member'; document.getElementById('fSub').textContent = e.message || String(e); }
+}
+function renderFocus() {
+  const d = focusData, u = d.user || {}, o = d.onboarding || {}, r = d.recommendation || {};
+  document.getElementById('fTitle').textContent = u.name || u.email;
+  document.getElementById('fSub').innerHTML = `${esc(u.email)}${u.company_name ? ' · ' + esc(u.company_name) : ''}${u.title ? ' · ' + esc(u.title) : ''} &nbsp; ${planBadge(u.plan)} ${u.status === 'trial' ? '<span class="badge b-blue">trial</span>' : u.status !== 'active' ? '<span class="badge b-red">' + esc(u.status || '') + '</span>' : ''}`;
+  const isMail = /^mailto:/i.test(r.action_url || '');
+  document.getElementById('fRec').innerHTML = `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin-bottom:6px;">Recommended next step</div>
+    <div class="rec-h">${esc(r.headline || 'No recommendation')}</div><div class="rec-w">${esc(r.why || '')}</div>
+    ${r.action_url ? `<a class="btn btn-p" style="text-decoration:none;display:inline-block" href="${esc(r.action_url)}" ${isMail ? '' : 'target="_blank" rel="noopener"'}>${esc(r.action_label || 'Open')}</a>` : ''}`;
+  const used = (u.charged_month || 0) + (u.shadow_month || 0);
+  const g = (goldList || []).find(x => String(x.email).toLowerCase() === String(u.email).toLowerCase());
+  document.getElementById('fMetrics').innerHTML = [
+    ['Credits', fmtN(u.balance), 'allowance ' + fmtN(u.allowance) + '/mo'],
+    ['Used this month', fmtN(used), fmtN(u.charged_month) + ' charged + ' + fmtN(u.shadow_month) + ' shadow'],
+    ['Would-be balance', fmtN(u.would_be_balance), 'if shadow charges were real'],
+    u.status === 'trial' ? ['Trial', (u.trial_days_left != null ? u.trial_days_left + ' days left' : '—'), u.trial_ends_at ? 'ends ' + sDate(u.trial_ends_at) : ''] : ['Member since', sDate(u.created_at), (u.billing_interval || '') + ' billing'],
+    String(u.plan).toLowerCase() === 'gold' ? ['Gold', 'Active', ''] : ['Gold readiness', g ? g.score + ' / 10' : '—', g && g.score >= 6 ? 'review task due' : g && g.score >= 4 ? 'contextual offers allowed' : 'not ready yet']
+  ].map(([l, v, s]) => `<div class="mcard"><div class="ml">${l}</div><div class="mv" style="font-size:22px">${v}</div><div class="ms">${s}</div></div>`).join('');
+
+  const steps = Array.isArray(o.checklist) ? o.checklist : [];
+  document.getElementById('fOnb').innerHTML = (o.activation_state ? `<div style="margin-bottom:10px;font-size:13px;"><b>${esc(o.activation_state)}</b> · ${o.pct_complete != null ? o.pct_complete + '% complete' : ''} · ${o.days_inactive >= 999 ? 'never logged in' : (o.days_inactive != null ? o.days_inactive + ' days quiet' : '')} · ${o.nudges_for_step || 0} AI note(s) on the current step <span style="color:var(--${o.risk_color === 'red' ? 'red' : o.risk_color === 'yellow' ? 'yellow' : 'green'});font-size:15px;">&#9679;</span></div>` : '')
+    + (steps.length ? '<div class="tl">' + steps.map(s => {
+      const cur = !s.done && s.key === o.next_step_key;
+      return `<div class="tl-i"><div class="tl-d ${s.done ? 'ok' : cur ? 'cur' : 'no'}">${s.done ? '✓' : cur ? '→' : ''}</div><span style="${s.done ? 'color:var(--text-dim)' : cur ? 'color:var(--text-bright);font-weight:700' : ''}">${esc(s.label)}</span>${s.page ? `<a class="lnk" style="margin-left:auto;font-size:11px" href="https://victoryvision.app/${esc(s.page)}" target="_blank" rel="noopener">open</a>` : ''}</div>`;
+    }).join('') + '</div>' : '<p style="color:var(--text-dim)">No onboarding checklist for this account.</p>');
+
+  const told = d.told || [];
+  document.getElementById('fTold').innerHTML = told.length ? told.map(t => `<details class="told"><summary>${sTime(t.ts)} · <b>${esc(t.subject || t.type)}</b> <span class="pill">${esc(t.type)}</span>${t.preview ? '<span class="pill">preview to ' + esc(t.sent_to || 'you') + '</span>' : ''}${t.layout ? '<span class="pill">' + esc(t.layout) + '</span>' : ''}${t.cc ? '<span class="pill">cc ' + esc([].concat(t.cc).join(', ')) + '</span>' : ''}</summary>${t.text ? `<div class="tx">${esc(t.text)}</div>` : '<div class="tx" style="color:var(--text-dim)">The full text was not stored for this message.</div>'}${t.cta_page ? `<div style="margin-top:8px"><a class="lnk" href="${esc(t.cta_page)}" target="_blank" rel="noopener">${esc(t.cta_page)}</a></div>` : ''}</details>`).join('')
+    : '<p style="color:var(--text-dim)">Nothing sent to this member in the last 60 days.</p>';
+
+  if (String(u.plan).toLowerCase() === 'gold') {
+    document.getElementById('fGold').innerHTML = '<p style="color:var(--green)">Gold member. Upgrade prompts are off; show Gold activation steps instead.</p>';
+  } else if (g) {
+    document.getElementById('fGold').innerHTML = `<div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace">${g.score}<span style="font-size:14px;color:var(--text-dim)"> / 10</span></div>
+      <div style="margin:8px 0">${(g.signals || []).map(s => `<div style="font-size:12.5px;margin:3px 0">+${s.points} ${esc(s.key.replace(/_/g, ' '))} <span style="color:var(--text-dim)">· ${esc(s.evidence || '')}</span></div>`).join('') || '<span style="color:var(--text-dim);font-size:12px">No signals yet.</span>'}</div>
+      <div style="font-size:12px;color:var(--text-dim)">Proactive offer: ${g.proactive && g.proactive.eligible ? '<b style="color:var(--green)">allowed</b>' : 'held back (' + esc((g.proactive && g.proactive.reason || '').replace(/_/g, ' ')) + ')'}${g.last_offer ? ' · last offer ' + sDate(g.last_offer.ts) + ' (' + esc(g.last_offer.moment) + ', ' + esc(g.last_offer.status) + ')' : ''}</div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="setUserFlag('${esc(u.email)}','gold_budget_confirmed',true)">Confirm budget and authority</button>
+        <button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="setUserFlag('${esc(u.email)}','requested_help',true)">Mark: asked for help</button></div>`;
+  } else {
+    document.getElementById('fGold').innerHTML = '<p style="color:var(--text-dim)">Not scored (inactive account).</p>';
+  }
+
+  const team = d.team || [], cc = u.deal_email_cc;
+  document.getElementById('fAcct').innerHTML = `<div class="kv">
+    <div>Plan</div><div>${esc(u.plan || '—')} · ${esc(u.status || '—')}${u.billing_interval ? ' · ' + esc(u.billing_interval) : ''}</div>
+    <div>Member since</div><div>${sDate(u.created_at)}</div>
+    <div>Team</div><div>${team.length ? team.map(t => memberLink(t.email, (t.name || t.email) + (t.role ? ' (' + t.role + ')' : ''))).join('<br>') : 'Just them'}</div>
+    <div>Deal emails cc</div><div>${cc && [].concat(cc).length ? esc([].concat(cc).join(', ')) : '—'}</div>
+    <div>Next step page</div><div>${o.next_step_page ? `<a class="lnk" href="https://victoryvision.app/${esc(o.next_step_page)}" target="_blank" rel="noopener">${esc(o.next_step_label || o.next_step_page)}</a>` : '—'}</div></div>
+    <div style="margin-top:12px"><button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">Edit plan or credits</button></div>`;
+
+  const bf = d.by_feature || [];
+  document.getElementById('fFeat').innerHTML = bf.length ? bf.map(f => `<tr><td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(f.feature_key)}</td><td>${fmtN(f.events)}</td><td>${fmtN(f.credits)}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text-dim)">No feature use in 30 days.</td></tr>';
+  const rc = d.recent || [];
+  document.getElementById('fRecent').innerHTML = rc.length ? rc.map(x => `<tr><td style="font-size:12px;white-space:nowrap">${sTime(x.ts)}</td><td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(x.feature_key)}${x.status && x.status !== 'ok' ? ' <span class="badge b-red">' + esc(x.status) + '</span>' : ''}</td><td>${x.credits ? fmtN(x.credits) : ''}${x.shadow_credits ? '<span style="color:var(--text-dim)"> (' + fmtN(x.shadow_credits) + ' shadow)</span>' : ''}</td><td style="font-size:12px;color:var(--text-dim);max-width:320px">${esc(x.prompt || '')}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-dim)">No recorded activity yet. Metering started Oct 13.</td></tr>';
+
+  document.getElementById('fBody').style.display = 'block';
+  renderFocusChart();
+}
+function renderFocusChart() {
+  if (!focusData) return;
+  const daily = focusData.daily || [], ct = ctype('focus');
+  if (charts.focus) charts.focus.destroy();
+  charts.focus = new Chart(document.getElementById('cFocus'), {
+    type: ct.type,
+    data: { labels: daily.map(x => sDate(x.day + 'T12:00:00')), datasets: [
+      { label: 'Events', data: daily.map(x => x.events), backgroundColor: 'rgba(59,130,246,.45)', borderColor: '#3b82f6', borderWidth: 2, fill: ct.fill, tension: .3, borderRadius: 3, yAxisID: 'y' },
+      { label: 'Credits (incl. shadow)', data: daily.map(x => x.credits), backgroundColor: 'rgba(253,126,20,.4)', borderColor: '#fd7e14', borderWidth: 2, fill: ct.fill, tension: .3, borderRadius: 3, yAxisID: 'y1' }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: DARK_SCALES.x, y: DARK_SCALES.y, y1: { position: 'right', ticks: { color: '#8899b0' }, grid: { display: false }, beginAtZero: true } }, plugins: { legend: { position: 'bottom', labels: { color: '#8899b0' } } } }
+  });
+}
+async function setUserFlag(email, flag, value) {
+  try { const { error } = await sb.rpc('admin_set_user_flag', { p_email: email, p_flag: flag, p_value: value }); if (error) throw error; showToast('Saved.'); goldList = null; openFocus(email); }
+  catch (e) { showToast('Could not save: ' + (e.message || e), 'err'); }
+}
+
+// ═══════════════════════════════════════════════
+// GOLD PATH (admin_gold_ready)
+// ═══════════════════════════════════════════════
+async function loadGold(force) {
+  const tb = document.getElementById('tblGold');
+  if (!goldList || force) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim)"><span class="mini-spin"></span>Loading...</td></tr>';
+  try {
+    if (!goldList || force) { const { data, error } = await sb.rpc('admin_gold_ready'); if (error) throw error; goldList = data || []; }
+    const open = goldList.filter(g => g.task && g.task.status === 'open').length;
+    const bg = document.getElementById('badgeGold'); bg.textContent = open; bg.style.display = open ? '' : 'none';
+    tb.innerHTML = goldList.length ? goldList.map(g => {
+      const sc = g.score >= 6 ? 'var(--green)' : g.score >= 4 ? 'var(--yellow)' : 'var(--text-dim)';
+      const task = g.task ? `<span class="badge ${g.task.status === 'open' ? 'b-yellow' : 'b-green'}">${esc(g.task.status)}</span> <span style="font-size:11px;color:var(--text-dim)">${sDate(g.task.created_at)}</span>${g.task.status === 'open' ? `<div style="margin-top:4px"><button class="tb" style="padding:2px 8px" onclick="goldTask(${g.task.id},'done')">Done</button> <button class="tb" style="padding:2px 8px" onclick="goldTask(${g.task.id},'dismissed')">Dismiss</button></div>` : ''}` : '<span style="color:var(--text-dim);font-size:12px">none</span>';
+      return `<tr><td>${memberLink(g.email, g.name || g.email)}<div style="font-size:11px;color:var(--text-dim)">${esc(g.company_name || '')} · ${esc(g.plan || '')}${g.status === 'trial' ? ' trial' : ''}</div></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:${sc}">${g.score}</td>
+        <td style="max-width:360px">${(g.signals || []).map(s => `<span class="pill" title="${esc(s.evidence || '')}">+${s.points} ${esc(s.key.replace(/_/g, ' '))}</span>`).join('') || '<span style="color:var(--text-dim);font-size:12px">no signals yet</span>'}</td>
+        <td style="font-size:12px">${g.proactive && g.proactive.eligible ? '<span style="color:var(--green)">allowed</span>' : '<span style="color:var(--text-dim)">' + esc(((g.proactive && g.proactive.reason) || '').replace(/_/g, ' ')) + '</span>'}</td>
+        <td style="font-size:12px">${g.last_offer ? sDate(g.last_offer.ts) + ' · ' + esc(g.last_offer.moment) + ' · ' + esc(g.last_offer.status) : '<span style="color:var(--text-dim)">never</span>'}${g.offers_30d ? '<div style="font-size:11px;color:var(--text-dim)">' + g.offers_30d + ' in 30 days</div>' : ''}</td>
+        <td>${task}</td></tr>`;
+    }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim)">No Starter or trial members.</td></tr>';
+  } catch (e) { tb.innerHTML = `<tr><td colspan="6" style="color:var(--red)">Could not load: ${esc(e.message || e)}</td></tr>`; }
+}
+async function goldTask(id, status) {
+  try { const { error } = await sb.rpc('admin_gold_task', { p_id: id, p_status: status }); if (error) throw error; loadGold(true); }
+  catch (e) { showToast('Could not update: ' + (e.message || e), 'err'); }
+}
+(function waitGold() { const a = document.getElementById('authLoading'); if (a && a.style.display === 'none' && typeof sb !== 'undefined') { loadGold(); loadUsage(30); } else setTimeout(waitGold, 600); })();
 </script>
 </body>
 </html>
