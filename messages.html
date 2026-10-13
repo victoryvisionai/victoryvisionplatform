@@ -2247,6 +2247,10 @@ async function init() {
   // Auto-trigger tour from email link (?tour=)
   if (new URLSearchParams(window.location.search).get('tour')) setTimeout(startTour, 1200);
 
+  // Open a folder from an email link (?folder=drafts)
+  const _fd = new URLSearchParams(window.location.search).get('folder');
+  if (_fd && document.getElementById('tab-' + _fd)) switchFolder(_fd);
+
   // Pre-populate compose form from email link (?contact=EMAIL)
   const _cp = new URLSearchParams(window.location.search).get('contact');
   if (_cp) setTimeout(() => {
