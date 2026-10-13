@@ -352,4 +352,12 @@
   };
 
   global.VVCall = VVCall;
+
+  // Gold path (contextual Gold explanations, upgrade prompts). Loaded once, fails open.
+  try {
+    if (!global.VVGold && !document.querySelector('script[src*="gold-path.js"]')) {
+      var gp = document.createElement('script'); gp.src = '/gold-path.js?v=1'; gp.defer = true;
+      (document.head || document.documentElement).appendChild(gp);
+    }
+  } catch (e) {}
 })(window);
