@@ -455,6 +455,7 @@
       <span id="experimentsToggleIcon" style="font-size:20px;">▸</span>
     </div>
     <div id="experimentsBody" style="display:none;margin-top:16px;">
+      <div id="experimentsGroups"></div>
       <button id="runExperimentBtn" onclick="runExperimentCycle()" class="btn btn-primary" style="margin-bottom:16px;">▶ Run Experiment Cycle Now</button>
       <div id="experimentsWindows" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
       <div id="experimentsCombos"></div>
@@ -2460,6 +2461,59 @@ function toggleExperimentsPanel() {
   icon.textContent = opening ? '▾' : '▸';
   if (opening && !experimentsLoaded) { loadExperiments(); experimentsLoaded = true; }
 }
+// Group outreach experiments: contacts split by tag group (Stuy / West Point / Marines x finance /
+// professional services), each assigned an email type (arm). Counts are contacts, not emails;
+// clicks are human clicks only (security-scanner clicks are excluded).
+function renderGroupExperiments(list) {
+  const el = document.getElementById('experimentsGroups');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = ''; return; }
+  const ARM = { ug: 'User generated', vv: 'VV campaign', tpl: 'Template' };
+  const pct = (n, d) => d > 0 ? Math.round((n / d) * 100) + '%' : '–';
+  el.innerHTML = list.map(x => {
+    const rows = x.rows || [];
+    const byGroup = (x.weights && x.weights.by_group) || {};
+    const def = (x.weights && x.weights.default) || {};
+    const labels = x.groups || {};
+    const armCards = (x.by_arm || []).map(a => `<div style="flex:1;min-width:150px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;">
+        <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${esc(ARM[a.arm] || a.arm)}</div>
+        <div style="font-size:22px;font-weight:700;color:#0A3161;">${a.enrolled}</div>
+        <div style="font-size:12px;color:#64748b;">${a.replied} replied (${pct(a.replied, a.emailed)}) · ${a.meetings} meetings · ${a.joined} joined</div>
+      </div>`).join('');
+    const th = 'style="text-align:left;padding:6px 8px;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap;"';
+    const td = 'style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;"';
+    let lastGrp = '';
+    const body = rows.map(r => {
+      const w = (byGroup[r.grp] || def)[r.arm];
+      const first = r.grp !== lastGrp; lastGrp = r.grp;
+      return `<tr>
+        <td ${td}>${first ? esc(labels[r.grp] || r.grp) : ''}</td>
+        <td ${td}>${esc(ARM[r.arm] || r.arm)}</td>
+        <td ${td}>${w != null ? Math.round(w * 100) + '%' : '–'}</td>
+        <td ${td}>${r.enrolled}${r.waiting ? ` <span style="color:#94a3b8;">(+${r.waiting} queued)</span>` : ''}</td>
+        <td ${td}>${r.emailed}</td>
+        <td ${td}>${r.replied} <span style="color:#94a3b8;">${pct(r.replied, r.emailed)}</span></td>
+        <td ${td}>${r.meetings}</td>
+        <td ${td}>${r.clicked}</td>
+        <td ${td}>${r.visited}</td>
+        <td ${td}>${r.joined}</td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
+        <div style="font-weight:700;font-size:16px;">${esc(x.name || 'Group experiment')}</div>
+        <div style="font-size:12px;color:#94a3b8;">${esc(x.outcome || '')} · updated ${esc(String(x.generated_at || '').slice(0, 16).replace('T', ' '))} UTC</div>
+      </div>
+      <div style="font-size:12px;color:#64748b;margin:4px 0 12px;">Each new contact in a group gets one email type. Split = share of new contacts each type gets; the AI reviews results every Monday and shifts the split toward what works (never below 20%). Clicks count real people only.</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">${armCards}</div>
+      <div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;">
+        <thead><tr><th ${th}>Group</th><th ${th}>Email type</th><th ${th}>Split</th><th ${th}>Enrolled</th><th ${th}>Emailed</th><th ${th}>Replied</th><th ${th}>Meetings</th><th ${th}>Clicked</th><th ${th}>Visited page</th><th ${th}>Joined</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+      ${x.lessons ? `<div style="font-size:12px;margin-top:10px;background:#fffbeb;padding:8px 10px;border-radius:6px;white-space:pre-wrap;"><b>AI review notes:</b> ${esc(String(x.lessons).slice(-1200))}</div>` : ''}
+    </div>`;
+  }).join('');
+}
 async function loadExperiments() {
   try {
     const res = await fetch(N8N + '/experiments/summary', {
@@ -2468,6 +2522,7 @@ async function loadExperiments() {
     });
     const data = await res.json();
     if (!data || !data.success) return;
+    renderGroupExperiments(data.group_experiments || []);
 
     const w = data.windows || {};
     const windowsEl = document.getElementById('experimentsWindows');
@@ -2502,7 +2557,7 @@ async function loadExperiments() {
         // leads a lookalike found, whether anything actually sent.
         const stepsHtml = (run.steps || []).map(s => {
           const sColor = s.status === 'completed' ? '#16a34a' : s.status === 'in_progress' ? '#d97706' : s.status === 'failed' ? '#dc2626' : '#94a3b8';
-          const rd = s.result_data ? Object.entries(s.result_data).map(([k,v]) => k.replace(/_/g,' ') + ': ' + v).join(', ') : '';
+          const rd = !s.result_data ? '' : (typeof s.result_data === 'string' ? s.result_data : Object.entries(s.result_data).map(([k,v]) => k.replace(/_/g,' ') + ': ' + (v && typeof v === 'object' ? JSON.stringify(v) : v)).join(', '));
           return `<div style="font-size:11px;margin-top:3px;padding-left:8px;border-left:2px solid ${sColor};">
             <span style="color:${sColor};font-weight:600;text-transform:uppercase;">${esc(s.status || 'pending')}</span>
             <span style="color:#475569;"> ${esc(s.step_name || s.workflow_name || '')}</span>
