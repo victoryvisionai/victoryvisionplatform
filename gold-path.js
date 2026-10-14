@@ -6,6 +6,8 @@
  * 2. At most one proactive Gold card per session, at the right moment (gold_in_app_offer applies the
  *    suppression rules). Off until GOLD_INAPP_LIVE is 1. Add ?gold_preview=1 to any page to see a sample card.
  * 3. The upgrade section on Settings: renders into #vvUpgrade, checkout runs server-side (billing/gold-checkout).
+ * 4. Out of credits: when metering is enforced for this member (my_gold_status credits.enforced) and the balance
+ *    is 0, POSTs to paid paths (credits.paid_paths) pause with a short explanation. Inert in shadow mode.
  *
  * Fails open: if the status cannot be loaded or anything here errors, the page behaves exactly as before.
  * Load with: <script src="/gold-path.js" defer></script>   (vv-call.js also loads it)
@@ -243,15 +245,82 @@
     return to.length > 0 && to.every(function (x) { return TEAM.indexOf(x) >= 0 || x === me; });
   }
 
+  // ---------- out of credits (enforce mode only) ----------
+  // When metering is enforced for this member and the balance is 0, actions that use credits pause.
+  // Reading, copying and exporting never call these paths, so they stay free. The page and draft are untouched.
+  function outOfCredits() { var c = S && S.credits; return !!(c && c.enforced && Number(c.balance || 0) <= 0); }
+  function paidPath(input, init) {
+    try {
+      var url = typeof input === 'string' ? input : (input && input.url) || String(input);
+      var u = new URL(url, location.href);
+      if (u.hostname !== N8N_HOST) return null;
+      var m = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      if (m !== 'POST') return null;
+      var p = u.pathname.replace(/^\/webhook\//, '').replace(/\/+$/, '');
+      return (S.credits.paid_paths || []).indexOf(p) >= 0 ? p : null;
+    } catch (e) { return null; }
+  }
+  function creditsModal(path) {
+    css();
+    var old = d.getElementById('vvgGate'); if (old) old.remove();
+    var c = S.credits || {}, gold = isGold(S), offerId = null, done = false;
+    var ov = d.createElement('div');
+    ov.className = 'vvg-ov'; ov.id = 'vvgGate';
+    ov.innerHTML =
+      '<div class="vvg-box" role="dialog" aria-modal="true" aria-labelledby="vvgT">' +
+        '<div class="vvg-hd"><h3 id="vvgT">You have used this month\'s credits</h3><button class="vvg-x" data-a="close" aria-label="Close">&times;</button></div>' +
+        '<div class="vvg-bd">' +
+          '<div class="vvg-kept">Nothing was lost. Your work is kept.</div>' +
+          '<p>Actions that use credits are paused until your credits renew' + (c.reset ? ' on ' + esc(c.reset) : '') + '. Reading, copying and exporting are always free.</p>' +
+          (gold ? '<p>Need more before then? Email Andrew and he will sort it out.</p>'
+                : (c.gold_allowance ? '<p style="font-size:13px;color:#475569">Gold includes ' + fmt(c.gold_allowance) + ' credits a month' + (S.gold_price_cents ? ' for ' + money(S.gold_price_cents) + ' a year' : '') + '.</p>' : '')) +
+          '<div class="vvg-row">' +
+            (gold ? '<a class="vvg-btn vvg-gold" data-a="mail" href="mailto:' + ANDREW + '?subject=' + encodeURIComponent('More credits this month') + '">Email Andrew</a>'
+                  : '<button class="vvg-btn vvg-gold" data-a="gold">See what Gold adds</button>') +
+            '<button class="vvg-btn vvg-link" data-a="close">Close</button></div>' +
+          '<div class="vvg-note" id="vvgNote"></div>' +
+        '</div>' +
+      '</div>';
+    d.body.appendChild(ov);
+    if (!gold) logOffer('out_of_credits', 'presented', { page: page(), endpoint: path }).then(function (r) { if (r && r.offer_id) offerId = r.offer_id; });
+    function finish(st) { if (done || gold) return; done = true; var go = function () { logOffer('out_of_credits', st, {}, offerId); }; if (offerId) go(); else setTimeout(go, 1200); }
+    function close() { finish('dismissed'); ov.remove(); d.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    d.addEventListener('keydown', onKey);
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) return close();
+      var a = e.target.closest && e.target.closest('[data-a]'); if (!a) return;
+      var act = a.getAttribute('data-a');
+      if (act === 'close') return close();
+      if (act === 'gold') { finish('clicked'); w.open(UPGRADE.replace('#', '?gold_from=out_of_credits#'), '_blank'); d.getElementById('vvgNote').textContent = 'Gold opened in a new tab. This page and your work are unchanged.'; }
+    });
+  }
+  function noCredits(path) {
+    return new Response(JSON.stringify({ success: false, ok: false, credits_required: true, endpoint: path,
+      message: 'You have used this month\'s credits. Your work is kept.', error: 'You have used this month\'s credits. Your work is kept.' }), {
+      status: 402, statusText: 'Credits required', headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   if (nativeFetch) {
     w.fetch = function (input, init) {
       try {
+        if (outOfCredits()) {
+          var pp = paidPath(input, init);
+          if (pp) { creditsModal(pp); return Promise.resolve(noCredits(pp)); }
+        }
         if (gated()) {
           var rule = ruleFor(typeof input === 'string' ? input : (input && input.url) || String(input));
           if (rule) {
             var b = bodyOf(init && init.body);
             if (!exempt(rule, b)) { explain(rule, draftOf(rule.kind, b)); return Promise.resolve(blocked(rule)); }
           }
+        }
+      } catch (e) { /* fail open */ }
+      try {
+        if (S && S.credits && S.credits.enforced && paidPath(input, init)) {
+          // Keep the balance current after a paid action, so a member who just hit 0 sees the pause next time.
+          return nativeFetch(input, init).then(function (r) { setTimeout(function () { status(true); }, 4000); return r; });
         }
       } catch (e) { /* fail open */ }
       return nativeFetch(input, init);
@@ -411,7 +480,7 @@
     });
   }
 
-  w.VVGold = { status: status, renderUpgrade: renderUpgrade, explain: explain, isGated: gated, _rules: RULES };
+  w.VVGold = { status: status, renderUpgrade: renderUpgrade, explain: explain, isGated: gated, isOutOfCredits: outOfCredits, _rules: RULES };
 
   function boot() {
     wrapCall();
