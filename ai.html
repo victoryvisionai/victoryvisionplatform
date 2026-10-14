@@ -2515,13 +2515,16 @@ function renderGroupExperiments(list) {
   }).join('');
 }
 async function loadExperiments() {
+  // 2026-10-14: show a loading line right away; the panel used to stay blank until the endpoint answered.
+  const gEl = document.getElementById('experimentsGroups');
+  if (gEl && !gEl.innerHTML.trim()) gEl.innerHTML = '<p style="color:#64748b;font-size:13px;">Loading experiment results…</p>';
   try {
     const res = await fetch(N8N + '/experiments/summary', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customer_id: CUSTOMER_ID })
     });
     const data = await res.json();
-    if (!data || !data.success) return;
+    if (!data || !data.success) { if (gEl) gEl.innerHTML = '<p style="color:#b91c1c;font-size:13px;">Could not load experiment results. Close and reopen this panel to retry.</p>'; experimentsLoaded = false; return; }
     renderGroupExperiments(data.group_experiments || []);
 
     const w = data.windows || {};
@@ -2595,7 +2598,11 @@ async function loadExperiments() {
         <div id="${groupId}" style="display:none;">${runsHtml}</div>
       </div>`;
     }).join('');
-  } catch (e) { console.error('[loadExperiments]', e); }
+  } catch (e) {
+    console.error('[loadExperiments]', e);
+    if (gEl && /Loading experiment results/.test(gEl.innerHTML)) gEl.innerHTML = '<p style="color:#b91c1c;font-size:13px;">Could not load experiment results. Close and reopen this panel to retry.</p>';
+    experimentsLoaded = false;
+  }
 }
 async function addExperimentIdea() {
   const idea = document.getElementById('newExperimentIdea').value.trim();
