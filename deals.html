@@ -593,16 +593,20 @@ function closeDetails() { document.getElementById('detailsModal').classList.remo
 // MAX_TARGETS. Members only pull rows that are visible to someone.
 const MAX_TARGETS = 10000;
 async function fetchAllTargets() {
-  const rows = [];
-  for (let from = 0; from < MAX_TARGETS; from += 1000) {
+  const page = from => {
     let q = supabaseClient.from('targets').select('*')
       .order('created_at', { ascending: false }).order('id', { ascending: true })
       .range(from, from + 999);
     if (!IS_CURATOR) q = q.not('visible_to', 'is', null);
-    const { data, error } = await q;
-    if (error) return { data: rows.length ? rows : null, error: rows.length ? null : error };
-    rows.push(...(data || []));
-    if (!data || data.length < 1000) break;
+    return q;
+  };
+  const first = await page(0);
+  if (first.error) return { data: null, error: first.error };
+  const rows = [...(first.data || [])];
+  if ((first.data || []).length === 1000) {
+    const froms = []; for (let f = 1000; f < MAX_TARGETS; f += 1000) froms.push(f);
+    const seen = new Set(rows.map(r => r.id));
+    (await Promise.all(froms.map(page))).forEach(r => { if (!r.error && r.data) r.data.forEach(x => { if (!seen.has(x.id)) { seen.add(x.id); rows.push(x); } }); });
   }
   if (rows.length >= MAX_TARGETS) console.warn('deals.html: reached MAX_TARGETS (' + MAX_TARGETS + ') - raise it if the catalog has grown past this.');
   return { data: rows, error: null };
@@ -1177,20 +1181,23 @@ async function addLeadToContacts(i, btn) {
 const N8N_BASE = 'https://victoryvision.app.n8n.cloud/webhook';
 let FIN = null, CREDIT_PRICES = {}, LAST_CHAT = null, BUYBOX_CUTOFF = null;
 const FLAG_LABEL = { strong_cash_flow: ['Covers debt 1.5x+', 'ins-good'], covers_debt: ['Covers debt 1.25x+', 'ins-good'], thin_coverage: ['Thin debt coverage', 'ins-warn'], under_earning_vs_peers: ['Under-earning vs peers', 'ins-up'], priced_below_peers: ['Priced below peers', 'ins-up'], priced_above_peers: ['Priced above peers', 'ins-warn'], below_peer_price_psf: ['Below peer $/sq ft', 'ins-up'], high_cap_vs_peers: ['High cap vs peers', 'ins-up'], vacancy_upside: ['Vacancy upside', 'ins-up'], flood_zone_high_risk: ['Flood zone risk', 'ins-warn'], income_not_disclosed: ['Income not disclosed', 'ins-neutral'], value_add_candidate: ['Value-add', 'ins-up'], verify_financials: ['Verify financials', 'ins-warn'] };
-var INS_VIEW = 'targets_cash_after_debt_v';
+var INS_VIEW = 'targets_cash_after_debt_mv';
 var INS_COLS = 'id,kind,state,city,county,zip,peer_cat,sub_type,noi,noi_basis,cap_rate_pct,sq_ft,occupancy_pct,year_established,margin,multiple,price_psf,peer_margin,peer_multiple,peer_price_psf,peer_cap_rate,peer_basis,loan_rate_pct,annual_debt_service,income_for_debt,dscr,flags,flood_zone';
 var INS_CASH_COLS = ',income_basis,income_estimated,cre_bucket,est_cap_low_pct,est_cap_high_pct,income_low,income_base,income_high,loan_rate_base_pct,loan_rate_stress_pct,down_pct,term_yrs,equity_required,debt_service_base,debt_service_stress,cash_after_debt_low,cash_after_debt_base,cash_after_debt_high,dscr_low,dscr_base,dscr_high,cash_on_cash_pct,breakeven_income,breakeven_cap_pct,covers_debt_conservative,sba_capped,needs_verification';
 async function mergeInsights() {
   try {
     const map = {};
-    for (let from = 0; from < 20000; from += 1000) {
-      const { data, error } = await supabaseClient.from(INS_VIEW)
-        .select(INS_VIEW === 'targets_cash_after_debt_v' ? INS_COLS + INS_CASH_COLS : INS_COLS)
-        .range(from, from + 999);
-      if (error && from === 0 && INS_VIEW !== 'targets_insights_v') { console.warn('cash view unavailable, using insights only', error); INS_VIEW = 'targets_insights_v'; from = -1000; continue; }
-      if (error || !data) break;
-      data.forEach(r => { map[r.id] = r; });
-      if (data.length < 1000) break;
+    const insPage = from => supabaseClient.from(INS_VIEW)
+      .select(INS_VIEW.indexOf('targets_cash_after_debt') === 0 ? INS_COLS + INS_CASH_COLS : INS_COLS)
+      .order('id', { ascending: true }).range(from, from + 999);
+    let first = await insPage(0);
+    if (first.error && INS_VIEW !== 'targets_insights_v') { console.warn('precomputed insights unavailable, using live view', first.error); INS_VIEW = 'targets_insights_v'; first = await insPage(0); }
+    if (!first.error && first.data) {
+      first.data.forEach(r => { map[r.id] = r; });
+      if (first.data.length === 1000) {
+        const froms = []; for (let f = 1000; f < 20000; f += 1000) froms.push(f);
+        (await Promise.all(froms.map(insPage))).forEach(r => { if (!r.error && r.data) r.data.forEach(x => { map[x.id] = x; }); });
+      }
     }
     allTargets.forEach(t => { t._ins = map[t.id] || null; });
     const types = [...new Set(allTargets.map(t => t._ins && t._ins.kind === 'cre' ? t._ins.peer_cat : null).filter(Boolean))].sort();
