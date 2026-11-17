@@ -1,6 +1,5 @@
 /* Victory Vision shared calling module.
  * One implementation for calls.html, contacts.html and deals.html.
- * Three separate copies of this logic is why fixing one page kept breaking another.
  *
  * Usage:
  *   <script src="https://unpkg.com/@telnyx/webrtc@2.27.8/lib/bundle.js"></script>
@@ -8,8 +7,18 @@
  *   VVCall.init({ customerId: CUSTOMER_ID });
  *   VVCall.dial(contactObject);
  *
- * The host page supplies nothing else. The modal, script generation, live coach,
- * timer, notes and logging all live here.
+ * v2 (2026-11-16) - why calls stopped going out after the Oct 13 rollout:
+ *  - The Telnyx client was created once at page load and reused for every dial.
+ *    When its WebSocket dropped (laptop sleep, Wi-Fi change, idle tab) the client
+ *    object still existed, so connect() returned it as-is and newCall() went
+ *    nowhere. Telnyx has no record of those calls at all.
+ *  - The timer started at dial time, so a dead call looked like a live one
+ *    ("Calling... 01:01") and got logged to calls/journey as a "brief" call.
+ *  - Login errors were written to the status line and then overwritten by
+ *    "Calling...", so the real reason was never visible.
+ * Now: every dial confirms the client is logged in (telnyx.ready) and rebuilds it
+ * if not; a watchdog catches a call that never reaches Telnyx, reconnects and
+ * retries once; the timer starts on answer; dead attempts are not logged.
  */
 (function (global) {
   'use strict';
@@ -21,10 +30,17 @@
     log:   'https://victoryvision.app.n8n.cloud/webhook/calls/log'
   };
 
+  var READY_TIMEOUT_MS = 12000;   // login must finish within this
+  var REACH_TIMEOUT_MS = 15000;   // call must leave "new/requesting" within this
+
   var cfg = { customerId: null, onEnd: null };
-  var client = null, call = null, startedAt = null;
-  var timerId = null, coachId = null, recog = null;
-  var heard = '', script = '', contact = null, logged = false;
+  var client = null, ready = false, lastError = '', connecting = null;
+  var call = null, dialAt = null, answeredAt = null, reached = false, attempt = 0;
+  var timerId = null, coachId = null, watchdogId = null, recog = null;
+  var heard = '', script = '', contact = null, logged = false, dialDest = '', dialFrom = '';
+  var session = 0;   // bumps on every dial and hang-up so late async work can't place a call
+
+  function sameCall(a, b) { return !!(a && b && (a === b || (a.id && a.id === b.id))); }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -42,15 +58,25 @@
 
   function $(id) { return document.getElementById(id); }
 
-  function setStatus(t) { var e = $('vvcStatus'); if (e) e.textContent = t; }
+  function setStatus(t, isError) {
+    var e = $('vvcStatus');
+    if (!e) return;
+    e.textContent = t;
+    e.style.color = isError ? '#c0392b' : '#667';
+    e.style.fontWeight = isError ? '600' : '400';
+  }
+
+  function errText(e) {
+    if (!e) return 'unknown error';
+    if (typeof e === 'string') return e;
+    if (e.message) return e.message;
+    if (e.error && e.error.message) return e.error.message;
+    try { return JSON.stringify(e); } catch (x) { return 'unknown error'; }
+  }
 
   // ---------- modal ----------
   function ensureModal() {
     if ($('vvCallModal')) return;
-    var a = document.createElement('audio');
-    a.id = 'vvcRemoteAudio'; a.autoplay = true; a.setAttribute('playsinline','');
-    document.body.appendChild(a);
-
     var d = document.createElement('div');
     d.id = 'vvCallModal';
     d.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;align-items:center;justify-content:center;';
@@ -93,17 +119,15 @@
         cfg.sipUser  = uu && uu.sip_username ? uu.sip_username : null;
         cfg.sipPass  = uu && uu.sip_password ? uu.sip_password : null;
         if (!cfg.sipUser || !cfg.sipPass) {
-          console.warn('VVCall: calling disabled - sip_username or sip_password missing on this user.');
+          lastError = 'No phone login on this account (sip_username / sip_password missing)';
+          console.warn('VVCall: ' + lastError);
         }
         return uu;
       })
-      .catch(function (e) { console.warn('VVCall: user load failed', e); });
+      .catch(function (e) { lastError = 'Could not load your phone settings'; console.warn('VVCall: user load failed', e); });
   }
 
   // ---------- remote audio ----------
-  // Telnyx resolves remoteElement by id at call time. No page defined
-  // vvcRemoteAudio, so the remote stream was never attached and calls were
-  // silent. Create the element here so every page that loads this gets it.
   function ensureRemoteAudio() {
     var el = document.getElementById('vvcRemoteAudio');
     if (!el) {
@@ -122,54 +146,117 @@
   }
 
   // ---------- telnyx ----------
-  function connect() {
-    if (client) return Promise.resolve(client);
-    if (!cfg.sipUser || !cfg.sipPass) return Promise.resolve(null);
-    try {
-      client = new global.TelnyxWebRTC.TelnyxRTC({
-        login: cfg.sipUser, password: cfg.sipPass,
-        ringtoneFile: null, ringbackFile: null
-      });
-      client.on('telnyx.ready', function () { console.log('VVCall: Telnyx ready'); });
-      client.on('telnyx.error', function (e) {
-        console.error('VVCall: Telnyx error', e);
-        setStatus('Phone error: ' + (e && e.message ? e.message : 'unknown'));
-      });
-      client.on('telnyx.notification', onNotification);
-      return client.connect().then(function () {
-        console.log('VVCall: WebRTC connected');
-        return client;
-      }).catch(function (e) {
-        console.error('VVCall: connect failed', e);
-        client = null;
-        return null;
-      });
-    } catch (e) {
-      console.error('VVCall: init failed', e);
-      client = null;
-      return Promise.resolve(null);
+  function isLive() {
+    return !!(client && ready && client.connected !== false);
+  }
+
+  function dropClient() {
+    var c = client;
+    client = null; ready = false; connecting = null;
+    if (c) { try { c.disconnect(); } catch (e) {} }
+  }
+
+  // Resolves with a logged-in client, or rejects with a readable reason.
+  // Reuses the current client only if it is still logged in; otherwise rebuilds.
+  function ensureClient() {
+    if (isLive()) return Promise.resolve(client);
+    if (connecting) return connecting;
+    if (!cfg.sipUser || !cfg.sipPass) {
+      return Promise.reject(new Error(lastError || 'No phone login on this account'));
     }
+    if (!global.TelnyxWebRTC || !global.TelnyxWebRTC.TelnyxRTC) {
+      return Promise.reject(new Error('Telnyx phone library did not load (check ad/script blockers)'));
+    }
+    dropClient();
+
+    connecting = new Promise(function (resolve, reject) {
+      var settled = false;
+      function ok() { if (settled) return; settled = true; clearTimeout(t); resolve(client); }
+      function fail(msg) {
+        if (settled) return; settled = true; clearTimeout(t);
+        lastError = msg;
+        dropClient();
+        reject(new Error(msg));
+      }
+      var t = setTimeout(function () { fail('Phone login timed out (no response from Telnyx)'); }, READY_TIMEOUT_MS);
+
+      try {
+        var c = new global.TelnyxWebRTC.TelnyxRTC({
+          login: cfg.sipUser, password: cfg.sipPass,
+          ringtoneFile: null, ringbackFile: null
+        });
+        client = c;
+        c.on('telnyx.ready', function () {
+          if (client !== c) return;
+          ready = true; lastError = '';
+          console.log('VVCall: Telnyx logged in');
+          ok();
+        });
+        c.on('telnyx.error', function (e) {
+          if (client !== c) return;
+          ready = false;
+          var msg = 'Phone login failed: ' + errText(e);
+          console.error('VVCall: Telnyx error', e);
+          lastError = msg;
+          if (!settled) fail(msg);
+          else if (call) setStatus(msg, true);
+        });
+        c.on('telnyx.socket.close', function () {
+          if (client !== c) return;
+          console.warn('VVCall: Telnyx socket closed');
+          ready = false;
+        });
+        c.on('telnyx.socket.error', function (e) {
+          if (client !== c) return;
+          console.warn('VVCall: Telnyx socket error', e);
+          ready = false;
+          if (!settled) fail('Could not reach Telnyx (network or firewall)');
+        });
+        c.on('telnyx.notification', onNotification);
+        var p = c.connect();
+        if (p && p.catch) p.catch(function (e) { if (client === c) fail('Could not connect to Telnyx: ' + errText(e)); });
+      } catch (e) {
+        fail('Phone init failed: ' + errText(e));
+      }
+    });
+    connecting.then(function () { connecting = null; }, function () { connecting = null; });
+    return connecting;
   }
 
   function onNotification(n) {
+    if (n && n.type === 'userMediaError') {
+      setStatus('Microphone blocked - allow mic access for this site and try again', true);
+      abortAttempt(false);
+      return;
+    }
     var c = n && n.call ? n.call : null;
-    if (!c) return;
-    console.log('VVCall:', n.type, '| state:', c.state, '| cause:', c.cause, '| sip:', c.sipCode);
-    if (c.state === 'active') { setStatus('Connected'); startTimer(); startCoach(); }
-    if (c.state === 'hangup' || c.state === 'destroy') {
-      if (c.cause && c.cause !== 'NORMAL_CLEARING') {
-        setStatus('Call rejected: ' + c.cause + (c.sipCode ? ' (SIP ' + c.sipCode + ')' : ''));
-      }
-      finish();
+    if (!c || !sameCall(c, call)) return;
+    var st = c.state;
+    console.log('VVCall:', n.type, '| state:', st, '| cause:', c.cause, '| sip:', c.sipCode, c.sipReason || '');
+
+    if (st === 'trying' || st === 'ringing' || st === 'early' || st === 'answering' || st === 'active') {
+      reached = true;
+      clearTimeout(watchdogId);
+    }
+    if (st === 'trying') setStatus('Dialing...');
+    if (st === 'ringing' || st === 'early') setStatus('Ringing...');
+    if (st === 'active') {
+      if (!answeredAt) answeredAt = Date.now();
+      setStatus('Connected');
+      startTimer(); startCoach();
+    }
+    if (st === 'hangup' || st === 'destroy') {
+      var bad = c.cause && c.cause !== 'NORMAL_CLEARING';
+      finish(bad ? ('Call ended: ' + c.cause + (c.sipCode ? ' (SIP ' + c.sipCode + (c.sipReason ? ' ' + c.sipReason : '') + ')' : '')) : 'Call ended', bad);
     }
   }
 
   // ---------- timer ----------
   function startTimer() {
-    if (!startedAt) startedAt = Date.now();
     clearInterval(timerId);
+    var from = answeredAt || Date.now();
     timerId = setInterval(function () {
-      var s = Math.floor((Date.now() - startedAt) / 1000);
+      var s = Math.floor((Date.now() - from) / 1000);
       var e = $('vvcTimer');
       if (e) e.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     }, 1000);
@@ -178,7 +265,7 @@
   // ---------- speech ----------
   function startListening() {
     var SR = global.SpeechRecognition || global.webkitSpeechRecognition;
-    if (!SR) { console.warn('VVCall: no SpeechRecognition; coach runs without transcript.'); return; }
+    if (!SR || recog) return;
     try {
       recog = new SR();
       recog.continuous = true; recog.interimResults = false; recog.lang = 'en-US';
@@ -188,9 +275,13 @@
         }
       };
       recog.onerror = function (e) { if (e.error !== 'no-speech') console.warn('VVCall: speech', e.error); };
-      recog.onend = function () { if (call) { try { recog.start(); } catch (e) {} } };
+      recog.onend = function () { if (call && recog) { try { recog.start(); } catch (e) {} } };
       recog.start();
     } catch (e) { console.warn('VVCall: speech init', e); }
+  }
+
+  function stopListening() {
+    if (recog) { try { recog.onend = null; recog.stop(); } catch (e) {} recog = null; }
   }
 
   // ---------- coach ----------
@@ -206,7 +297,7 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer_id: cfg.customerId, contact: contact, script: script, heard: heard,
-        elapsed_seconds: startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0
+        elapsed_seconds: answeredAt ? Math.floor((Date.now() - answeredAt) / 1000) : 0
       })
     }).then(function (r) { return r.json(); })
       .then(function (d) {
@@ -225,22 +316,21 @@
   }
 
   // ---------- logging ----------
-  function logCall() {
+  function logCall(c) {
     if (logged) return;
     logged = true;
-    var dur = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-    // Telnyx stamps every recording with call_session_id and call_leg_id. Sending
-    // them here turns recording-to-call matching into an exact lookup. Without
-    // them the server can only guess from the dialled number and a time window,
-    // which once attached a recording of one call to a different call entirely.
-    var ids = (call && call.telnyxIDs) ? call.telnyxIDs : {};
+    // Only log calls Telnyx actually carried. An attempt that never left the
+    // browser is not a call and must not land in calls / customer_journey.
+    if (!reached) { console.warn('VVCall: not logged - call never reached Telnyx'); return; }
+    var start = answeredAt || dialAt;
+    var dur = start ? Math.max(1, Math.floor((Date.now() - start) / 1000)) : 0;
+    var ids = (c && c.telnyxIDs) ? c.telnyxIDs : {};
     var sessionId = ids.telnyxSessionId || null;
     var legId     = ids.telnyxLegId || null;
     var ccId      = ids.telnyxCallControlId || null;
-    console.log('VVCall: telnyx session=' + sessionId + ' leg=' + legId);
-    if (!contact || dur <= 0) { console.warn('VVCall: log skipped, duration=' + dur); return; }
+    if (!contact) return;
     var notesEl = $('vvcNotes');
-    console.log('VVCall: logging ' + dur + 's call with ' + (contact.name || 'unknown'));
+    console.log('VVCall: logging ' + dur + 's call with ' + (contact.name || 'unknown') + ' session=' + sessionId);
     fetch(EP.log, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -262,15 +352,67 @@
     }).catch(function (e) { console.warn('VVCall: log failed', e); });
   }
 
-  function finish() {
-    clearInterval(timerId); clearInterval(coachId);
-    if (recog) { try { recog.onend = null; recog.stop(); } catch (e) {} recog = null; }
-    logCall();
-    call = null; startedAt = null;
-    setStatus('Call ended');
-    // Close the modal shortly after the call ends. Previously only the X
-    // dismissed it, so hanging up left the window sitting open over the page.
-    setTimeout(hideModal, 1200);
+  function clearTimers() {
+    clearInterval(timerId); clearInterval(coachId); clearTimeout(watchdogId);
+  }
+
+  // Ends a call that did reach Telnyx (or was answered): log it and close.
+  function finish(statusText, isError) {
+    var c = call;
+    clearTimers();
+    stopListening();
+    logCall(c);
+    call = null; dialAt = null; answeredAt = null;
+    setStatus(statusText || 'Call ended', !!isError);
+    if (!isError) setTimeout(hideModal, 1200);
+  }
+
+  // Kills an attempt that never reached Telnyx. Leaves the modal open with the reason.
+  function abortAttempt(dropConnection) {
+    var c = call;
+    clearTimers();
+    stopListening();
+    call = null; dialAt = null; answeredAt = null; logged = true;
+    if (c) { try { c.hangup(); } catch (e) {} }
+    if (dropConnection) dropClient();
+  }
+
+  function placeCall(my) {
+    if (my !== session) return;
+    attempt++;
+    reached = false; logged = false; answeredAt = null;
+    setStatus(attempt > 1 ? 'Reconnected - calling again...' : 'Calling...');
+    try {
+      dialAt = Date.now();
+      ensureRemoteAudio();
+      call = client.newCall({
+        destinationNumber: dialDest,
+        callerNumber: dialFrom,
+        audio: true,
+        video: false,
+        remoteElement: 'vvcRemoteAudio'
+      });
+      startListening();
+    } catch (e) {
+      console.error('VVCall: dial failed', e);
+      abortAttempt(true);
+      setStatus('Call failed: ' + errText(e), true);
+      return;
+    }
+    clearTimeout(watchdogId);
+    watchdogId = setTimeout(function () {
+      if (!call || reached) return;
+      console.warn('VVCall: call never reached Telnyx after ' + REACH_TIMEOUT_MS + 'ms (attempt ' + attempt + ')');
+      abortAttempt(true);
+      if (attempt < 2) {
+        setStatus('Phone connection was stale - reconnecting...');
+        ensureClient().then(function () { placeCall(my); }, function (e) {
+          if (my === session) setStatus('Call did not go out: ' + errText(e), true);
+        });
+      } else {
+        setStatus('Call did not go out - Telnyx never received it. ' + (lastError ? lastError : 'Check your internet connection and try again.'), true);
+      }
+    }, REACH_TIMEOUT_MS);
   }
 
   // ---------- public ----------
@@ -279,12 +421,18 @@
       cfg.customerId = opts && opts.customerId ? opts.customerId : null;
       cfg.onEnd = opts && opts.onEnd ? opts.onEnd : null;
       ensureModal();
-      return loadUser().then(connect);
+      // Warm-up only. dial() re-checks the connection, so a failure here is not fatal.
+      return loadUser().then(function () {
+        return ensureClient().catch(function (e) { console.warn('VVCall: warm-up login failed -', errText(e)); return null; });
+      });
     },
 
     dial: function (c) {
       if (!c) { console.warn('VVCall: no contact'); return; }
-      contact = c; heard = ''; script = ''; logged = false; startedAt = null;
+      if (call) { setStatus('A call is already in progress'); showModal(); return; }
+      var my = ++session;
+      contact = c; heard = ''; script = ''; logged = false; reached = false;
+      dialAt = null; answeredAt = null; attempt = 0;
 
       showModal();
       $('vvcName').textContent = c.name || '(no name)';
@@ -293,12 +441,13 @@
       $('vvcCoach').innerHTML = '';
       $('vvcNotes').value = '';
       $('vvcScript').textContent = 'Generating...';
-      setStatus('Generating script...');
+      setStatus('Generating script and connecting phone...');
 
-      var dest = e164(c.phone_number);
-      if (!dest) { setStatus('No valid phone number'); return; }
+      dialDest = e164(c.phone_number);
+      if (!dialDest) { setStatus('No valid phone number on this contact', true); return; }
 
-      fetch(EP.script, {
+      // Script generation and phone login run in parallel.
+      var scriptP = fetch(EP.script, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customer_id: cfg.customerId, phone_number: c.phone_number, contact: c })
       }).then(function (r) { return r.json(); })
@@ -312,42 +461,33 @@
           script = s || String(c.script || '').trim() ||
                    'Open with your name, the shared context, then one question. Then stop talking.';
           $('vvcScript').textContent = script;
-          return (cfg.sipUser ? Promise.resolve() : loadUser()).then(connect);
-        })
-        .then(function () {
-          if (!client) { setStatus('Phone system not connected'); return; }
-          var from = e164(cfg.vvnumber);
-          if (!from) { setStatus('No caller number set in Settings'); return; }
-          setStatus('Calling...');
-          try {
-            // Stamp the dial time here, not on the active event: if the SDK
-            // never emits active, duration stays 0 and the call is never logged.
-            startedAt = Date.now();
-            ensureRemoteAudio();
-            call = client.newCall({
-              destinationNumber: dest,
-              callerNumber: from,
-              audio: true,
-              video: false,
-              remoteElement: 'vvcRemoteAudio'
-            });
-            startTimer();
-            startListening();
-          } catch (e) {
-            console.error('VVCall: dial failed', e);
-            setStatus('Call failed: ' + e.message);
-          }
         });
+
+      var phoneP = (cfg.sipUser ? Promise.resolve() : loadUser())
+        .then(ensureClient)
+        .then(function () { return null; }, function (e) { return e; });
+
+      Promise.all([scriptP, phoneP]).then(function (res) {
+        var phoneErr = res[1];
+        if (my !== session) return;         // hung up or redialled meanwhile
+        if (phoneErr) { setStatus('Phone system not connected: ' + errText(phoneErr), true); return; }
+        dialFrom = e164(cfg.vvnumber);
+        if (!dialFrom) { setStatus('No caller number set in Settings', true); return; }
+        placeCall(my);
+      });
     },
 
     hangup: function () {
-      if (call) { try { call.hangup(); } catch (e) {} }
-      finish();
-      hideModal();
+      session++;
+      var c = call;
+      if (c) { try { c.hangup(); } catch (e) {} }
+      if (c) finish('Call ended', false);
+      else { clearTimers(); stopListening(); hideModal(); }
     },
 
     close: hideModal,
-    isReady: function () { return !!client; },
+    isReady: function () { return isLive(); },
+    lastError: function () { return lastError; },
     endpoints: EP
   };
 
