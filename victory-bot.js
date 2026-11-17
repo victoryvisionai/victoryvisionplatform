@@ -129,16 +129,43 @@
       '</svg>';
   }
 
+  // Small head, wide chest screen: the chest is where the member looks.
+  function botSvg2(u, rank) {
+    var O = '#5E6876', L = '#DDE2E9', M = '#C2C9D3', hot = u >= 3;
+    var face = u >= 2 ? NAVY : '#FFFFFF', vee = hot ? '#FF4D5E' : (u === 2 ? '#FFFFFF' : NAVY), trim = hot ? RED : NAVY;
+    var chev = '', n = rank >= 3 ? 3 : rank === 2 ? 2 : 1, top = hot ? -6 : -3;
+    for (var i = 0; i < n; i++) { var y = 191 + i * 7; chev += 'M138 ' + y + ' L150 ' + (y + 6) + ' L162 ' + y + ' '; }
+    var logo = '<path d="M166 268 L18 10 L128 10 L256 226" stroke="' + RED + '"/><path d="M82 20 L219 258 L251 258 L366 10 L330 10" stroke="' + NAVY + '"/><path d="M170 10 L296 10 L240 130" stroke="' + RED + '"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -6 300 228" width="230" height="175" aria-hidden="true">' +
+      '<polygon points="10,96 18,80 90,70 210,70 282,80 290,96 290,214 10,214" fill="' + M + '" stroke="' + O + '" stroke-width="1.5"/>' +
+      '<polygon points="10,96 18,80 90,70 150,70 150,214 10,214" fill="' + L + '"/>' +
+      '<polygon points="142,60 158,60 160,72 140,72" fill="#9AA3B0" stroke="' + O + '" stroke-width="1"/>' +
+      '<rect x="38" y="100" width="224" height="86" rx="8" fill="#FFFFFF" stroke="' + trim + '" stroke-width="3"/>' +
+      '<polygon points="12,74 78,60 80,78 14,94" fill="#FFFFFF" stroke="' + trim + '" stroke-width="2"/>' +
+      '<polygon points="288,74 222,60 220,78 286,94" fill="#FFFFFF" stroke="' + trim + '" stroke-width="2"/>' +
+      '<g transform="translate(33,71.5) skewY(-12) scale(0.06)" fill="none" stroke-width="26">' + logo + '</g>' +
+      '<g transform="translate(245,66.5) skewY(12) scale(0.06)" fill="none" stroke-width="26">' + logo + '</g>' +
+      '<path d="' + chev + '" stroke="' + trim + '" stroke-width="3" fill="none"/>' +
+      '<polygon points="137,4 163,4 173,16 171,36 158,62 142,62 129,36 127,16" fill="' + L + '" stroke="' + O + '" stroke-width="1.2"/>' +
+      '<polygon points="150,4 163,4 173,16 171,36 158,62 150,62" fill="' + M + '"/>' +
+      '<polygon points="130,17 141,17 150,43 159,17 170,17 156,58 144,58" fill="' + face + '" stroke="' + (u >= 2 ? O : NAVY) + '" stroke-width="1"/>' +
+      '<path d="M135.5 20.5 L150 51 L164.5 20.5" stroke="' + vee + '" stroke-width="3.5" fill="none"/>' +
+      '<polygon points="127,20 123,23 124,35 128,34" fill="' + trim + '"/><polygon points="173,20 177,23 176,35 172,34" fill="' + trim + '"/>' +
+      '<polygon points="148,4 152,4 151,' + top + ' 149,' + top + '" fill="' + (u === 2 ? '#FFFFFF' : trim) + '" stroke="' + O + '" stroke-width="0.8"/>' +
+      '</svg>';
+  }
+
   var CSS = '#vvbot{position:fixed;left:14px;bottom:10px;z-index:2147483000;display:flex;align-items:flex-end;gap:6px;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}' +
     '#vvbot>*{pointer-events:auto}' +
-    '.vvbot-bot{position:relative;width:160px;height:141px;cursor:grab;touch-action:none;user-select:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}' +
+    '.vvbot-bot{position:relative;width:230px;height:175px;cursor:grab;touch-action:none;user-select:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}' +
     '.vvbot-bot svg{display:block;animation:vvbotBob 3.2s ease-in-out infinite}' +
-    '.vvbot-chest{position:absolute;left:30%;width:40%;top:76%;height:19%;overflow:hidden;display:flex;align-items:center;font-size:12px;font-weight:700;line-height:1;color:' + NAVY + ';animation:vvbotBob 3.2s ease-in-out infinite}' +
+    '.vvbot-chest{position:absolute;left:14.6%;width:70.8%;top:48.5%;height:33.5%;overflow:hidden;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-size:19px;font-weight:700;line-height:1.15;color:' + NAVY + ';animation:vvbotBob 3.2s ease-in-out infinite}' +
     '.vvbot-hot .vvbot-chest{color:' + RED + '}' +
+    '.vvbot-chest small{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;white-space:nowrap;color:' + RED + ';margin:0 0 4px 3px}' +
     '.vvbot-chest span{display:inline-block;white-space:nowrap;padding-left:100%;animation:vvbotTick 9s linear infinite}' +
     '@keyframes vvbotTick{from{transform:translateX(0)}to{transform:translateX(-100%)}}' +
     '@keyframes vvbotBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}' +
-    '.vvbot-card{position:relative;background:#fff;border:2px solid ' + NAVY + ';border-radius:10px;padding:10px 12px 8px;width:290px;max-width:calc(100vw - 150px);margin-bottom:22px;box-shadow:0 6px 18px rgba(0,0,0,.3);text-align:left}' +
+    '.vvbot-card{position:relative;background:#fff;border:2px solid ' + NAVY + ';border-radius:10px;padding:10px 12px 8px;width:290px;max-width:calc(100vw - 30px);margin-bottom:22px;box-shadow:0 6px 18px rgba(0,0,0,.3);text-align:left}' +
     '.vvbot-hot .vvbot-card{border-color:' + RED + '}' +
     '.vvbot-h{cursor:grab;touch-action:none;user-select:none;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + RED + ';margin:0 18px 6px 0}' +
     '.vvbot-go{display:flex;gap:8px;align-items:center;padding:7px 8px;margin:0 -4px;border-radius:7px;text-decoration:none;color:' + NAVY + '}' +
@@ -164,7 +191,7 @@
     '.vvbot-ask button:disabled{opacity:.5;cursor:default}' +
     '.vvbot-flip{flex-direction:row-reverse}' +
     '.vvbot-drag .vvbot-bot,.vvbot-drag .vvbot-h{cursor:grabbing}' +
-    '@media (max-width:640px){.vvbot-bot{width:104px;height:92px}.vvbot-bot svg{width:104px;height:92px}.vvbot-chest{font-size:9px}.vvbot-card{max-width:200px}}' +
+    '@media (max-width:640px){#vvbot{flex-direction:column-reverse}.vvbot-bot{width:170px;height:129px}.vvbot-bot svg{width:170px;height:129px}.vvbot-chest{font-size:14px}.vvbot-chest small{font-size:8px;margin-bottom:2px}.vvbot-card{max-width:200px}}' +
     '@media (prefers-reduced-motion:reduce){.vvbot-bot svg,.vvbot-chest{animation:none}}';
 
   function ensureCss() {
@@ -185,11 +212,11 @@
       if (right) box.classList.add('vvbot-flip'); else box.classList.remove('vvbot-flip');
     }
     function grip(el, tap) {
-      var sx = 0, sy = 0, ox = 0, oy = 0, down = false, moved = false;
+      var sx = 0, sy = 0, ox = 0, oy = 0, down = false, moved = false, tgt = null;
       el.addEventListener('pointerdown', function (e) {
         if (e.button) return;
         var r = bot.getBoundingClientRect();
-        down = true; moved = false; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+        down = true; moved = false; tgt = e.target; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
         try { el.setPointerCapture(e.pointerId); } catch (x) {}
       });
       el.addEventListener('pointermove', function (e) {
@@ -203,7 +230,7 @@
         if (!down) return;
         down = false; box.classList.remove('vvbot-drag');
         if (moved) { var r = bot.getBoundingClientRect(); try { w.localStorage.setItem('vvbot_pos', JSON.stringify([Math.round(r.left), Math.round(r.top)])); } catch (x) {} }
-        else if (tap) tap();
+        else if (tap) tap(tgt);
       });
       el.addEventListener('pointercancel', function () { down = false; box.classList.remove('vvbot-drag'); });
     }
@@ -255,16 +282,16 @@
     var u = Math.max(1, Math.min(3, +data.urgency || 1)), rank = +data.rank || 1, wins = +data.wins || 0;
     var min = false; try { min = w.sessionStorage.getItem('vvbot_min') === '1'; } catch (e) {}
     ensureCss();
-    var tick = acts.map(function (a) { return esc(fix(a.label)); }).join(' &nbsp;&#9670;&nbsp; ');
-    var dur = Math.max(7, Math.round(acts.map(function (a) { return a.label; }).join('   ').length * 0.3));
+    var tick = acts.map(function (a) { return esc(fix(a.label)) + (a.sub ? ', ' + esc(a.sub) : ''); }).join(' &nbsp;&#9670;&nbsp; ');
+    var dur = Math.max(7, Math.round(acts.map(function (a) { return a.label + ', ' + (a.sub || ''); }).join('   ').length * 0.22));
     var items = acts.map(function (a, i) {
       return '<a class="vvbot-go" href="' + esc(a.url) + '?vb=' + esc(a.key) + '" data-key="' + esc(a.key) + '" data-url="' + esc(a.url) + '">' +
         '<span class="vvbot-n">' + (i + 1) + '</span><span><b>' + esc(fix(a.label)) + '</b><i>' + esc(a.sub || '') + '</i></span></a>';
     }).join('');
     var box = d.createElement('div');
     box.id = 'vvbot'; if (u >= 3) box.className = 'vvbot-hot';
-    box.innerHTML = '<div class="vvbot-bot" title="Victory Bot">' + botSvg(u, rank) +
-      '<div class="vvbot-chest"><span style="animation-duration:' + dur + 's">' + tick + '</span></div></div>' +
+    box.innerHTML = '<div class="vvbot-bot" title="Victory Bot">' + botSvg2(u, rank) +
+      '<div class="vvbot-chest" data-key="' + esc(acts[0].key) + '" data-url="' + esc(acts[0].url) + '"><small>' + (u >= 3 ? 'DO THIS NOW' : 'YOUR NEXT MOVE') + '</small><span style="animation-duration:' + dur + 's">' + tick + '</span></div></div>' +
       '<div class="vvbot-card"' + (min ? ' style="display:none"' : '') + '><button class="vvbot-x" type="button" aria-label="Hide">&times;</button>' +
       '<div class="vvbot-h">' + (u >= 3 ? 'Do this now' : 'Your next move') + '</div>' + items +
       '<div class="vvbot-log" aria-live="polite"></div><form class="vvbot-ask"><input type="text" maxlength="500" placeholder="Ask me anything" aria-label="Ask Victory Bot"><button type="submit">Ask</button></form>' +
@@ -273,7 +300,13 @@
     var card = box.querySelector('.vvbot-card');
     function setMin(v) { card.style.display = v ? 'none' : ''; try { w.sessionStorage.setItem('vvbot_min', v ? '1' : '0'); } catch (e) {} }
     box.querySelector('.vvbot-x').addEventListener('click', function (e) { e.stopPropagation(); setMin(true); ev('bot_dismiss'); });
-    drag(box, box.querySelector('.vvbot-bot'), box.querySelector('.vvbot-h'), function () { setMin(card.style.display !== 'none'); });
+    drag(box, box.querySelector('.vvbot-bot'), box.querySelector('.vvbot-h'), function (t) {
+      var c = t && t.closest ? t.closest('.vvbot-chest') : null;
+      if (!c) { setMin(card.style.display !== 'none'); return; }
+      var key = c.getAttribute('data-key'), url = c.getAttribute('data-url');
+      ev('bot_click', key);
+      if (here(url)) { ensureCss(); guide(key); } else location.href = url + '?vb=' + key;
+    });
     chat(box);
     var links = box.querySelectorAll('.vvbot-go');
     for (var i = 0; i < links.length; i++) {
@@ -299,7 +332,7 @@
     });
   }
 
-  w.VVBot = { guide: guide, version: 2 };
+  w.VVBot = { guide: guide, version: 3 };
   function start() { setTimeout(function () { try { boot(); } catch (e) {} }, 1500); }
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start); else start();
 })(window, document);
