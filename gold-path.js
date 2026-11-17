@@ -489,5 +489,12 @@
     if (up) renderUpgrade(up);
     setTimeout(proactive, 6000);
   }
+  // Victory Bot (in-app guide + page-visit recording). Loaded from here so every page that has gold-path gets it.
+  try {
+    if (!w.VVBot && !d.querySelector('script[src*="victory-bot.js"]')) {
+      var vbs = d.createElement('script'); vbs.src = '/victory-bot.js?v=1'; vbs.defer = true; d.head.appendChild(vbs);
+    }
+  } catch (e) {}
+
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
 })(window, document);
