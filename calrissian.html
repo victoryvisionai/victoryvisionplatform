@@ -173,7 +173,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div id="p-users" class="panel">
   <div class="ph"><h1>All Users</h1><p>Full roster</p></div>
   <div class="card" style="overflow-x:auto">
-    <table><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Months</th><th>Credits</th><th>Last Active</th><th></th></tr></thead>
+    <table><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Months</th><th>Credits</th><th title="Last login or last thing they did in the browser. Automated emails and jobs no longer count.">Last Active</th><th title="Automated platform emails, last 30 days. Opens within 15s and clicks within 60s of sending are ignored.">Platform emails (30d)</th><th title="Tracked emails sent to this member from your accounts, last 60 days.">Your emails (60d)</th><th></th></tr></thead>
     <tbody id="tblUsers"><tr><td colspan="7" style="text-align:center;color:var(--text-dim)">Loading...</td></tr></tbody></table>
   </div>
 </div>
@@ -379,13 +379,15 @@ async function loadUsers() {
   try {
     const { data, error } = await sb.from('user_onboarding_progress_v').select('*');
     if (error) throw error;
+    let reach = {}; try { const rr = await sb.from('user_reach_v').select('*'); (rr.data || []).forEach(r => { reach[r.email] = r; }); } catch (e) { console.warn('reach', e); }
     allUsers = (data || [])
       .filter(u => u.tier === 'Gold' || u.tier === 'starter' || u.tier === 'starter-annual')
       .map(u => ({
         ...u,
         subscription_plan: u.tier === 'Gold' ? 'Gold' : 'Starter',
         subscription_status: 'active',
-        last_active: u.last_activity_at,
+        last_active: (reach[u.email] ? reach[u.email].real_last_active_at : u.last_activity_at),
+        ...(reach[u.email] ? { reach: reach[u.email], risk_color: reach[u.email].real_risk_color, days_since_last_activity: reach[u.email].real_days_inactive } : {}),
         pct_complete: (u.setup_total + u.pages_total) ? Math.round(100*(u.setup_done+u.pages_done)/(u.setup_total+u.pages_total)) : null
       }));
     document.getElementById('badgeTotal').textContent = allUsers.length;
@@ -472,6 +474,22 @@ async function loadPlatformActivity() {
 // USERS TABLE
 // ═══════════════════════════════════════════════
 function stBadge(s) { return `<span class="badge b-green">active</span>`; }
+function reachCell(u, k) {
+  const r = u.reach; const none = s => `<span style="color:var(--text-dim)">${s}</span>`;
+  if (!r) return none('—');
+  const dim = s => `<div style="font-size:11px;color:var(--text-dim)">${s}</div>`;
+  if (k === 'p') {
+    const sms = r.sms_sent_30d ? ` · ${r.sms_sent_30d} text${r.sms_sent_30d===1?'':'s'}` : '';
+    if (!r.platform_sent_30d) return none('none sent') + (sms ? dim(sms.slice(3)) : '');
+    if (!r.platform_tracked_30d) return `${r.platform_sent_30d} sent` + dim('not tracked yet' + sms);
+    const col = r.platform_opened_30d ? 'var(--text-bright)' : '#ef4444';
+    return `<span style="color:${col};font-weight:600">opened ${r.platform_opened_30d} of ${r.platform_tracked_30d}</span> · ${r.platform_clicks_30d} click${r.platform_clicks_30d===1?'':'s'}`
+      + dim((r.last_platform_open_at ? 'last open ' + ago(r.last_platform_open_at) : 'never opened') + (r.platform_sent_30d > r.platform_tracked_30d ? ` · ${r.platform_sent_30d - r.platform_tracked_30d} sent before tracking` : '') + sms);
+  }
+  if (!r.personal_sent_60d) return none('none sent');
+  const col = r.personal_opened_60d ? 'var(--text-bright)' : '#ef4444';
+  return `<span style="color:${col};font-weight:600">opened ${r.personal_opened_60d} of ${r.personal_sent_60d}</span>` + dim(r.last_personal_open_at ? 'last open ' + ago(r.last_personal_open_at) : 'never opened');
+}
 function renderUsersTable() {
   const tb = document.getElementById('tblUsers');
   if (!allUsers.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim)">No users</td></tr>'; return; }
@@ -482,6 +500,7 @@ function renderUsersTable() {
     <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${moSub(u)}</td>
     <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${u.credits||0}</td>
     <td style="font-size:12px;color:var(--text-dim)">${u.last_active?ago(u.last_active):'Never'}</td>
+    <td style="font-size:12px">${reachCell(u,'p')}</td><td style="font-size:12px">${reachCell(u,'m')}</td>
     <td style="white-space:nowrap"><button class="btn btn-p" style="padding:4px 10px;font-size:11px" onclick="openFocus('${esc(u.email)}')">Focus</button> <button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="pickAndEdit('${esc(u.email)}')">Edit</button></td>
   </tr>`).join('');
 }
