@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-132 -22 264 232" width="528" height="464">
+<polygon points="-96,204 -92,166 -60,148 -22,140 22,140 60,148 92,166 96,204" fill="#C2C9D3" stroke="#5E6876" stroke-width="1.5"/>
+<polygon points="-96,204 -92,166 -60,148 -22,140 0,140 0,204" fill="#DDE2E9"/>
+<polygon points="-14,120 14,120 18,142 -18,142" fill="#9AA3B0" stroke="#5E6876" stroke-width="1.5"/>
+<polygon points="-58,150 58,150 64,160 58,204 -58,204 -64,160" fill="#FFFFFF" stroke="#BA1340" stroke-width="2.5"/>
+<g transform="translate(-29,157) scale(0.15)" fill="none" stroke-width="22"><path d="M166 268 L18 10 L128 10 L256 226" stroke="#BA1340"/><path d="M82 20 L219 258 L251 258 L366 10 L330 10" stroke="#0B3063"/><path d="M170 10 L296 10 L240 130" stroke="#BA1340"/></g>
+<polygon points="-124,180 -72,167 -72,206 -116,206" fill="#DDE2E9" stroke="#5E6876" stroke-width="1.5"/>
+<polygon points="124,180 72,167 72,206 116,206" fill="#C2C9D3" stroke="#5E6876" stroke-width="1.5"/>
+<path d="M-109 179 L-97 187 L-85 179 M-109 187 L-97 195 L-85 187 M-109 195 L-97 203 L-85 195 M109 179 L97 187 L85 179 M109 187 L97 195 L85 187 M109 195 L97 203 L85 195" stroke="#BA1340" stroke-width="3" fill="none"/>
+<polygon points="-128,148 -64,132 -62,160 -126,176" fill="#FFFFFF" stroke="#BA1340" stroke-width="2"/>
+<polygon points="128,148 64,132 62,160 126,176" fill="#FFFFFF" stroke="#BA1340" stroke-width="2"/>
+<g transform="translate(-112,148) skewY(-14) scale(0.08)" fill="none" stroke-width="24"><path d="M166 268 L18 10 L128 10 L256 226" stroke="#BA1340"/><path d="M82 20 L219 258 L251 258 L366 10 L330 10" stroke="#0B3063"/><path d="M170 10 L296 10 L240 130" stroke="#BA1340"/></g>
+<g transform="translate(81,139.5) skewY(14) scale(0.08)" fill="none" stroke-width="24"><path d="M166 268 L18 10 L128 10 L256 226" stroke="#BA1340"/><path d="M82 20 L219 258 L251 258 L366 10 L330 10" stroke="#0B3063"/><path d="M170 10 L296 10 L240 130" stroke="#BA1340"/></g>
+<polygon points="-26,6 26,6 46,30 42,70 16,124 -16,124 -42,70 -46,30" fill="#DDE2E9" stroke="#5E6876" stroke-width="1.5"/>
+<polygon points="0,6 26,6 46,30 42,70 16,124 0,124" fill="#C2C9D3"/>
+<polygon points="-40,32 -18,32 0,84 18,32 40,32 12,116 -12,116" fill="#0B3063" stroke="#5E6876" stroke-width="1.5"/>
+<path d="M-29 39 L0 101 L29 39" stroke="#FF4D5E" stroke-width="6" fill="none"/>
+<polygon points="-46,40 -54,46 -52,70 -43,68" fill="#BA1340"/><polygon points="46,40 54,46 52,70 43,68" fill="#BA1340"/>
+<polygon points="-5,6 5,6 2,-18 -2,-18" fill="#BA1340" stroke="#5E6876" stroke-width="1"/>
+</svg>
